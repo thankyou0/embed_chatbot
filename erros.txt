@@ -1,0 +1,12 @@
+when bot is responding, if we quickly write another msg and submit it, it just break down in UI.
+
+gives out-of-context answers
+
+when closing chatbot using 'X' button, still i think session is on.
+
+on pasting link --> https://www.bing.com/images/search?view=detailV2&ccid=gD2RA/M4&id=EE36EE071115C487D1DD02EC696CB8BD28EB77F0&thid=OIP.gD2RA_M4312DRVptumAkfAAAAA&mediaurl=https://rukminim2.flixcart.com/image/300/300/xif0q/shoe/4/j/d/-original-imah84xehagx52rf.jpeg?q=90&exph=300&expw=250&q=blue%20shoes&ck=11682341C9F27557E74E3BA1528C478C&idpp=rc&form=rc2idp
+        giving response by opening it.
+
+for image, add working vision model, current one giving error --> 11:05:56 [X] ERROR    | Vision API error: 400 - {"error":{"message":"The model `llama-3.2-90b-vision-preview` has been decommissioned and is no longer supported. Please refer to https://console.groq.com/docs/deprecations for a recommendation on which model to use instead.","type":"invalid_request_error","code":"model_decommissioned"}}
+
+on writing very big query, analytics frontend doesn't work fine.

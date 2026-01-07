@@ -1,0 +1,19 @@
+{
+  "name": "e-com-chatbot",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Embeddable AI Chatbot SaaS Monorepo",
+  "scripts": {
+    "dev": "pnpm --filter './apps/*' --parallel dev",
+    "build": "pnpm --filter './apps/*' build",
+    "lint": "pnpm --filter './apps/*' lint"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  }
+}
+
