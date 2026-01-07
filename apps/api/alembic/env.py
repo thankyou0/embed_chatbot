@@ -2,14 +2,35 @@ from logging.config import fileConfig
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
+from pathlib import Path
 import asyncio
 import os
 from dotenv import load_dotenv
 
 from alembic import context
 
+
+def load_env_file():
+    """Load environment variables from the appropriate .env file."""
+    # Docker container path
+    docker_env = Path("/app/.env")
+    if docker_env.exists():
+        load_dotenv(docker_env)
+        return
+
+    # Project root (embed_chatbot/.env) - local development
+    project_root = Path(__file__).resolve().parents[3]
+    project_env = project_root / ".env"
+    if project_env.exists():
+        load_dotenv(project_env)
+        return
+
+    # Fallback: load from current directory or environment
+    load_dotenv()
+
+
 # Load environment variables
-load_dotenv()
+load_env_file()
 
 # Import your models and Base
 from app.core.database import Base

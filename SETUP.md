@@ -23,32 +23,44 @@ pnpm install
 
 ### 3. Set Up Environment Variables
 
-Create `.env` files in the root and each app directory:
+Copy the example environment file and configure it:
 
-**Root `.env`** (or copy from root):
-```env
-DATABASE_URL=postgresql+asyncpg://postgres:post@localhost:5432/embed_chatbot
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=post
-POSTGRES_DB=embed_chatbot
-API_PORT=8000
-API_HOST=0.0.0.0
-SECRET_KEY=your-secret-key-change-in-production
-NEXT_PUBLIC_API_URL=http://localhost:8000
+```bash
+cp .env.example .env
 ```
 
-**apps/api/.env**:
+Edit `.env` with your configuration:
 ```env
+# Database Configuration
 DATABASE_URL=postgresql+asyncpg://postgres:post@localhost:5432/embed_chatbot
+
+# API Configuration
 API_PORT=8000
 API_HOST=0.0.0.0
+
+# Security (CHANGE IN PRODUCTION!)
 SECRET_KEY=your-secret-key-change-in-production
+JWT_ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=150
+REFRESH_TOKEN_EXPIRE_DAYS=7
+
+# CORS Origins (JSON array format)
 CORS_ORIGINS=["http://localhost:3000","http://localhost:3001"]
+
+# LLM API Keys
+GROQ_API_KEY=your-groq-api-key
 ```
 
-**apps/web/.env.local**:
+**Optional: Frontend environment files**
+
+For Next.js frontend (apps/web/.env.local):
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:8000
+```
+
+For Widget (apps/widget/.env):
+```env
+VITE_PUBLIC_API_URL=http://localhost:8000
 ```
 
 ### 4. Start PostgreSQL
@@ -62,7 +74,7 @@ Wait a few seconds for PostgreSQL to be ready.
 ### 5. Set Up Python Environment (API)
 
 ```bash
-cd apps/api
+# From project root
 python -m venv venv
 
 # On Windows:
@@ -71,6 +83,7 @@ venv\Scripts\activate
 # On macOS/Linux:
 source venv/bin/activate
 
+# Install dependencies from root requirements.txt
 pip install -r requirements.txt
 ```
 
@@ -112,20 +125,22 @@ pnpm dev
 ## Project Structure
 
 ```
-.
+embed_chatbot/
+├── .env                  # Shared environment configuration
+├── .env.example          # Environment template
+├── requirements.txt      # Consolidated Python dependencies
+├── docker-compose.yml    # PostgreSQL + pgvector
 ├── apps/
-│   ├── api/          # FastAPI backend
-│   ├── web/          # Next.js dashboard
-│   └── widget/       # Preact embeddable widget
+│   ├── api/              # FastAPI backend
+│   ├── web/              # Next.js dashboard
+│   └── widget/           # Preact embeddable widget
 ├── packages/
-│   ├── shared/       # Shared TypeScript types/utils
-│   └── ui/           # Shared UI components
-└── docker-compose.yml
+│   ├── shared/           # Shared TypeScript types/utils
+│   └── ui/               # Shared UI components
 ```
 
-## Next Steps
+## Development URLs
 
-- Implement authentication
-- Add chat functionality
-- Set up vector embeddings with pgvector
-- Configure widget deployment
+- Web dashboard: http://localhost:3000
+- API: http://localhost:8000
+- API docs: http://localhost:8000/docs

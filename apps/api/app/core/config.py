@@ -1,23 +1,58 @@
 from pydantic_settings import BaseSettings
-from typing import List, Union
+from typing import List, Union, Optional
 from pydantic import field_validator
+from pathlib import Path
 import json
 import os
+
+
+def get_env_file_path() -> Optional[str]:
+    """
+    Determine the correct .env file path based on environment.
+
+    Priority:
+    1. /app/.env (Docker container)
+    2. Project root .env (local development)
+    3. None (rely on environment variables only - production)
+    """
+    # Docker container path
+    docker_env = Path("/app/.env")
+    if docker_env.exists():
+        return str(docker_env)
+
+    # Local development: project root (embed_chatbot/.env)
+    # Path: config.py -> core -> app -> api -> apps -> embed_chatbot
+    project_root_env = Path(__file__).resolve().parents[4] / ".env"
+    if project_root_env.exists():
+        return str(project_root_env)
+
+    # Fallback: relative path (for running from apps/api directory)
+    local_env = Path(__file__).resolve().parents[2] / ".env"
+    if local_env.exists():
+        return str(local_env)
+
+    # No .env file found - rely on environment variables
+    return None
+
+
+# Get the appropriate .env file path
+ENV_FILE_PATH = get_env_file_path()
+
 
 class Settings(BaseSettings):
     # Database
     DATABASE_URL: str = "postgresql+asyncpg://postgres:post@localhost:5432/embed_chatbot"
-    
+
     # API
     API_PORT: int = 8000
     API_HOST: str = "0.0.0.0"
-    SECRET_KEY: str = os.getenv("SECRET_KEY")
-    
+    SECRET_KEY: str = "your-secret-key-change-in-production"
+
     # JWT
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 150
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
-    
+
     # CORS
     CORS_ORIGINS: List[str] = [
         "http://localhost:3000",
@@ -27,8 +62,8 @@ class Settings(BaseSettings):
     ]
 
     # LLM
-    GROQ_API_KEY: str = os.getenv("GROQ_API_KEY")
-    
+    GROQ_API_KEY: Optional[str] = None
+
     @field_validator('CORS_ORIGINS', mode='before')
     @classmethod
     def parse_cors_origins(cls, v: Union[str, List[str]]) -> List[str]:
@@ -40,11 +75,12 @@ class Settings(BaseSettings):
                 # If not JSON, try comma-separated
                 return [origin.strip() for origin in v.split(',') if origin.strip()]
         return v
-    
+
     class Config:
-        env_file = ".env"
+        env_file = ENV_FILE_PATH
         case_sensitive = True
+        # Allow environment variables to override .env file
+        env_file_encoding = 'utf-8'
 
 
 settings = Settings()
-

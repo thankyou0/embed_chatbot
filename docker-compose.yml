@@ -1,6 +1,13 @@
+# ============================================
+# Docker Compose - Local Development
+# ============================================
+# Usage: docker-compose up -d
+# ============================================
+
 version: '3.8'
 
 services:
+  # PostgreSQL Database with pgvector
   postgres:
     image: pgvector/pgvector:pg16
     container_name: chatbot_postgres
@@ -17,7 +24,80 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - chatbot_network
+
+  # FastAPI Backend (Development with hot reload)
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: development
+    container_name: chatbot_api
+    ports:
+      - "8000:8000"
+    volumes:
+      # Mount source code for hot reload
+      - ./apps/api:/app
+      - ./.env:/app/.env:ro
+      # Persist uploads
+      - api_uploads:/app/uploads
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:post@postgres:5432/embed_chatbot
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - chatbot_network
+    restart: unless-stopped
+
+  # Next.js Web Dashboard (Development)
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      target: development
+    container_name: chatbot_web
+    ports:
+      - "3000:3000"
+    volumes:
+      # Mount source code for hot reload
+      - ./apps/web:/app
+      - /app/node_modules
+      - /app/.next
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    depends_on:
+      - api
+    networks:
+      - chatbot_network
+    restart: unless-stopped
+
+  # Preact Widget (Development)
+  widget:
+    build:
+      context: .
+      dockerfile: apps/widget/Dockerfile
+      target: development
+    container_name: chatbot_widget
+    ports:
+      - "3001:3001"
+    volumes:
+      # Mount source code for hot reload
+      - ./apps/widget:/app
+      - /app/node_modules
+    environment:
+      - VITE_PUBLIC_API_URL=http://localhost:8000
+    depends_on:
+      - api
+    networks:
+      - chatbot_network
+    restart: unless-stopped
 
 volumes:
   postgres_data:
+  api_uploads:
 
+networks:
+  chatbot_network:
+    driver: bridge
