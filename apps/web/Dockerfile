@@ -27,11 +27,12 @@ FROM base AS development
 
 WORKDIR /app
 
-# Copy dependencies
-COPY --from=dependencies /app/node_modules ./node_modules
+# Install pnpm for runtime dependency installation
+RUN corepack enable && corepack prepare pnpm@latest --activate
 
-# Copy application code
-COPY apps/web ./
+# Copy package files for dependency installation
+COPY apps/web/package.json ./
+COPY pnpm-lock.yaml* ./
 
 # Expose port
 EXPOSE 3000
@@ -39,9 +40,13 @@ EXPOSE 3000
 # Set environment
 ENV NODE_ENV=development
 ENV NEXT_TELEMETRY_DISABLED=1
+# Enable polling for file watching on Windows/Docker
+ENV WATCHPACK_POLLING=true
+ENV CHOKIDAR_USEPOLLING=true
 
-# Run development server
-CMD ["npx", "next", "dev"]
+# Install dependencies and start dev server
+# This ensures node_modules is available after volume mount
+CMD ["sh", "-c", "pnpm install && pnpm dev"]
 
 # ---- Builder Stage ----
 FROM base AS builder

@@ -4,7 +4,7 @@
 # ============================================
 
 # ---- Base Stage ----
-FROM python:3.11-slim as base
+FROM python:3.11-slim AS base
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -21,7 +21,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # ---- Dependencies Stage ----
-FROM base as dependencies
+FROM base AS dependencies
 
 # Copy requirements from project root
 COPY requirements.txt /app/requirements.txt
@@ -31,7 +31,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
 # ---- Development Stage ----
-FROM dependencies as development
+FROM dependencies AS development
 
 # Install development dependencies
 RUN pip install --no-cache-dir watchfiles
@@ -49,10 +49,12 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
 # Run with hot reload for development
+# watchfiles is installed and will be used automatically with --reload
+# For Windows Docker, watchfiles handles file watching better than default
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
 
 # ---- Production Stage ----
-FROM dependencies as production
+FROM dependencies AS production
 
 # Create non-root user for security
 RUN groupadd -r appgroup && useradd -r -g appgroup appuser

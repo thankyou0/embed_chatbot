@@ -65,3 +65,5 @@ dmypy.json
 .cache/
 .turbo/
 .vercel
+
+.pnpm-store/

@@ -67,6 +67,9 @@ services:
       - /app/.next
     environment:
       - NEXT_PUBLIC_API_URL=http://localhost:8000
+      # Enable file watching polling for Windows/Docker
+      - WATCHPACK_POLLING=true
+      - CHOKIDAR_USEPOLLING=true
     depends_on:
       - api
     networks:
@@ -86,8 +89,12 @@ services:
       # Mount source code for hot reload
       - ./apps/widget:/app
       - /app/node_modules
+      - /app/dist
     environment:
       - VITE_PUBLIC_API_URL=http://localhost:8000
+      # Enable file watching polling for Windows/Docker
+      - CHOKIDAR_USEPOLLING=true
+      - VITE_HMR_POLLING=true
     depends_on:
       - api
     networks:
