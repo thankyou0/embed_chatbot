@@ -1,3 +1,48 @@
-# Reference to project root requirements.txt
-# All Python dependencies are consolidated at the project root
--r ../../requirements.txt
+# ===========================================
+# Embed Chatbot - Python Dependencies
+# ===========================================
+# Install with: pip install -r requirements.txt
+# ===========================================
+
+# Core Framework
+fastapi==0.128.0
+uvicorn[standard]==0.40.0
+
+# Database
+sqlalchemy==2.0.45
+asyncpg==0.31.0
+alembic==1.17.2
+pgvector==0.3.6
+
+# Configuration
+python-dotenv==1.2.1
+pydantic==2.12.5
+pydantic-settings==2.12.0
+
+# Authentication
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+
+# Request Handling
+python-multipart==0.0.6
+email-validator==2.1.0
+httpx==0.28.1
+aiofiles==24.1.0
+
+# AI/ML - Embeddings
+sentence-transformers==3.3.1
+torch==2.5.1
+numpy==2.2.1
+
+# Web Scraping/Crawling
+trafilatura==1.12.2
+beautifulsoup4==4.12.3
+
+# Document Processing
+pypdf==5.1.0
+python-docx==1.1.2
+openpyxl==3.1.5
+pandas==2.2.3
+
+# Background Tasks
+apscheduler==3.10.4
