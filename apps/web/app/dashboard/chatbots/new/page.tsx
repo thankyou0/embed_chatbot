@@ -9,6 +9,7 @@ import {
   Plus, 
   Globe, 
   Check, 
+  X,
   ExternalLink,
   MessageSquare,
   Database,
