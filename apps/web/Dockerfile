@@ -7,20 +7,23 @@
 FROM node:18-alpine AS base
 
 # Install dependencies only when needed
-RUN apk add --no-cache libc6-compat
+RUN apk add --no-cache libc6-compat wget
 
 WORKDIR /app
 
 # ---- Dependencies Stage ----
 FROM base AS dependencies
 
-# Copy package files
-COPY apps/web/package.json ./
-COPY pnpm-lock.yaml* ./
+# Copy root package.json and pnpm-workspace.yaml for monorepo
+COPY package.json pnpm-workspace.yaml* ./
+
+# Copy package files (handle optional packages)
+COPY apps/web/package.json ./apps/web/package.json
 
 # Install pnpm and dependencies
 RUN corepack enable && corepack prepare pnpm@latest --activate
-RUN pnpm install --frozen-lockfile || pnpm install
+# Install without frozen lockfile for DigitalOcean compatibility
+RUN pnpm install || (echo "pnpm install failed, trying npm install" && npm install)
 
 # ---- Development Stage ----
 FROM base AS development
@@ -48,18 +51,23 @@ FROM base AS builder
 
 WORKDIR /app
 
-# Copy dependencies
+# Copy all dependencies and workspace files
 COPY --from=dependencies /app/node_modules ./node_modules
+COPY --from=dependencies /app/apps/web/node_modules ./apps/web/node_modules
+COPY --from=dependencies /app/package.json ./package.json
+COPY --from=dependencies /app/pnpm-workspace.yaml* ./pnpm-workspace.yaml
 
 # Copy application code
-COPY apps/web ./
+COPY apps/web ./apps/web
 
 # Set production environment for build
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
 # Build the application
-RUN corepack enable && npm run build
+WORKDIR /app/apps/web
+RUN corepack enable && (pnpm run build || npm run build)
+WORKDIR /app
 
 # ---- Production Stage ----
 FROM base AS production
@@ -71,9 +79,9 @@ RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
 # Copy built application
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/apps/web/public ./public
+COPY --from=builder /app/apps/web/.next/standalone ./
+COPY --from=builder /app/apps/web/.next/static ./.next/static
 
 # Set ownership
 RUN chown -R nextjs:nodejs /app

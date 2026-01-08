@@ -24,11 +24,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 FROM base as dependencies
 
 # Copy requirements from project root
+# apps/api/requirements.txt references ../../requirements.txt, so we copy root requirements.txt
+# and place it where the relative path will resolve correctly
 COPY requirements.txt /app/requirements.txt
 
-# Install Python dependencies
+# Install Python dependencies directly from root requirements.txt
+# (apps/api/requirements.txt just references it anyway)
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+    pip install --no-cache-dir -r /app/requirements.txt
 
 # ---- Development Stage ----
 FROM dependencies as development

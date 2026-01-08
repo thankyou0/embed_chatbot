@@ -6,20 +6,23 @@
 # ---- Base Stage ----
 FROM node:18-alpine AS base
 
-RUN apk add --no-cache libc6-compat
+RUN apk add --no-cache libc6-compat wget
 
 WORKDIR /app
 
 # ---- Dependencies Stage ----
 FROM base AS dependencies
 
+# Copy root package.json and pnpm-workspace.yaml for monorepo
+COPY package.json pnpm-workspace.yaml* ./
+
 # Copy package files
-COPY apps/widget/package.json ./
-COPY pnpm-lock.yaml* ./
+COPY apps/widget/package.json ./apps/widget/package.json
 
 # Install pnpm and dependencies
 RUN corepack enable && corepack prepare pnpm@latest --activate
-RUN pnpm install --frozen-lockfile || pnpm install
+# Install without frozen lockfile for DigitalOcean compatibility
+RUN pnpm install || (echo "pnpm install failed, trying npm install" && npm install)
 
 # ---- Development Stage ----
 FROM base AS development
@@ -46,20 +49,25 @@ FROM base AS builder
 
 WORKDIR /app
 
-# Copy dependencies
+# Copy all dependencies and workspace files
 COPY --from=dependencies /app/node_modules ./node_modules
+COPY --from=dependencies /app/apps/widget/node_modules ./apps/widget/node_modules
+COPY --from=dependencies /app/package.json ./package.json
+COPY --from=dependencies /app/pnpm-workspace.yaml* ./pnpm-workspace.yaml
 
 # Copy application code
-COPY apps/widget ./
+COPY apps/widget ./apps/widget
 
 # Build the widget
-RUN corepack enable && npm run build
+WORKDIR /app/apps/widget
+RUN corepack enable && (pnpm run build || npm run build)
+WORKDIR /app
 
 # ---- Production Stage ----
 FROM nginx:alpine AS production
 
 # Copy built files to nginx
-COPY --from=builder /app/dist /usr/share/nginx/html
+COPY --from=builder /app/apps/widget/dist /usr/share/nginx/html
 
 # Copy nginx configuration
 COPY apps/widget/nginx.conf /etc/nginx/conf.d/default.conf
