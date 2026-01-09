@@ -63,6 +63,9 @@ class Settings(BaseSettings):
 
     # LLM
     GROQ_API_KEY: Optional[str] = None
+    
+    # Hugging Face (for embeddings - free tier available)
+    HF_API_KEY: Optional[str] = None
 
     @field_validator('CORS_ORIGINS', mode='before')
     @classmethod

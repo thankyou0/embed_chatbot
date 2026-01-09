@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.knowledge import Embedding, KnowledgeSourceType
 from app.models.chatbot import Chatbot
 from app.models.chat import ChatSession, ChatMessage, MessageRole
-from app.services.embedding_service import model
+from app.services.embedding_service import get_query_embedding
 from app.services.vision_service import VisionService, ImageAttributes
 from app.core.config import settings
 from app.core.logging import get_logger
@@ -146,8 +146,8 @@ class ChatService:
         # Search query includes message + summary for better context
         search_query = f"{effective_message} | Context: {summary}" if summary else effective_message
         
-        loop = asyncio.get_event_loop()
-        query_vector = await loop.run_in_executor(None, lambda: model.encode(search_query).tolist())
+        # Get query embedding using HF API
+        query_vector = await get_query_embedding(search_query)
         
         vector_stmt = select(
             Embedding,

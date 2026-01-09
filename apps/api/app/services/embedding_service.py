@@ -1,20 +1,106 @@
 import asyncio
-from typing import List, Dict, Any
+import httpx
+from typing import List, Dict, Any, Optional
 from uuid import UUID
 from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
-from sentence_transformers import SentenceTransformer
 from app.models.knowledge import KnowledgeSource, CrawledPage, Embedding, KnowledgeSourceStatus, KnowledgeSourceType, QAPair
-from app.core.database import AsyncSessionLocal
+from app.core.database import get_session_factory
+from app.core.config import settings
 from app.core.logging import get_logger
 
 logger = get_logger(__name__)
 
-# Initialize the model globally to avoid reloading
-# 'all-MiniLM-L6-v2' produces 384-dimensional embeddings
-model = SentenceTransformer('all-MiniLM-L6-v2')
+# Hugging Face Inference API configuration
+# Using all-MiniLM-L6-v2 model (384-dimensional embeddings)
+HF_API_URL = "https://api-inference.huggingface.co/pipeline/feature-extraction/sentence-transformers/all-MiniLM-L6-v2"
+
 
 class EmbeddingService:
+    """
+    Embedding service using Hugging Face Inference API (free tier).
+    No heavy model downloads required - uses API for embeddings.
+    """
+    
+    @staticmethod
+    async def get_embeddings_from_api(texts: List[str], batch_size: int = 32) -> List[List[float]]:
+        """
+        Get embeddings from Hugging Face Inference API.
+        Free tier: ~30,000 characters per request.
+        """
+        all_embeddings = []
+        
+        # Get API key from settings (optional - HF has some free usage without key)
+        headers = {}
+        if hasattr(settings, 'HF_API_KEY') and settings.HF_API_KEY:
+            headers["Authorization"] = f"Bearer {settings.HF_API_KEY}"
+        
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            # Process in batches
+            for i in range(0, len(texts), batch_size):
+                batch = texts[i:i + batch_size]
+                
+                try:
+                    response = await client.post(
+                        HF_API_URL,
+                        headers=headers,
+                        json={
+                            "inputs": batch,
+                            "options": {"wait_for_model": True}
+                        }
+                    )
+                    
+                    if response.status_code == 200:
+                        embeddings = response.json()
+                        # Handle nested response format
+                        for emb in embeddings:
+                            if isinstance(emb[0], list):
+                                # Mean pooling if we get token-level embeddings
+                                pooled = [sum(x) / len(emb) for x in zip(*emb)]
+                                all_embeddings.append(pooled)
+                            else:
+                                all_embeddings.append(emb)
+                    elif response.status_code == 503:
+                        # Model is loading, wait and retry
+                        logger.warning("Model is loading, waiting 20 seconds...")
+                        await asyncio.sleep(20)
+                        # Retry this batch
+                        response = await client.post(
+                            HF_API_URL,
+                            headers=headers,
+                            json={
+                                "inputs": batch,
+                                "options": {"wait_for_model": True}
+                            }
+                        )
+                        if response.status_code == 200:
+                            embeddings = response.json()
+                            for emb in embeddings:
+                                if isinstance(emb[0], list):
+                                    pooled = [sum(x) / len(emb) for x in zip(*emb)]
+                                    all_embeddings.append(pooled)
+                                else:
+                                    all_embeddings.append(emb)
+                        else:
+                            logger.error(f"HF API error after retry: {response.status_code} - {response.text}")
+                            # Use fallback zero embeddings
+                            all_embeddings.extend([[0.0] * 384 for _ in batch])
+                    else:
+                        logger.error(f"HF API error: {response.status_code} - {response.text}")
+                        # Use fallback zero embeddings
+                        all_embeddings.extend([[0.0] * 384 for _ in batch])
+                        
+                except Exception as e:
+                    logger.error(f"Error calling HF API: {str(e)}")
+                    # Use fallback zero embeddings
+                    all_embeddings.extend([[0.0] * 384 for _ in batch])
+                
+                # Rate limiting - small delay between batches
+                if i + batch_size < len(texts):
+                    await asyncio.sleep(0.5)
+        
+        return all_embeddings
+
     @staticmethod
     def chunk_text(text: str, max_tokens: int = 512, overlap: int = 50, min_tokens: int = 100) -> List[str]:
         """
@@ -61,10 +147,11 @@ class EmbeddingService:
         """
         1. Get all crawled_pages for knowledge_source
         2. Chunk each page's content
-        3. Generate embeddings for each chunk
+        3. Generate embeddings for each chunk using HF API
         4. Store in embeddings table with metadata
         """
-        async with AsyncSessionLocal() as db:
+        session_factory = get_session_factory()
+        async with session_factory() as db:
             try:
                 # 1. Fetch the knowledge source and its pages
                 stmt = select(KnowledgeSource).where(KnowledgeSource.id == knowledge_source_id)
@@ -128,10 +215,9 @@ class EmbeddingService:
                     logger.warning(f"No content chunks generated for KS: {ks.id}")
                     return
 
-                # 3. Generate embeddings (blocking call, run in executor)
-                logger.info(f"Generating embeddings for {len(all_chunks)} chunks...")
-                loop = asyncio.get_event_loop()
-                embeddings_list = await loop.run_in_executor(None, lambda: model.encode(all_chunks))
+                # 3. Generate embeddings using HF API
+                logger.info(f"Generating embeddings for {len(all_chunks)} chunks using HF API...")
+                embeddings_list = await EmbeddingService.get_embeddings_from_api(all_chunks)
 
                 # 4. Store in database
                 for chunk_text, vector, meta in zip(all_chunks, embeddings_list, all_metadata):
@@ -140,7 +226,7 @@ class EmbeddingService:
                         knowledge_source_id=ks.id,
                         source_type=ks.source_type,
                         content=chunk_text,
-                        embedding=vector.tolist(),
+                        embedding=vector,
                         metadata_json=meta,
                         priority_weight=1.0
                     )
@@ -153,3 +239,9 @@ class EmbeddingService:
                 logger.error(f"Error in embedding pipeline for KS {knowledge_source_id}: {str(e)}")
                 await db.rollback()
 
+
+# For query embeddings (used in chat/search)
+async def get_query_embedding(query: str) -> List[float]:
+    """Get embedding for a single query using HF API."""
+    embeddings = await EmbeddingService.get_embeddings_from_api([query])
+    return embeddings[0] if embeddings else [0.0] * 384

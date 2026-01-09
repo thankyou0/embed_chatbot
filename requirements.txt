@@ -29,9 +29,9 @@ email-validator==2.1.0
 httpx==0.28.1
 aiofiles==24.1.0
 
-# AI/ML - Embeddings
-sentence-transformers==3.3.1
-torch==2.5.1
+# AI/ML - Embeddings (using HuggingFace Inference API - no heavy local models)
+# sentence-transformers and torch removed to reduce deployment size
+# Embeddings are generated via HuggingFace Inference API (free tier)
 numpy==2.2.1
 
 # Web Scraping/Crawling
