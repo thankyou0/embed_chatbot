@@ -1064,7 +1064,7 @@ export default function ChatbotDetailPage() {
                         </div>
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        We'll crawl the website and process its content for your chatbot.
+                        We&apos;ll crawl the website and process its content for your chatbot.
                       </p>
                     </form>
                   ) : knowledgeType === 'file' ? (
@@ -2020,7 +2020,7 @@ export default function ChatbotDetailPage() {
             <CardHeader>
               <CardTitle>Chatbot Settings</CardTitle>
               <CardDescription>
-                Update your chatbot's general information and status
+                Update your chatbot&apos;s general information and status
               </CardDescription>
             </CardHeader>
             <CardContent>

@@ -394,7 +394,7 @@ export default function AppearancePage() {
 
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <Label htmlFor="show_branding">Show "Powered By"</Label>
+                    <Label htmlFor="show_branding">Show &quot;Powered By&quot;</Label>
                     <p className="text-sm text-gray-500">Display branding in the widget</p>
                   </div>
                   <Switch

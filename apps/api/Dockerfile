@@ -4,7 +4,7 @@
 # ============================================
 
 # ---- Base Stage ----
-FROM python:3.11-slim as base
+FROM python:3.11-slim AS base
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -21,7 +21,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # ---- Dependencies Stage ----
-FROM base as dependencies
+FROM base AS dependencies
 
 # Copy requirements from project root
 # apps/api/requirements.txt references ../../requirements.txt, so we copy root requirements.txt
@@ -34,7 +34,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r /app/requirements.txt
 
 # ---- Development Stage ----
-FROM dependencies as development
+FROM dependencies AS development
 
 # Install development dependencies
 RUN pip install --no-cache-dir watchfiles
@@ -55,7 +55,7 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
 
 # ---- Production Stage ----
-FROM dependencies as production
+FROM dependencies AS production
 
 # Create non-root user for security
 RUN groupadd -r appgroup && useradd -r -g appgroup appuser

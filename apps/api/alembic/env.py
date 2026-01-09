@@ -96,8 +96,16 @@ async def run_async_migrations() -> None:
     and associate a connection with the context.
 
     """
+    # Get configuration section and ensure URL is set
+    configuration = config.get_section(config.config_ini_section, {})
+    
+    # If DATABASE_URL is in environment, use it directly
+    database_url = os.getenv("DATABASE_URL")
+    if database_url:
+        configuration["sqlalchemy.url"] = database_url
+    
     connectable = async_engine_from_config(
-        config.get_section(config.config_ini_section, {}),
+        configuration,
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
