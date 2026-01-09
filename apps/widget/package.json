@@ -6,9 +6,11 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "start": "node server.js"
   },
   "dependencies": {
+    "express": "^4.18.2",
     "lucide-preact": "^0.562.0",
     "preact": "^10.19.6"
   },
@@ -16,5 +18,8 @@
     "@preact/preset-vite": "^2.8.2",
     "typescript": "^5.2.2",
     "vite": "^5.2.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
