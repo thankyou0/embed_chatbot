@@ -56,7 +56,7 @@ from app.services.crawler_service import CrawlerService
 from app.services.file_service import FileService
 from app.services.embedding_service import EmbeddingService
 from app.services.scheduler_service import SchedulerService
-from app.core.database import AsyncSessionLocal
+from app.core.database import get_session_factory
 from fastapi import BackgroundTasks, UploadFile
 from sqlalchemy import select, update, delete, func
 from sqlalchemy.orm import selectinload
@@ -1075,7 +1075,8 @@ class ChatbotService:
     @staticmethod
     async def _process_uploaded_file(ks_id: UUID, file_path: str, mime_type: str):
         """Background task to extract text from file and generate embeddings"""
-        async with AsyncSessionLocal() as db:
+        session_factory = get_session_factory()
+        async with session_factory() as db:
             try:
                 # Update status
                 await db.execute(

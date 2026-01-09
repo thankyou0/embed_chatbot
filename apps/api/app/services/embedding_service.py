@@ -13,7 +13,8 @@ logger = get_logger(__name__)
 
 # Hugging Face Inference API configuration
 # Using all-MiniLM-L6-v2 model (384-dimensional embeddings)
-HF_API_URL = "https://api-inference.huggingface.co/pipeline/feature-extraction/sentence-transformers/all-MiniLM-L6-v2"
+# Updated to use the new router endpoint
+HF_API_URL = "https://api-inference.huggingface.co/models/sentence-transformers/all-MiniLM-L6-v2"
 
 
 class EmbeddingService:

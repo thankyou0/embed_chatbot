@@ -5,7 +5,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from sqlalchemy import select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.core.database import AsyncSessionLocal
+from app.core.database import get_session_factory
 from app.core.logging import get_logger
 from app.models.knowledge import CrawlSchedule, KnowledgeSource, ScheduleType
 from app.services.crawler_service import CrawlerService
@@ -53,7 +53,8 @@ class SchedulerService:
         """Check for schedules that need to run"""
         logger.info("Checking for scheduled crawls...")
         
-        async with AsyncSessionLocal() as db:
+        session_factory = get_session_factory()
+        async with session_factory() as db:
             try:
                 now = datetime.now(timezone.utc)
                 
