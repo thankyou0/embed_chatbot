@@ -890,7 +890,12 @@ class ChatbotService:
             raise ForbiddenError("Insufficient permissions to add knowledge source")
 
         # Check if this URL is already a knowledge source for this chatbot
-        stmt = select(KnowledgeSource).where(
+        # Use selectinload to eagerly load relationships for Pydantic validation
+        stmt = select(KnowledgeSource).options(
+            selectinload(KnowledgeSource.files),
+            selectinload(KnowledgeSource.qa_pairs),
+            selectinload(KnowledgeSource.pages)
+        ).where(
             KnowledgeSource.chatbot_id == chatbot_id,
             KnowledgeSource.source_type == KnowledgeSourceType.CRAWLED_URL,
             KnowledgeSource.source_url == request.base_url
