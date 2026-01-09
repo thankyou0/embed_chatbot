@@ -1,4 +1,5 @@
 import asyncio
+import gc
 from typing import List, Dict, Any
 from uuid import UUID
 from sqlalchemy import select, delete
@@ -13,6 +14,9 @@ logger = get_logger(__name__)
 # Initialize the model globally to avoid reloading
 # 'all-MiniLM-L6-v2' produces 384-dimensional embeddings
 model = SentenceTransformer('all-MiniLM-L6-v2')
+
+# Batch size for embedding generation to prevent OOM on low-memory instances
+EMBEDDING_BATCH_SIZE = 32
 
 class EmbeddingService:
     @staticmethod
@@ -129,26 +133,48 @@ class EmbeddingService:
                     logger.warning(f"No content chunks generated for KS: {ks.id}")
                     return
 
-                # 3. Generate embeddings (blocking call, run in executor)
-                logger.info(f"Generating embeddings for {len(all_chunks)} chunks...")
+                # 3. Generate embeddings in batches to prevent OOM
+                total_chunks = len(all_chunks)
+                logger.info(f"Generating embeddings for {total_chunks} chunks in batches of {EMBEDDING_BATCH_SIZE}...")
+                
                 loop = asyncio.get_event_loop()
-                embeddings_list = await loop.run_in_executor(None, lambda: model.encode(all_chunks))
-
-                # 4. Store in database
-                for chunk_text, vector, meta in zip(all_chunks, embeddings_list, all_metadata):
-                    emb_obj = Embedding(
-                        chatbot_id=ks.chatbot_id,
-                        knowledge_source_id=ks.id,
-                        source_type=ks.source_type,
-                        content=chunk_text,
-                        embedding=vector.tolist(),
-                        metadata_json=meta,
-                        priority_weight=1.0
+                total_stored = 0
+                
+                for batch_start in range(0, total_chunks, EMBEDDING_BATCH_SIZE):
+                    batch_end = min(batch_start + EMBEDDING_BATCH_SIZE, total_chunks)
+                    batch_chunks = all_chunks[batch_start:batch_end]
+                    batch_metadata = all_metadata[batch_start:batch_end]
+                    
+                    # Generate embeddings for this batch
+                    batch_embeddings = await loop.run_in_executor(
+                        None, 
+                        lambda chunks=batch_chunks: model.encode(chunks)
                     )
-                    db.add(emb_obj)
+                    
+                    # 4. Store batch in database
+                    for chunk_text, vector, meta in zip(batch_chunks, batch_embeddings, batch_metadata):
+                        emb_obj = Embedding(
+                            chatbot_id=ks.chatbot_id,
+                            knowledge_source_id=ks.id,
+                            source_type=ks.source_type,
+                            content=chunk_text,
+                            embedding=vector.tolist(),
+                            metadata_json=meta,
+                            priority_weight=1.0
+                        )
+                        db.add(emb_obj)
+                    
+                    # Commit each batch and clear memory
+                    await db.commit()
+                    total_stored += len(batch_chunks)
+                    
+                    # Force garbage collection to free memory
+                    del batch_embeddings
+                    gc.collect()
+                    
+                    logger.info(f"Batch {batch_start // EMBEDDING_BATCH_SIZE + 1}: Stored {total_stored}/{total_chunks} embeddings")
 
-                await db.commit()
-                logger.success(f"Successfully processed and stored {len(all_chunks)} embeddings for KS: {ks.id}")
+                logger.success(f"Successfully processed and stored {total_stored} embeddings for KS: {ks.id}")
 
             except Exception as e:
                 logger.error(f"Error in embedding pipeline for KS {knowledge_source_id}: {str(e)}")
