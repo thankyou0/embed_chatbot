@@ -4,6 +4,7 @@ import re
 import json
 import base64
 import time
+import math
 from typing import List, Dict, Any, Optional
 from uuid import UUID, uuid4
 from sqlalchemy import select, desc
@@ -192,7 +193,9 @@ class ChatService:
         top_chunks = combined_results[:5]
         
         # Track retrieval confidence (highest similarity score)
-        retrieval_confidence = top_chunks[0]["score"] if top_chunks else 0.0
+        # Handle NaN values - convert to 0.0 if NaN
+        raw_confidence = top_chunks[0]["score"] if top_chunks else 0.0
+        retrieval_confidence = 0.0 if (math.isnan(raw_confidence) if isinstance(raw_confidence, float) else False) else raw_confidence
         sources_count = len(top_chunks)
 
         # --- 6. Prepare LLM Prompt ---
@@ -350,7 +353,9 @@ class ChatService:
                 response_time_ms = int((time.time() - start_time) * 1000)
                 
                 # Determine if query was answered based on confidence threshold
-                was_answered = retrieval_confidence >= chatbot.confidence_threshold
+                # Handle NaN in retrieval_confidence
+                safe_confidence_for_check = retrieval_confidence if not (isinstance(retrieval_confidence, float) and math.isnan(retrieval_confidence)) else 0.0
+                was_answered = safe_confidence_for_check >= chatbot.confidence_threshold
                 
                 user_metadata = {}
                 if image_attrs:
@@ -366,9 +371,16 @@ class ChatService:
                 )
                 
                 # Store analytics metadata in assistant message
+                # Ensure retrieval_confidence is not NaN (PostgreSQL doesn't accept NaN in JSON)
+                safe_confidence = retrieval_confidence
+                if isinstance(safe_confidence, float) and math.isnan(safe_confidence):
+                    safe_confidence = None
+                else:
+                    safe_confidence = round(safe_confidence, 3) if safe_confidence is not None else None
+                
                 assistant_metadata = {
                     "suggestions": suggestions,
-                    "retrieval_confidence": round(retrieval_confidence, 3),
+                    "retrieval_confidence": safe_confidence,
                     "sources_count": sources_count,
                     "response_time_ms": response_time_ms,
                     "was_answered": was_answered
