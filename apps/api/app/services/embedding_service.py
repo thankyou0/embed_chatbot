@@ -5,7 +5,7 @@ from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sentence_transformers import SentenceTransformer
 from app.models.knowledge import KnowledgeSource, CrawledPage, Embedding, KnowledgeSourceStatus, KnowledgeSourceType, QAPair
-from app.core.database import AsyncSessionLocal
+from app.core.database import get_session_factory
 from app.core.logging import get_logger
 
 logger = get_logger(__name__)
@@ -64,7 +64,8 @@ class EmbeddingService:
         3. Generate embeddings for each chunk
         4. Store in embeddings table with metadata
         """
-        async with AsyncSessionLocal() as db:
+        session_factory = get_session_factory()
+        async with session_factory() as db:
             try:
                 # 1. Fetch the knowledge source and its pages
                 stmt = select(KnowledgeSource).where(KnowledgeSource.id == knowledge_source_id)

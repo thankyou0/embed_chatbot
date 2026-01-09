@@ -12,7 +12,7 @@ from app.models.knowledge import (
     KnowledgeSource, CrawledPage, KnowledgeSourceStatus, KnowledgeSourceType,
     CrawlHistory, CrawlStatus, CrawlSchedule
 )
-from app.core.database import AsyncSessionLocal
+from app.core.database import get_session_factory
 from app.core.logging import get_logger
 from app.services.embedding_service import EmbeddingService
 from bs4 import BeautifulSoup
@@ -148,7 +148,8 @@ class CrawlerService:
         """
         Entry point for background crawl job with diff detection support.
         """
-        async with AsyncSessionLocal() as db:
+        session_factory = get_session_factory()
+        async with session_factory() as db:
             crawl_history = None
             try:
                 if crawl_history_id:
