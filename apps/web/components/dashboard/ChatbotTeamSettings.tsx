@@ -1,23 +1,18 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { useParams, useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { getAccessToken } from '@/lib/auth'
 import { apiRequestWithAuth } from '@/lib/api'
 import {
-  Shield,
-  User as UserIcon,
   Plus,
   Trash2,
-  Check,
   X,
   Loader2,
-  Users,
   AlertCircle
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
@@ -89,10 +84,11 @@ const PRESETS = {
   }
 }
 
-export default function ChatbotMembersPage() {
-  const params = useParams()
-  const router = useRouter()
-  const chatbotId = params.chatbotId as string
+interface ChatbotTeamSettingsProps {
+  chatbotId: string
+}
+
+export function ChatbotTeamSettings({ chatbotId }: ChatbotTeamSettingsProps) {
   const { user, isAdmin } = useAuth()
 
   const [permissions, setPermissions] = useState<Permission[]>([])

@@ -17,19 +17,25 @@ def get_env_file_path() -> Optional[str]:
     """
     # Docker container path
     docker_env = Path("/app/.env")
-    if docker_env.exists():
+    if docker_env.exists() and docker_env.is_file():
         return str(docker_env)
 
     # Local development: project root (embed_chatbot/.env)
     # Path: config.py -> core -> app -> api -> apps -> embed_chatbot
-    project_root_env = Path(__file__).resolve().parents[4] / ".env"
-    if project_root_env.exists():
-        return str(project_root_env)
+    try:
+        project_root_env = Path(__file__).resolve().parents[4] / ".env"
+        if project_root_env.exists() and project_root_env.is_file():
+            return str(project_root_env)
+    except IndexError:
+        pass
 
     # Fallback: relative path (for running from apps/api directory)
-    local_env = Path(__file__).resolve().parents[2] / ".env"
-    if local_env.exists():
-        return str(local_env)
+    try:
+        local_env = Path(__file__).resolve().parents[2] / ".env"
+        if local_env.exists() and local_env.is_file():
+            return str(local_env)
+    except IndexError:
+        pass
 
     # No .env file found - rely on environment variables
     return None

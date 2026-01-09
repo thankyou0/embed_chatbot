@@ -8,6 +8,7 @@ export interface User {
   id: number
   tenant_id: number
   email: string
+  username: string
   name?: string
   role: 'admin' | 'user'
   is_active: boolean
@@ -38,6 +39,7 @@ export interface MeResponse {
 export interface SignupData {
   tenant_name: string
   email: string
+  username: string
   password: string
   name?: string
 }

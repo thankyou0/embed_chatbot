@@ -215,6 +215,10 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
         }
       }
 
+      if (config.isPreview) {
+        formData.append('is_preview', 'true')
+      }
+
       const response = await fetch(`${apiUrl}/api/v1/chat/${chatbotId}/message`, {
         method: 'POST',
         body: formData

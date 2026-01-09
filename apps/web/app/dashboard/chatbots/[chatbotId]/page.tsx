@@ -66,6 +66,9 @@ import { apiRequestWithAuth } from '@/lib/api'
 import { getAccessToken } from '@/lib/auth'
 import { cn } from '@/lib/utils'
 import { ChatbotWidgetPreview } from '@/components/chatbot/WidgetPreview'
+import { ChatbotTeamSettings } from '@/components/dashboard/ChatbotTeamSettings'
+import { CrawlSourcePanel } from '@/components/dashboard/CrawlSourcePanel'
+import { ChevronDown, ChevronUp, MoreHorizontal } from 'lucide-react'
 
 interface ChatbotDetail {
   id: string
@@ -121,11 +124,21 @@ interface RecentActivity {
   created_at: string
 }
 
+interface KnowledgeSourceBreakdown {
+  total_crawled_urls: number
+  total_uploaded_files: number
+  total_qa_pairs: number
+  total_crawled_pages: number
+  total_file_size: number
+  total_qa_count: number
+}
+
 interface ChatbotStats {
   total_conversations: number
   total_knowledge_sources: number
   active_knowledge_sources: number
   total_kb_size: number
+  knowledge_breakdown: KnowledgeSourceBreakdown
   recent_activity: RecentActivity[]
 }
 
@@ -357,11 +370,11 @@ export default function ChatbotDetailPage() {
     }
   }
 
-  const fetchKnowledgeSources = async (showLoading = true) => {
+  const fetchKnowledgeSources = async (showLoading = true): Promise<KnowledgeSource[] | null> => {
     try {
       if (showLoading) setIsLoadingKnowledge(true)
       const token = getAccessToken()
-      if (!token) return
+      if (!token) return null
 
       const response = await apiRequestWithAuth<KnowledgeSource[]>(
         `/api/v1/chatbots/${chatbotId}/knowledge-sources`,
@@ -369,8 +382,10 @@ export default function ChatbotDetailPage() {
         { method: 'GET' }
       )
       setKnowledgeSources(response)
+      return response
     } catch (err) {
       console.error('Failed to fetch knowledge sources:', err)
+      return null
     } finally {
       if (showLoading) setIsLoadingKnowledge(false)
     }
@@ -429,7 +444,8 @@ export default function ChatbotDetailPage() {
       const token = getAccessToken()
       if (!token) return
 
-      await apiRequestWithAuth(
+      // Get the response which includes the new knowledge source
+      const newSource = await apiRequestWithAuth<KnowledgeSource>(
         `/api/v1/chatbots/${chatbotId}/crawl`,
         token,
         {
@@ -438,11 +454,27 @@ export default function ChatbotDetailPage() {
         }
       )
       
+      // Optimistically add the new source to the state immediately
+      setKnowledgeSources(prev => {
+        // Check if it already exists (avoid duplicates)
+        const exists = prev.some(s => s.id === newSource.id)
+        if (exists) {
+          // Update existing source
+          return prev.map(s => s.id === newSource.id ? newSource : s)
+        }
+        // Add new source
+        return [...prev, newSource]
+      })
+      
       setNewUrl('')
       setIsAddKnowledgeOpen(false)
       // Enable polling only when we manually start a crawl
       setManuallyStartedCrawl(true)
-      fetchKnowledgeSources()
+      
+      // Refresh to get the latest data (including pages as they're crawled)
+      await fetchKnowledgeSources()
+      // Refresh stats after adding knowledge source
+      fetchChatbotStats()
     } catch (err: any) {
       alert(err.message || 'Failed to start crawl')
     } finally {
@@ -483,7 +515,9 @@ export default function ChatbotDetailPage() {
       
       setUploadFiles(null)
       setIsAddKnowledgeOpen(false)
-      fetchKnowledgeSources()
+      await fetchKnowledgeSources()
+      // Refresh stats after uploading files
+      fetchChatbotStats()
     } catch (err: any) {
       alert(err.message || 'Failed to upload files')
     } finally {
@@ -519,8 +553,10 @@ export default function ChatbotDetailPage() {
       
       setNewQA({ question: '', answer: '' })
       setEditingQA(null)
-      fetchQAPairs()
-      fetchKnowledgeSources()
+      await fetchQAPairs()
+      await fetchKnowledgeSources()
+      // Refresh stats after adding QA
+      fetchChatbotStats()
     } catch (err: any) {
       alert(err.message || 'Failed to save QA pair')
     }
@@ -565,7 +601,10 @@ export default function ChatbotDetailPage() {
       const token = getAccessToken()
       if (!token) return
       await apiRequestWithAuth(`/api/v1/chatbots/qa/${qaId}`, token, { method: 'DELETE' })
-      fetchQAPairs()
+      await fetchQAPairs()
+      await fetchKnowledgeSources()
+      // Refresh stats after deleting QA
+      fetchChatbotStats()
     } catch (err: any) {
       alert(err.message || 'Failed to delete QA')
     }
@@ -584,7 +623,9 @@ export default function ChatbotDetailPage() {
         { method: 'DELETE' }
       )
       
-      fetchKnowledgeSources()
+      await fetchKnowledgeSources()
+      // Refresh stats after deleting source
+      fetchChatbotStats()
     } catch (err: any) {
       alert(err.message || 'Failed to delete source')
     }
@@ -596,7 +637,34 @@ export default function ChatbotDetailPage() {
       const token = getAccessToken()
       if (!token) return
       await apiRequestWithAuth(`/api/v1/chatbots/pages/${pageId}`, token, { method: 'DELETE' })
-      fetchKnowledgeSources()
+      
+      // Refresh knowledge sources and check for empty crawl sources
+      const updatedSources = await fetchKnowledgeSources()
+      if (updatedSources) {
+        const crawlSources = updatedSources.filter(s => s.source_type === 'crawled_url')
+        const emptyCrawlSources = crawlSources.filter(source => {
+          return !source.pages || source.pages.length === 0
+        })
+        
+        // Delete empty crawl sources
+        if (emptyCrawlSources.length > 0) {
+          for (const source of emptyCrawlSources) {
+            try {
+              await apiRequestWithAuth(
+                `/api/v1/chatbots/knowledge-sources/${source.id}`,
+                token,
+                { method: 'DELETE' }
+              )
+            } catch (err) {
+              console.error(`Failed to delete empty crawl source ${source.id}:`, err)
+            }
+          }
+          // Refresh again after deleting empty sources
+          await fetchKnowledgeSources()
+        }
+      }
+      // Refresh stats after deleting page
+      fetchChatbotStats()
     } catch (err: any) {
       alert(err.message || 'Failed to delete page')
     }
@@ -627,8 +695,48 @@ export default function ChatbotDetailPage() {
       else if (type === 'files') setSelectedFiles([])
       else if (type === 'qa') setSelectedQAs([])
 
-      fetchKnowledgeSources()
-      if (type === 'qa') fetchQAPairs()
+      // Refresh knowledge sources to get updated state
+      const updatedSources = await fetchKnowledgeSources()
+      
+      // If pages were deleted, check for empty crawl sources and delete them
+      if (type === 'pages' && updatedSources) {
+        // Find crawl sources with no pages
+        const crawlSources = updatedSources.filter(s => s.source_type === 'crawled_url')
+        const emptyCrawlSources = crawlSources.filter(source => {
+          // Check if source has any pages
+          return !source.pages || source.pages.length === 0
+        })
+        
+        // Delete empty crawl sources
+        if (emptyCrawlSources.length > 0) {
+          for (const source of emptyCrawlSources) {
+            try {
+              await apiRequestWithAuth(
+                `/api/v1/chatbots/knowledge-sources/${source.id}`,
+                token,
+                { method: 'DELETE' }
+              )
+            } catch (err) {
+              console.error(`Failed to delete empty crawl source ${source.id}:`, err)
+            }
+          }
+          // Refresh again after deleting empty sources
+          await fetchKnowledgeSources()
+        }
+        // Refresh stats after deleting pages
+        fetchChatbotStats()
+      }
+      
+      if (type === 'qa') {
+        await fetchQAPairs()
+        // Refresh stats after deleting QA
+        fetchChatbotStats()
+      }
+      
+      if (type === 'files') {
+        // Refresh stats after deleting files
+        fetchChatbotStats()
+      }
     } catch (err: any) {
       alert(err.message || 'Bulk delete failed')
     } finally {
@@ -796,6 +904,15 @@ export default function ChatbotDetailPage() {
     (s.pages || []).map(p => ({ ...p, status: s.status, source_url: s.source_url }))
   )
 
+  // Show crawl sources that are actively crawling or have pages
+  // This ensures newly added crawl URLs appear immediately even with 0 pages
+  const crawlSourcesWithPages = crawlSources.filter(s => {
+    const pages = s.pages || []
+    const status = s.status?.toLowerCase()
+    // Show if: has pages, OR is pending/crawling (active), OR has pages_found > 0
+    return pages.length > 0 || s.pages_found > 0 || status === 'pending' || status === 'crawling'
+  })
+
   return (
     <div className="space-y-6">
       {/* Header - Reduced Width */}
@@ -844,10 +961,6 @@ export default function ChatbotDetailPage() {
             <Code className="h-4 w-4" />
             <span className="hidden sm:inline">Install</span>
           </TabsTrigger>
-          <TabsTrigger value="members" className="flex items-center gap-2" onClick={() => router.push(`/dashboard/chatbots/${chatbotId}/settings/members`)}>
-            <Users className="h-4 w-4" />
-            <span className="hidden sm:inline">Team</span>
-          </TabsTrigger>
           <TabsTrigger value="settings" className="flex items-center gap-2">
             <Settings className="h-4 w-4" />
             <span className="hidden sm:inline">Settings</span>
@@ -886,7 +999,7 @@ export default function ChatbotDetailPage() {
               <CardContent>
                 <div className="text-2xl font-bold">{stats?.total_knowledge_sources || 0}</div>
                 <p className="text-xs text-muted-foreground">
-                  {stats?.active_knowledge_sources || 0} sources active
+                  {stats?.knowledge_breakdown?.total_crawled_urls || 0} crawl sites • {stats?.knowledge_breakdown?.total_uploaded_files || 0} files • {stats?.knowledge_breakdown?.total_qa_pairs || 0} Q&A
                 </p>
               </CardContent>
             </Card>
@@ -900,7 +1013,10 @@ export default function ChatbotDetailPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {stats?.total_kb_size ? (stats.total_kb_size / 1024).toFixed(1) : '0.0'} KB
+                  {stats?.total_kb_size ? (stats.total_kb_size >= 1024 * 1024 
+                    ? `${(stats.total_kb_size / (1024 * 1024)).toFixed(2)} MB`
+                    : `${(stats.total_kb_size / 1024).toFixed(1)} KB`
+                  ) : '0.0 KB'}
                 </div>
                 <p className="text-xs text-muted-foreground">
                   Total indexed content
@@ -908,6 +1024,7 @@ export default function ChatbotDetailPage() {
               </CardContent>
             </Card>
           </div>
+
 
           {/* Quick Actions */}
           <Card>
@@ -1186,84 +1303,32 @@ export default function ChatbotDetailPage() {
                       onSync={() => { /* refresh if needed */ }}
                     />
                   )}
-                  {crawlSources.length > 0 && (
-                    <div className="space-y-2 mb-4">
-                      {/* Filter crawl sources to only show unique URLs for scheduling */}
-                      {Array.from(new Map(crawlSources.map(ks => [ks.source_url, ks])).values()).map((ks) => (
-                        <div key={ks.id} className="flex items-center justify-between p-3 border rounded-md">
-                          <div className="text-sm font-medium">{ks.source_url}</div>
-                          <Button size="sm" variant="outline" onClick={() => {
+                  {crawlSourcesWithPages.length > 0 ? (
+                    <div className="space-y-4">
+                      {Array.from(new Map(crawlSourcesWithPages.map(ks => [ks.source_url, ks])).values()).map((ks) => (
+                        <CrawlSourcePanel
+                          key={ks.id}
+                          source={ks}
+                          pages={allCrawledPages.filter(p => p.source_url === ks.source_url)}
+                          selectedPages={selectedPages}
+                          onSelectionChange={setSelectedPages}
+                          onSchedule={() => {
                             setSelectedCrawlSource(ks)
                             setIsCrawlScheduleOpen(true)
-                          }}>
-                            Schedule
-                          </Button>
-                        </div>
+                          }}
+                          onDeleteSelected={() => handleBulkDelete('pages')}
+                          isBulkDeleting={isBulkDeleting}
+                        />
                       ))}
                     </div>
+                  ) : (
+                    <div className="text-center py-12 border-2 border-dashed rounded-xl">
+                      <Globe className="h-12 w-12 mx-auto text-gray-300 mb-3" />
+                      <p className="text-gray-500">No crawled pages found</p>
+                      <Button variant="link" onClick={() => {setKnowledgeType('url'); setIsAddKnowledgeOpen(true)}}>Add website URL</Button>
+                    </div>
                   )}
-                      {allCrawledPages.length > 0 && (
-                        <div className="flex items-center justify-between bg-muted/20 p-2 rounded-md mb-2">
-                          <div className="flex items-center gap-2">
-                            <Checkbox 
-                              checked={selectedPages.length === allCrawledPages.length && allCrawledPages.length > 0}
-                              onCheckedChange={(checked: boolean) => {
-                                if (checked) setSelectedPages(allCrawledPages.map(p => p.id))
-                                else setSelectedPages([])
-                              }}
-                            />
-                            <span className="text-sm font-medium">Select All</span>
-                          </div>
-                          {selectedPages.length > 0 && (
-                            <Button 
-                              variant="destructive" 
-                              size="sm" 
-                              onClick={() => handleBulkDelete('pages')}
-                              disabled={isBulkDeleting}
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Delete {selectedPages.length}
-                            </Button>
-                          )}
-                        </div>
-                      )}
-                      
-                      {allCrawledPages.length > 0 ? (
-                        <div className="space-y-2">
-                          {allCrawledPages.map((page) => (
-                            <div 
-                              key={page.id} 
-                              className={`flex items-center justify-between p-3 border rounded-lg hover:bg-muted/5 transition-colors ${selectedPages.includes(page.id) ? 'bg-blue-50/30 border-blue-200' : ''}`}
-                            >
-                              <div className="flex items-center gap-3 overflow-hidden">
-                                <Checkbox 
-                                  checked={selectedPages.includes(page.id)}
-                                  onCheckedChange={(checked: boolean) => {
-                                    if (checked) setSelectedPages([...selectedPages, page.id])
-                                    else setSelectedPages(selectedPages.filter(id => id !== page.id))
-                                  }}
-                                />
-                                <div className="overflow-hidden">
-                                  <div className="font-medium text-sm truncate">{page.title || page.url}</div>
-                                  <div className="text-xs text-muted-foreground truncate">{page.url}</div>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-2 shrink-0">
-                                <Badge variant={page.status === 'completed' ? 'success' : 'secondary'} className="text-[10px] px-1 h-4">
-                                  {page.status}
-                                </Badge>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="text-center py-12 border-2 border-dashed rounded-xl">
-                          <Globe className="h-12 w-12 mx-auto text-gray-300 mb-3" />
-                          <p className="text-gray-500">No crawled pages found</p>
-                          <Button variant="link" onClick={() => {setKnowledgeType('url'); setIsAddKnowledgeOpen(true)}}>Add website URL</Button>
-                        </div>
-                      )}
-                    </TabsContent>
+                </TabsContent>
 
                     {/* Files Tab Content */}
                     <TabsContent value="files" className="space-y-4">
@@ -1324,6 +1389,15 @@ export default function ChatbotDetailPage() {
                                 <Badge variant={source.status === 'completed' ? 'success' : 'secondary'} className="text-[10px] px-1 h-4">
                                   {source.status}
                                 </Badge>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                  onClick={() => handleDeleteSource(source.id)}
+                                  title="Delete file"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
                               </div>
                             </div>
                           ))}
@@ -1401,8 +1475,18 @@ export default function ChatbotDetailPage() {
                                       setIsAddKnowledgeOpen(true);
                                       window.scrollTo({ top: 0, behavior: 'smooth' });
                                     }}
+                                    title="Edit QA pair"
                                   >
                                     <Edit2 className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                    onClick={() => handleDeleteQA(qa.id)}
+                                    title="Delete QA pair"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
                                   </Button>
                                 </div>
                               </div>
@@ -2014,9 +2098,14 @@ export default function ChatbotDetailPage() {
           </Card>
         </TabsContent>
 
-        {/* Settings Tab */}
         <TabsContent value="settings" className="space-y-6">
-          <Card>
+          <Tabs defaultValue="general" className="w-full">
+            <TabsList className="w-full justify-start border-b rounded-none h-auto p-0 bg-transparent mb-6">
+              <TabsTrigger value="general" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-2">General</TabsTrigger>
+              <TabsTrigger value="team" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-2">Team</TabsTrigger>
+            </TabsList>
+            <TabsContent value="general" className="space-y-6">
+              <Card>
             <CardHeader>
               <CardTitle>Chatbot Settings</CardTitle>
               <CardDescription>
@@ -2136,6 +2225,11 @@ export default function ChatbotDetailPage() {
               </CardContent>
             </Card>
           )}
+            </TabsContent>
+            <TabsContent value="team" className="space-y-6">
+              <ChatbotTeamSettings chatbotId={chatbotId} />
+            </TabsContent>
+          </Tabs>
         </TabsContent>
       </Tabs>
     </div>

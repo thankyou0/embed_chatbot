@@ -20,7 +20,7 @@ from app.schemas.chatbot import (
     ChatbotStatsResponse,
     AnalyticsOverviewResponse,
 )
-from app.schemas.analytics import UnansweredQueriesResponse
+from app.schemas.analytics import UnansweredQueriesResponse, ResolveQueriesRequest
 from app.schemas.appearance import (
     ChatbotAppearanceResponse,
     ChatbotAppearanceUpdate,
@@ -608,5 +608,23 @@ async def get_unanswered_queries(
         user=current_user,
         period=period,
         limit=limit
+    )
+
+
+@router.post("/{chatbot_id}/analytics/unanswered/resolve", status_code=204)
+async def resolve_unanswered_queries(
+    chatbot_id: UUID,
+    request: ResolveQueriesRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    current_tenant: Tenant = Depends(get_current_tenant),
+):
+    """Mark unanswered queries as resolved"""
+    await AnalyticsService.resolve_queries(
+        db=db,
+        tenant_id=current_tenant.id,
+        chatbot_id=chatbot_id,
+        user=current_user,
+        query_texts=request.queries
     )
 

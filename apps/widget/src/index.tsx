@@ -6,6 +6,7 @@ export interface ChatbotConfig {
   apiUrl?: string
   chatbotId?: string
   tenantId?: string // Deprecated, use chatbotId
+  isPreview?: boolean
   theme?: {
     primaryColor?: string
     position?: 'bottom-right' | 'bottom-left'
@@ -27,6 +28,7 @@ if (typeof window !== 'undefined') {
     const config: ChatbotConfig = {
       apiUrl: script.dataset.apiUrl,
       chatbotId: script.dataset.chatbotId || script.dataset.tenantId,
+      isPreview: script.dataset.isPreview === 'true'
     }
     initChatbot(config)
   }

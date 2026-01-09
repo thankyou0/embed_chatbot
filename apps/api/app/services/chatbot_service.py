@@ -28,6 +28,7 @@ from app.schemas.chatbot import (
     PermissionResponse,
     PermissionListResponse,
     ChatbotStatsResponse,
+    KnowledgeSourceBreakdown,
     RecentActivity,
     AnalyticsOverviewResponse,
 )
@@ -58,7 +59,7 @@ from app.services.embedding_service import EmbeddingService
 from app.services.scheduler_service import SchedulerService
 from app.core.database import get_session_factory
 from fastapi import BackgroundTasks, UploadFile
-from sqlalchemy import select, update, delete, func
+from sqlalchemy import select, update, delete, func, text, bindparam
 from sqlalchemy.orm import selectinload
 import os
 import io
@@ -496,6 +497,7 @@ class ChatbotService:
             granted_by=permission.granted_by,
             created_at=permission.created_at,
             user_email=target_user.email,
+            user_username=target_user.username,
             user_name=target_user.name,
         )
     
@@ -548,6 +550,7 @@ class ChatbotService:
                 granted_by=perm.granted_by,
                 created_at=perm.created_at,
                 user_email=target_user.email,
+                user_username=target_user.username,
                 user_name=target_user.name,
             )
             for perm, target_user in rows
@@ -1161,18 +1164,29 @@ class ChatbotService:
             except Exception as e:
                 logger.error(f"Failed to delete file from disk: {file_record.file_path} - {e}")
 
-        # 4. Delete from database (cascade will handle pages, embeddings, files)
+        # 4. Explicitly delete all embeddings for this knowledge source
+        # (CASCADE should handle this, but being explicit ensures it works)
+        await db.execute(delete(Embedding).where(Embedding.knowledge_source_id == ks_id))
+        
+        # 5. Delete crawl-related records (CrawlHistory, CrawlSchedule) to avoid FK constraint
+        await db.execute(delete(CrawlHistory).where(CrawlHistory.knowledge_source_id == ks_id))
+        await db.execute(delete(CrawlSchedule).where(CrawlSchedule.knowledge_source_id == ks_id))
+        
+        # 6. Delete from database (cascade will handle pages, files, qa_pairs)
         await db.execute(delete(KnowledgeSource).where(KnowledgeSource.id == ks_id))
         await db.commit()
-        logger.success(f"Deleted knowledge source {ks_id}")
+        logger.success(f"Deleted knowledge source {ks_id} and all associated embeddings")
 
     @staticmethod
-    async def delete_crawled_page(
+    async def _delete_crawled_page_internal(
         db: AsyncSession,
         page_id: UUID,
-        user: User
-    ) -> None:
-        """Delete an individual crawled page and its embeddings"""
+        user: User,
+        commit: bool = True
+    ) -> Optional[UUID]:
+        """Internal method to delete a crawled page and its embeddings.
+        Returns the knowledge_source_id if the page was deleted, None otherwise.
+        If commit is False, the caller is responsible for committing."""
         
         # 1. Find page
         stmt = select(CrawledPage).where(CrawledPage.id == page_id)
@@ -1191,11 +1205,16 @@ class ChatbotService:
         if not await ChatbotService.has_permission(db, ks.chatbot_id, user, "can_manage_knowledge"):
             raise ForbiddenError("Insufficient permissions to delete page")
 
-        # 4. Delete associated embeddings
-        await db.execute(delete(Embedding).where(
-            Embedding.knowledge_source_id == ks.id,
-            Embedding.metadata_json['page_id'].as_string() == str(page_id)
-        ))
+        # 4. Delete associated embeddings (metadata contains 'url' field, not 'page_id')
+        # Use JSONB operator to find embeddings with matching URL
+        # Escape single quotes in URL for SQL safety
+        escaped_url = page.url.replace("'", "''")
+        await db.execute(
+            delete(Embedding).where(
+                Embedding.knowledge_source_id == ks.id,
+                text(f"metadata_json->>'url' = '{escaped_url}'")
+            )
+        )
 
         # 5. Delete page
         await db.delete(page)
@@ -1203,8 +1222,54 @@ class ChatbotService:
         # 6. Update pages_found count in KnowledgeSource
         ks.pages_found = max(0, ks.pages_found - 1)
         
-        await db.commit()
+        if commit:
+            await db.commit()
+        
         logger.success(f"Deleted crawled page {page_id}")
+        return ks.id
+
+    @staticmethod
+    async def delete_crawled_page(
+        db: AsyncSession,
+        page_id: UUID,
+        user: User
+    ) -> None:
+        """Delete an individual crawled page and its embeddings"""
+        try:
+            ks_id = await ChatbotService._delete_crawled_page_internal(db, page_id, user, commit=False)
+            await db.commit()
+            
+            # Check if knowledge source is now empty and delete it if it's a crawl source
+            if ks_id:
+                try:
+                    # Check if knowledge source has any pages left
+                    stmt = select(func.count(CrawledPage.id)).where(
+                        CrawledPage.knowledge_source_id == ks_id
+                    )
+                    page_count = (await db.execute(stmt)).scalar() or 0
+                    
+                    if page_count == 0:
+                        # Get the knowledge source to check its type
+                        stmt = select(KnowledgeSource).where(KnowledgeSource.id == ks_id)
+                        ks = (await db.execute(stmt)).scalar_one_or_none()
+                        
+                        # Only delete CRAWLED_URL sources that are empty
+                        if ks and ks.source_type == KnowledgeSourceType.CRAWLED_URL:
+                            # Delete embeddings first
+                            await db.execute(delete(Embedding).where(Embedding.knowledge_source_id == ks_id))
+                            # Delete crawl-related records to avoid FK constraint
+                            await db.execute(delete(CrawlHistory).where(CrawlHistory.knowledge_source_id == ks_id))
+                            await db.execute(delete(CrawlSchedule).where(CrawlSchedule.knowledge_source_id == ks_id))
+                            # Delete knowledge source
+                            await db.execute(delete(KnowledgeSource).where(KnowledgeSource.id == ks_id))
+                            await db.commit()
+                            logger.info(f"Deleted empty crawl knowledge source {ks_id}")
+                except Exception as e:
+                    logger.error(f"Failed to check/delete empty knowledge source {ks_id}: {e}")
+                    # Don't fail the whole operation if this check fails
+        except Exception as e:
+            await db.rollback()
+            raise
 
     @staticmethod
     async def bulk_delete_knowledge_sources(
@@ -1242,13 +1307,96 @@ class ChatbotService:
         page_ids: List[UUID],
         user: User
     ) -> None:
-        """Bulk delete individual pages"""
-        for page_id in page_ids:
-            try:
-                await ChatbotService.delete_crawled_page(db, page_id, user)
-            except Exception as e:
-                logger.error(f"Failed to delete page {page_id}: {e}")
-        await db.commit()
+        """Bulk delete individual pages in a single transaction"""
+        if not page_ids:
+            return
+        
+        # Track knowledge sources that might become empty
+        affected_ks_ids = set()
+        deleted_count = 0
+        
+        try:
+            for page_id in page_ids:
+                try:
+                    ks_id = await ChatbotService._delete_crawled_page_internal(
+                        db, page_id, user, commit=False
+                    )
+                    if ks_id:
+                        affected_ks_ids.add(ks_id)
+                        deleted_count += 1
+                except NotFoundError:
+                    # Page already deleted or doesn't exist, skip
+                    logger.warning(f"Page {page_id} not found, skipping")
+                    continue
+                except Exception as e:
+                    logger.error(f"Failed to delete page {page_id}: {e}")
+                    # Continue with other pages
+            
+            # Commit all deletions at once
+            await db.commit()
+            
+            # Check for empty knowledge sources and delete them
+            if affected_ks_ids:
+                empty_ks_to_delete = []
+                for ks_id in affected_ks_ids:
+                    try:
+                        # Check if knowledge source has any pages left
+                        stmt = select(func.count(CrawledPage.id)).where(
+                            CrawledPage.knowledge_source_id == ks_id
+                        )
+                        page_count = (await db.execute(stmt)).scalar() or 0
+                        
+                        if page_count == 0:
+                            # Get the knowledge source to check its type
+                            stmt = select(KnowledgeSource).where(KnowledgeSource.id == ks_id)
+                            ks = (await db.execute(stmt)).scalar_one_or_none()
+                            
+                            # Only delete CRAWLED_URL sources that are empty
+                            # (UPLOADED_FILE and QA_PAIR sources have different content)
+                            if ks and ks.source_type == KnowledgeSourceType.CRAWLED_URL:
+                                empty_ks_to_delete.append(ks_id)
+                    except Exception as e:
+                        logger.error(f"Failed to check empty knowledge source {ks_id}: {e}")
+                
+                # Delete all empty crawl sources in one go
+                if empty_ks_to_delete:
+                    try:
+                        # Delete embeddings first
+                        await db.execute(
+                            delete(Embedding).where(
+                                Embedding.knowledge_source_id.in_(empty_ks_to_delete)
+                            )
+                        )
+                        # Delete crawl-related records to avoid FK constraint
+                        await db.execute(
+                            delete(CrawlHistory).where(
+                                CrawlHistory.knowledge_source_id.in_(empty_ks_to_delete)
+                            )
+                        )
+                        await db.execute(
+                            delete(CrawlSchedule).where(
+                                CrawlSchedule.knowledge_source_id.in_(empty_ks_to_delete)
+                            )
+                        )
+                        # Delete knowledge sources
+                        await db.execute(
+                            delete(KnowledgeSource).where(
+                                KnowledgeSource.id.in_(empty_ks_to_delete)
+                            )
+                        )
+                        logger.info(f"Deleted {len(empty_ks_to_delete)} empty crawl knowledge source(s)")
+                    except Exception as e:
+                        logger.error(f"Failed to delete empty knowledge sources: {e}")
+                
+                # Commit knowledge source deletions
+                await db.commit()
+            
+            logger.success(f"Bulk deleted {deleted_count} pages")
+            
+        except Exception as e:
+            await db.rollback()
+            logger.error(f"Error in bulk_delete_pages: {e}")
+            raise
 
     # ============== QA Pair Management ==============
 
@@ -1437,20 +1585,23 @@ class ChatbotService:
         if not qa: raise NotFoundError("QA pair not found")
         
         ks_id = qa.knowledge_source_id
+        
+        # Delete the specific embedding for this QA pair
+        # Embedding metadata contains "qa_id" as a string
+        # Use JSONB contains operator: metadata_json->>'qa_id' = 'qa_id_string'
+        qa_id_str = str(qa_id)
+        await db.execute(
+            delete(Embedding).where(
+                Embedding.knowledge_source_id == ks_id,
+                text(f"metadata_json->>'qa_id' = '{qa_id_str}'")
+            )
+        )
+        
+        # Delete the QA pair
         await db.delete(qa)
         await db.commit()
         
-        # We also need to delete the specific embedding for this QA
-        # Instead of re-embedding everything (slow), let's just delete the embedding record
-        # Embedding metadata contains "qa_id"
-        # However, for simplicity and consistency, let's just re-embed the source in background if it has many pairs
-        # Or just delete the embedding directly.
-        
-        await db.execute(delete(Embedding).where(
-            Embedding.knowledge_source_id == ks_id,
-            Embedding.metadata_json['qa_id'].as_string() == str(qa_id)
-        ))
-        await db.commit()
+        logger.success(f"Deleted QA pair {qa_id} and its embedding")
 
     @staticmethod
     async def get_overview_stats(
@@ -1464,11 +1615,14 @@ class ChatbotService:
         if not await ChatbotService.has_permission(db, chatbot_id, user, "can_view_analytics"):
             raise ForbiddenError("Insufficient permissions to view stats")
 
-        # 1. Total Conversations (Sessions with actual messages)
+        # 1. Total Conversations (Sessions with actual messages, excluding previews)
         # Only count sessions that have at least one user message
         sessions_with_messages_stmt = select(func.count(func.distinct(ChatMessage.session_id))).where(
             ChatMessage.session_id.in_(
-                select(ChatSession.id).where(ChatSession.chatbot_id == chatbot_id)
+                select(ChatSession.id).where(
+                    ChatSession.chatbot_id == chatbot_id,
+                    ChatSession.is_preview == False
+                )
             )
         ).where(ChatMessage.role == MessageRole.USER)
         sessions_count = (await db.execute(sessions_with_messages_stmt)).scalar() or 0
@@ -1481,31 +1635,47 @@ class ChatbotService:
         total_ks = len(ks_list)
         active_ks = len([ks for ks in ks_list if ks.status == KnowledgeSourceStatus.COMPLETED])
 
-        # 2.5. Calculate total knowledge base size
+        # 2.5. Calculate detailed breakdown and total knowledge base size
         total_kb_size = 0
+        breakdown = {
+            'total_crawled_urls': 0,
+            'total_uploaded_files': 0,
+            'total_qa_pairs': 0,
+            'total_crawled_pages': 0,
+            'total_file_size': 0,
+            'total_qa_count': 0
+        }
 
         if ks_list:
             ks_ids = [ks.id for ks in ks_list]
+            
+            # Count by source type
+            breakdown['total_crawled_urls'] = len([ks for ks in ks_list if ks.source_type == KnowledgeSourceType.CRAWLED_URL])
+            breakdown['total_uploaded_files'] = len([ks for ks in ks_list if ks.source_type == KnowledgeSourceType.UPLOADED_FILE])
+            breakdown['total_qa_pairs'] = len([ks for ks in ks_list if ks.source_type == KnowledgeSourceType.QA_PAIR])
             
             # Sum uploaded file sizes
             uploaded_files_stmt = select(func.sum(UploadedFile.file_size)).where(
                 UploadedFile.knowledge_source_id.in_(ks_ids)
             )
             uploaded_size = (await db.execute(uploaded_files_stmt)).scalar() or 0
+            breakdown['total_file_size'] = uploaded_size
             total_kb_size += uploaded_size
 
-            # Estimate crawled content size (average ~2KB per page)
+            # Count and estimate crawled content size (average ~2KB per page)
             crawled_pages_stmt = select(func.count(CrawledPage.id)).where(
                 CrawledPage.knowledge_source_id.in_(ks_ids)
             )
             crawled_pages_count = (await db.execute(crawled_pages_stmt)).scalar() or 0
+            breakdown['total_crawled_pages'] = crawled_pages_count
             total_kb_size += crawled_pages_count * 2000  # Estimate 2KB per page
 
-            # Estimate QA pairs size (average ~500 bytes per pair)
+            # Count and estimate QA pairs size (average ~500 bytes per pair)
             qa_pairs_stmt = select(func.count(QAPair.id)).where(
                 QAPair.knowledge_source_id.in_(ks_ids)
             )
             qa_pairs_count = (await db.execute(qa_pairs_stmt)).scalar() or 0
+            breakdown['total_qa_count'] = qa_pairs_count
             total_kb_size += qa_pairs_count * 500  # Estimate 500 bytes per QA pair
 
         # 3. Recent Activity (Knowledge additions and Status changes)
@@ -1531,6 +1701,7 @@ class ChatbotService:
             total_knowledge_sources=total_ks,
             active_knowledge_sources=active_ks,
             total_kb_size=total_kb_size,
+            knowledge_breakdown=KnowledgeSourceBreakdown(**breakdown),
             recent_activity=activity[:10]
         )
 
@@ -1545,7 +1716,7 @@ class ChatbotService:
         # For now, we'll aggregate from chat_sessions and chat_messages
         # In a real app, you'd have an analytics_events table
         
-        query = select(ChatSession)
+        query = select(ChatSession).where(ChatSession.is_preview == False)
         if chatbot_id:
             # Verify access to specific chatbot
             await ChatbotService.get_chatbot(db, tenant_id, chatbot_id, user)

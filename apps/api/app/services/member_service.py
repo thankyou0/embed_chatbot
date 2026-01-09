@@ -48,6 +48,12 @@ class MemberService:
         if existing_user:
             raise BadRequestError("Email already registered")
         
+        # Check if username already exists
+        result = await db.execute(select(User).where(User.username == request.username))
+        existing_username = result.scalar_one_or_none()
+        if existing_username:
+            raise BadRequestError("Username already taken")
+        
         # Calculate password expiration
         password_expires_at = datetime.now(timezone.utc) + timedelta(hours=request.password_expiry_hours)
         
@@ -55,6 +61,7 @@ class MemberService:
         member = User(
             tenant_id=tenant_id,
             email=request.email,
+            username=request.username,
             password_hash=get_password_hash(request.password),
             name=request.name,
             role=request.role,
@@ -111,6 +118,7 @@ class MemberService:
             id=member.id,
             tenant_id=member.tenant_id,
             email=member.email,
+            username=member.username,
             name=member.name,
             role=member.role,
             is_active=member.is_active,

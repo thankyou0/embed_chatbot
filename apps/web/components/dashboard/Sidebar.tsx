@@ -135,9 +135,9 @@ export function Sidebar() {
                           <UserIcon className="h-4 w-4 text-primary-foreground" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">{user.email}</p>
-                          <p className="text-xs text-muted-foreground capitalize truncate">
-                            {user.role}
+                          <p className="text-sm font-medium truncate">@{user.username}</p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {user.email}
                           </p>
                         </div>
                       </div>

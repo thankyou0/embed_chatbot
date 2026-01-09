@@ -16,6 +16,7 @@ import Link from 'next/link'
 const signupSchema = z.object({
   tenant_name: z.string().min(2, 'Company name must be at least 2 characters'),
   email: z.string().email('Invalid email address'),
+  username: z.string().min(3, 'Username must be at least 3 characters').regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers and underscores'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
 })
 
@@ -87,6 +88,19 @@ export default function SignupPage() {
               />
               {errors.email && (
                 <p className="text-sm text-destructive">{errors.email.message}</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="username">Username</Label>
+              <Input
+                id="username"
+                type="text"
+                placeholder="johndoe"
+                {...register('username')}
+                disabled={isSubmitting}
+              />
+              {errors.username && (
+                <p className="text-sm text-destructive">{errors.username.message}</p>
               )}
             </div>
             <div className="space-y-2">

@@ -7,6 +7,7 @@ from app.schemas.tenant import TenantResponse
 class SignupRequest(BaseModel):
     tenant_name: str
     email: EmailStr
+    username: str
     password: str
     name: Optional[str] = None
 

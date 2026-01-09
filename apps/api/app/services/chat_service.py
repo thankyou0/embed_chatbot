@@ -25,7 +25,7 @@ VISION_CONFIDENCE_THRESHOLD = 0.4
 
 class ChatService:
     @staticmethod
-    async def get_or_create_session(db: AsyncSession, chatbot_id: UUID, session_id: Optional[str] = None) -> ChatSession:
+    async def get_or_create_session(db: AsyncSession, chatbot_id: UUID, session_id: Optional[str] = None, is_preview: bool = False) -> ChatSession:
         if session_id:
             try:
                 session_uuid = UUID(session_id)
@@ -38,7 +38,7 @@ class ChatService:
                 pass
         
         # Create new session if not found or invalid
-        session = ChatSession(chatbot_id=chatbot_id)
+        session = ChatSession(chatbot_id=chatbot_id, is_preview=is_preview)
         db.add(session)
         await db.commit()
         await db.refresh(session)
@@ -99,13 +99,14 @@ class ChatService:
         chatbot_id: UUID,
         message: Optional[str] = None,
         session_id: Optional[str] = None,
-        image_bytes: Optional[bytes] = None
+        image_bytes: Optional[bytes] = None,
+        is_preview: bool = False
     ) -> ChatMessageResponse:
         # Track response time
         start_time = time.time()
         
         # --- 1. Get/Create Session ---
-        session = await ChatService.get_or_create_session(db, chatbot_id, session_id)
+        session = await ChatService.get_or_create_session(db, chatbot_id, session_id, is_preview=is_preview)
         
         # --- 2. Get chatbot and history ---
         chatbot_stmt = select(Chatbot).where(Chatbot.id == chatbot_id)

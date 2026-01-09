@@ -28,13 +28,19 @@ class AuthService:
     @staticmethod
     async def signup(db: AsyncSession, request: SignupRequest) -> dict:
         """Create a new tenant and admin user"""
-        logger.info(f"Signup attempt for email: {request.email}")
+        logger.info(f"Signup attempt for email: {request.email}, username: {request.username}")
         
         # Check if email already exists
         result = await db.execute(select(User).where(User.email == request.email))
         existing_user = result.scalar_one_or_none()
         if existing_user:
             raise BadRequestError("Email already registered")
+        
+        # Check if username already exists
+        result = await db.execute(select(User).where(User.username == request.username))
+        existing_username = result.scalar_one_or_none()
+        if existing_username:
+            raise BadRequestError("Username already taken")
         
         # Check if tenant email already exists
         result = await db.execute(select(Tenant).where(Tenant.email == request.email))
@@ -54,6 +60,7 @@ class AuthService:
         user = User(
             tenant_id=tenant.id,
             email=request.email,
+            username=request.username,
             password_hash=get_password_hash(request.password),
             name=request.name,
             role=UserRole.ADMIN,

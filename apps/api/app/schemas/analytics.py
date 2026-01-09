@@ -33,3 +33,6 @@ class UnansweredQueriesResponse(BaseModel):
     queries: List[UnansweredQuery]
     total_unanswered: int
 
+
+class ResolveQueriesRequest(BaseModel):
+    queries: List[str]  # List of query texts to mark as resolved

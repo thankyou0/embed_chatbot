@@ -165,6 +165,7 @@ export function ChatbotWidgetPreview({
         if (selectedImage) {
           formData.append('image', selectedImage)
         }
+        formData.append('is_preview', 'true')
 
         const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/chat/${chatbotId}/message`, {
           method: 'POST',

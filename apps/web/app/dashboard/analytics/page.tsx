@@ -13,13 +13,16 @@ import {
   RefreshCcw,
   Download,
   TrendingUp,
-  TrendingDown
+  TrendingDown,
+  CheckSquare,
+  Square
 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Checkbox } from '@/components/ui/checkbox'
 import { apiRequestWithAuth } from '@/lib/api'
 import { getAccessToken } from '@/lib/auth'
 import { cn } from '@/lib/utils'
@@ -69,6 +72,8 @@ export default function AnalyticsPage() {
   const [chatbots, setChatbots] = useState<ChatbotOption[]>([])
   const [selectedChatbot, setSelectedChatbot] = useState<string>(chatbotIdParam || 'all')
   const [period, setPeriod] = useState<string>('30d')
+  const [selectedQueries, setSelectedQueries] = useState<string[]>([])
+  const [isResolving, setIsResolving] = useState(false)
 
   useEffect(() => {
     fetchChatbots()
@@ -172,6 +177,33 @@ export default function AnalyticsPage() {
       case '30d': return 'Last 30 days'
       case '90d': return 'Last 90 days'
       default: return 'Last 30 days'
+    }
+  }
+
+  const handleBulkResolve = async () => {
+    if (selectedQueries.length === 0 || selectedChatbot === 'all') return
+    if (!confirm(`Are you sure you want to mark ${selectedQueries.length} query/queries as resolved?`)) return
+
+    try {
+      setIsResolving(true)
+      const token = getAccessToken()
+      if (!token) return
+
+      await apiRequestWithAuth(
+        `/api/v1/chatbots/${selectedChatbot}/analytics/unanswered/resolve`,
+        token,
+        {
+          method: 'POST',
+          body: JSON.stringify({ queries: selectedQueries })
+        }
+      )
+
+      setSelectedQueries([])
+      await fetchAnalytics()
+    } catch (err: any) {
+      alert(err.message || 'Failed to resolve queries')
+    } finally {
+      setIsResolving(false)
     }
   }
 
@@ -344,21 +376,81 @@ export default function AnalyticsPage() {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    <div className="text-sm text-muted-foreground mb-4">
-                      Total unanswered: <span className="font-medium">{unansweredQueries.total_unanswered}</span>
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="text-sm text-muted-foreground">
+                        Total unanswered: <span className="font-medium">{unansweredQueries.total_unanswered}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {selectedQueries.length > 0 && (
+                          <Button 
+                            variant="default" 
+                            size="sm" 
+                            onClick={handleBulkResolve}
+                            disabled={isResolving}
+                          >
+                            {isResolving ? (
+                              <>
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                Resolving...
+                              </>
+                            ) : (
+                              <>
+                                <CheckCircle className="h-4 w-4 mr-2" />
+                                Resolve Selected ({selectedQueries.length})
+                              </>
+                            )}
+                          </Button>
+                        )}
+                      </div>
                     </div>
+                    
+                    <div className="flex items-center justify-between bg-muted/20 p-2 rounded-md mb-2">
+                      <div className="flex items-center gap-2">
+                        <Checkbox 
+                          checked={selectedQueries.length === unansweredQueries.queries.length && unansweredQueries.queries.length > 0}
+                          onCheckedChange={(checked: boolean) => {
+                            if (checked) {
+                              setSelectedQueries(unansweredQueries.queries.map(q => q.query))
+                            } else {
+                              setSelectedQueries([])
+                            }
+                          }}
+                        />
+                        <span className="text-sm font-medium">Select All</span>
+                      </div>
+                    </div>
+
                     <div className="space-y-3">
                       {unansweredQueries.queries.map((query, idx) => (
-                        <div key={idx} className="border rounded-lg p-4 space-y-2">
+                        <div 
+                          key={idx} 
+                          className={cn(
+                            "border rounded-lg p-4 space-y-2 transition-colors",
+                            selectedQueries.includes(query.query) && "bg-blue-50/30 border-blue-200"
+                          )}
+                        >
                           <div className="flex items-start justify-between gap-4">
-                            <div className="flex-1 space-y-1">
-                              <p className="font-medium">{query.query}</p>
-                              <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                                <span>Asked {query.count} times</span>
-                                <span>•</span>
-                                <span>
-                                  Last: {new Date(query.last_asked).toLocaleDateString()}
-                                </span>
+                            <div className="flex items-start gap-3 flex-1">
+                              <Checkbox 
+                                checked={selectedQueries.includes(query.query)}
+                                onCheckedChange={(checked: boolean) => {
+                                  if (checked) {
+                                    setSelectedQueries([...selectedQueries, query.query])
+                                  } else {
+                                    setSelectedQueries(selectedQueries.filter(q => q !== query.query))
+                                  }
+                                }}
+                                className="mt-1"
+                              />
+                              <div className="flex-1 space-y-1">
+                                <p className="font-medium">{query.query}</p>
+                                <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                                  <span>Asked {query.count} times</span>
+                                  <span>•</span>
+                                  <span>
+                                    Last: {new Date(query.last_asked).toLocaleDateString()}
+                                  </span>
+                                </div>
                               </div>
                             </div>
                             <Badge variant={query.avg_confidence < 0.5 ? "destructive" : "secondary"}>
