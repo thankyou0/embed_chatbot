@@ -7,30 +7,49 @@ from app.core.logging import get_logger
 
 logger = get_logger(__name__)
 
-# Create async engine
-engine = create_async_engine(
-    settings.DATABASE_URL,
-    echo=False,
-    future=True,
-)
-
-# Create async session factory
-AsyncSessionLocal = async_sessionmaker(
-    engine,
-    class_=AsyncSession,
-    expire_on_commit=False,
-    autocommit=False,
-    autoflush=False,
-)
-
 # Base class for models
 Base = declarative_base()
+
+# Global variables for engine and session
+engine = None
+AsyncSessionLocal = None
+
+
+def get_engine():
+    """Get or create the database engine"""
+    global engine
+    if engine is None:
+        # Validate DATABASE_URL before creating engine
+        if not settings.DATABASE_URL or settings.DATABASE_URL == "postgresql+asyncpg://postgres:post@localhost:5432/embed_chatbot":
+            logger.warning("DATABASE_URL not set or using default value. Database operations may fail.")
+        
+        engine = create_async_engine(
+            settings.DATABASE_URL,
+            echo=False,
+            future=True,
+        )
+    return engine
+
+
+def get_session_factory():
+    """Get or create the async session factory"""
+    global AsyncSessionLocal
+    if AsyncSessionLocal is None:
+        AsyncSessionLocal = async_sessionmaker(
+            get_engine(),
+            class_=AsyncSession,
+            expire_on_commit=False,
+            autocommit=False,
+            autoflush=False,
+        )
+    return AsyncSessionLocal
 
 
 async def check_database_connection() -> bool:
     """Test database connectivity and log the result."""
     try:
-        async with engine.connect() as conn:
+        eng = get_engine()
+        async with eng.connect() as conn:
             await conn.execute(text("SELECT 1"))
             # Extract host info from DATABASE_URL for display
             db_host = settings.DATABASE_URL.split("@")[-1].split("/")[0] if "@" in settings.DATABASE_URL else "localhost"
@@ -58,7 +77,8 @@ async def check_database_connection() -> bool:
 async def get_db() -> AsyncSession:
     """Dependency for getting database session"""
     try:
-        async with AsyncSessionLocal() as session:
+        session_factory = get_session_factory()
+        async with session_factory() as session:
             try:
                 yield session
             except Exception as e:

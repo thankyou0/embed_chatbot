@@ -185,7 +185,7 @@ export default function NewChatbotWizard() {
         <Card>
           <CardHeader>
             <CardTitle>Basic Information</CardTitle>
-            <CardDescription>Tell us about your chatbot's identity</CardDescription>
+            <CardDescription>Tell us about your chatbot&apos;s identity</CardDescription>
           </CardHeader>
           <form onSubmit={handleStep1Submit}>
             <CardContent className="space-y-4">
@@ -246,7 +246,7 @@ export default function NewChatbotWizard() {
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                We'll crawl up to 500 pages from this domain.
+                We&apos;ll crawl up to 500 pages from this domain.
               </p>
             </div>
 
@@ -305,7 +305,7 @@ export default function NewChatbotWizard() {
                 <div>
                   <h4 className="font-semibold text-gray-900">Chatbot Details</h4>
                   <p className="text-sm text-gray-600">{name}</p>
-                  <p className="text-xs text-gray-400 mt-1 italic">"{welcomeMessage}"</p>
+                  <p className="text-xs text-gray-400 mt-1 italic">&quot;{welcomeMessage}&quot;</p>
                 </div>
                 <Button variant="ghost" size="sm" onClick={() => setStep(1)}>Edit</Button>
               </div>
