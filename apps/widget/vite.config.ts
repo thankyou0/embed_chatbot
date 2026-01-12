@@ -31,6 +31,12 @@ const serveBuiltFiles = () => {
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [preact(), serveBuiltFiles()],
+  resolve: {
+    alias: {
+      'react': 'preact/compat',
+      'react-dom': 'preact/compat',
+    }
+  },
   build: {
     lib: {
       entry: 'src/index.tsx',

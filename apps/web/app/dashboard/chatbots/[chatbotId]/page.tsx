@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { useForm } from 'react-hook-form'
+import { useForm, Controller, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import {
@@ -33,11 +33,6 @@ import {
   CheckSquare,
   Square,
   Save,
-  Maximize2,
-  Minimize2,
-  ShoppingCart,
-  Search as SearchIcon,
-  Menu as MenuIcon,
   Users
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -61,7 +56,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { createPortal } from 'react-dom'
 import { apiRequestWithAuth } from '@/lib/api'
 import { getAccessToken } from '@/lib/auth'
 import { cn } from '@/lib/utils'
@@ -205,7 +199,6 @@ export default function ChatbotDetailPage() {
   const [appearanceError, setAppearanceError] = useState<string | null>(null)
   const [appearanceSuccessMessage, setAppearanceSuccessMessage] = useState<string | null>(null)
   const [newSuggestion, setNewSuggestion] = useState('')
-  const [isFullscreen, setIsFullscreen] = useState(false)
   const [embedCopyStatus, setEmbedCopyStatus] = useState<string | null>(null)
   const avatarInputRef = useRef<HTMLInputElement>(null)
 
@@ -218,37 +211,16 @@ export default function ChatbotDetailPage() {
   const [isCrawlScheduleOpen, setIsCrawlScheduleOpen] = useState(false)
   const [selectedCrawlSource, setSelectedCrawlSource] = useState<any | null>(null)
 
-  useEffect(() => {
-    if (isFullscreen) {
-      document.body.style.overflow = 'hidden'
-    } else {
-      document.body.style.overflow = 'unset'
-    }
-    return () => {
-      document.body.style.overflow = 'unset'
-    }
-  }, [isFullscreen])
-
   // Polling state - only poll when we explicitly start a crawl
   const [isPolling, setIsPolling] = useState(false)
   const [pollingStartTime, setPollingStartTime] = useState<number | null>(null)
   const MAX_POLLING_DURATION = 5 * 60 * 1000 // 5 minutes max polling
   const [manuallyStartedCrawl, setManuallyStartedCrawl] = useState(false)
 
-  useEffect(() => {
-    if (isFullscreen) {
-      document.body.style.overflow = 'hidden'
-    } else {
-      document.body.style.overflow = 'unset'
-    }
-    return () => {
-      document.body.style.overflow = 'unset'
-    }
-  }, [isFullscreen])
-
   // Appearance form setup
-  const { register, handleSubmit, watch, setValue, formState: { errors, isDirty } } = useForm<AppearanceFormData>({
+  const { register, handleSubmit, watch, setValue, control, formState: { errors, isDirty } } = useForm<AppearanceFormData>({
     resolver: zodResolver(appearanceSchema),
+    mode: 'onChange', // Enable real-time validation and updates
     defaultValues: {
       primary_color: '#3B82F6',
       header_text: 'Chat Support',
@@ -262,9 +234,33 @@ export default function ChatbotDetailPage() {
     }
   })
 
+  // Use useWatch for real-time updates - this triggers re-renders when values change
+  const watchedPrimaryColor = useWatch({ control, name: 'primary_color', defaultValue: '#3B82F6' })
+  const watchedHeaderText = useWatch({ control, name: 'header_text', defaultValue: 'Chat Support' })
+  const watchedWelcomeMessage = useWatch({ control, name: 'welcome_message', defaultValue: null })
+  const watchedAvatarUrl = useWatch({ control, name: 'avatar_url', defaultValue: null })
+  const watchedPosition = useWatch({ control, name: 'position', defaultValue: 'bottom-right' })
+  const watchedOffsetX = useWatch({ control, name: 'offset_x', defaultValue: 0 })
+  const watchedOffsetY = useWatch({ control, name: 'offset_y', defaultValue: 0 })
+  const watchedInitialSuggestions = useWatch({ control, name: 'initial_suggestions', defaultValue: [] })
+  const watchedShowBranding = useWatch({ control, name: 'show_branding', defaultValue: true })
+
+  // Create watched values object for widget preview
+  const watchedAppearanceValues = {
+    primary_color: watchedPrimaryColor ?? '#3B82F6',
+    header_text: watchedHeaderText ?? 'Chat Support',
+    welcome_message: watchedWelcomeMessage ?? null,
+    avatar_url: watchedAvatarUrl ?? null,
+    position: watchedPosition ?? 'bottom-right',
+    offset_x: watchedOffsetX ?? 0,
+    offset_y: watchedOffsetY ?? 0,
+    initial_suggestions: watchedInitialSuggestions ?? [],
+    show_branding: watchedShowBranding !== undefined ? watchedShowBranding : true,
+  }
+
   const formData = watch()
-  // Watch primary_color specifically for immediate updates
-  const primaryColor = watch('primary_color')
+  // Keep primaryColor for backward compatibility
+  const primaryColor = watchedPrimaryColor ?? watch('primary_color')
 
   useEffect(() => {
     fetchChatbotDetails()
@@ -1523,8 +1519,8 @@ export default function ChatbotDetailPage() {
           )}
 
           <form onSubmit={handleSubmit(handleAppearanceSubmit)}>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Left Column - Settings Form */}
+            <div className="max-w-4xl">
+              {/* Settings Form */}
               <div className="space-y-6">
                 {/* General Settings */}
                 <Card>
@@ -1535,10 +1531,20 @@ export default function ChatbotDetailPage() {
                   <CardContent className="space-y-4">
                     <div>
                       <Label htmlFor="header_text">Header Text</Label>
-                      <Input
-                        id="header_text"
-                        {...register('header_text')}
-                        placeholder="Chat Support"
+                      <Controller
+                        name="header_text"
+                        control={control}
+                        render={({ field }) => (
+                          <Input
+                            {...field}
+                            id="header_text"
+                            placeholder="Chat Support"
+                            onChange={(e) => {
+                              console.log('✏️ Header Text onChange:', e.target.value)
+                              field.onChange(e.target.value)
+                            }}
+                          />
+                        )}
                       />
                       {errors.header_text && (
                         <p className="text-sm text-red-600 mt-1">{errors.header_text.message}</p>
@@ -1551,13 +1557,19 @@ export default function ChatbotDetailPage() {
                         <input
                           id="primary_color"
                           type="color"
-                          value={primaryColor || '#3B82F6'}
-                          onChange={(e) => setValue('primary_color', e.target.value, { shouldDirty: true })}
+                          value={watchedPrimaryColor || '#3B82F6'}
+                          onChange={(e) => {
+                            console.log('🎨 Color picker onChange:', e.target.value)
+                            setValue('primary_color', e.target.value, { shouldDirty: true })
+                          }}
                           className="w-16 h-10 p-1 border rounded cursor-pointer"
                         />
                         <Input
-                          value={primaryColor || ''}
-                          onChange={(e) => setValue('primary_color', e.target.value, { shouldDirty: true })}
+                          value={watchedPrimaryColor || ''}
+                          onChange={(e) => {
+                            console.log('🎨 Color input onChange:', e.target.value)
+                            setValue('primary_color', e.target.value, { shouldDirty: true })
+                          }}
                           placeholder="#3B82F6"
                           className="flex-1"
                         />
@@ -1655,11 +1667,22 @@ export default function ChatbotDetailPage() {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label htmlFor="offset_x">Offset X (px)</Label>
-                        <Input
-                          id="offset_x"
-                          type="number"
-                          {...register('offset_x', { valueAsNumber: true })}
-                          placeholder="0"
+                        <Controller
+                          name="offset_x"
+                          control={control}
+                          render={({ field }) => (
+                            <Input
+                              {...field}
+                              id="offset_x"
+                              type="number"
+                              placeholder="0"
+                              value={field.value ?? 0}
+                              onChange={(e) => {
+                                const value = e.target.value === '' ? 0 : parseInt(e.target.value, 10) || 0
+                                field.onChange(value)
+                              }}
+                            />
+                          )}
                         />
                         {errors.offset_x && (
                           <p className="text-sm text-red-600 mt-1">{errors.offset_x.message}</p>
@@ -1667,11 +1690,22 @@ export default function ChatbotDetailPage() {
                       </div>
                       <div>
                         <Label htmlFor="offset_y">Offset Y (px)</Label>
-                        <Input
-                          id="offset_y"
-                          type="number"
-                          {...register('offset_y', { valueAsNumber: true })}
-                          placeholder="0"
+                        <Controller
+                          name="offset_y"
+                          control={control}
+                          render={({ field }) => (
+                            <Input
+                              {...field}
+                              id="offset_y"
+                              type="number"
+                              placeholder="0"
+                              value={field.value ?? 0}
+                              onChange={(e) => {
+                                const value = e.target.value === '' ? 0 : parseInt(e.target.value, 10) || 0
+                                field.onChange(value)
+                              }}
+                            />
+                          )}
                         />
                         {errors.offset_y && (
                           <p className="text-sm text-red-600 mt-1">{errors.offset_y.message}</p>
@@ -1744,256 +1778,6 @@ export default function ChatbotDetailPage() {
                     )}
                   </Button>
                 </div>
-              </div>
-
-              {/* Right Column - Live Site Preview */}
-              <div className="lg:sticky lg:top-6 h-fit space-y-4">
-                {isFullscreen ? createPortal(
-                  <div className="fixed inset-0 z-[99999] bg-background flex flex-col">
-                    <div className="flex items-center justify-between px-6 py-4 border-b bg-white relative z-20">
-                      <div className="flex items-center gap-2">
-                        <Label className="text-sm font-semibold text-gray-700">
-                          Live Site Preview (Fullscreen Mode)
-                        </Label>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => setIsFullscreen(false)}
-                        className="h-8 gap-2"
-                      >
-                        <Minimize2 className="h-4 w-4" />
-                        Exit Fullscreen
-                      </Button>
-                    </div>
-
-                    <div className="flex-1 relative bg-gray-50 overflow-hidden">
-                      <div className="absolute inset-0 overflow-y-auto pb-20">
-                        {/* Header */}
-                        <header className="bg-white border-b px-6 py-4 flex items-center justify-between sticky top-0 z-10">
-                          <div className="flex items-center gap-4">
-                            <MenuIcon className="h-5 w-5 text-gray-500" />
-                            <div className="font-bold text-xl tracking-tighter">STORE.CO</div>
-                          </div>
-                          <div className="hidden md:flex items-center gap-6 text-sm font-medium">
-                            <span className="text-blue-600 border-b-2 border-blue-600 pb-1">Home</span>
-                            <span className="text-gray-500 hover:text-blue-600 cursor-pointer transition-colors">Shop</span>
-                            <span className="text-gray-500 hover:text-blue-600 cursor-pointer transition-colors">Categories</span>
-                            <span className="text-gray-500 hover:text-blue-600 cursor-pointer transition-colors">Deals</span>
-                          </div>
-                          <div className="flex items-center gap-4">
-                            <SearchIcon className="h-5 w-5 text-gray-500" />
-                            <div className="relative">
-                              <ShoppingCart className="h-5 w-5 text-gray-500" />
-                              <span className="absolute -top-2 -right-2 bg-blue-600 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center">3</span>
-                            </div>
-                          </div>
-                        </header>
-
-                        {/* Hero Section */}
-                        <section className="bg-blue-600 text-white px-8 text-center relative overflow-hidden py-24 transition-all duration-300">
-                          <div className="absolute top-0 left-0 w-full h-full opacity-10">
-                            <div className="absolute top-10 left-10 w-20 h-20 border-4 border-white rounded-full"></div>
-                            <div className="absolute bottom-10 right-10 w-32 h-32 border-4 border-white rounded-full"></div>
-                          </div>
-                          <h2 className="font-bold mb-4 relative z-10 text-5xl transition-all duration-300">Summer Collection 2026</h2>
-                          <p className="text-blue-100 mb-6 mx-auto relative z-10 text-xl max-w-2xl transition-all duration-300">Get up to 50% off on all new arrivals this season. Shop the latest trends now!</p>
-                          <Button variant="secondary" size="lg" className="font-semibold relative z-10">Shop Now</Button>
-                        </section>
-
-                        {/* Product Grid */}
-                        <section className="p-8 max-w-7xl mx-auto transition-all duration-300">
-                          <div className="flex items-center justify-between mb-6">
-                            <h3 className="font-bold text-lg">Featured Products</h3>
-                            <span className="text-blue-600 text-sm font-medium cursor-pointer">View All</span>
-                          </div>
-                          <div className="grid gap-6 grid-cols-4 transition-all duration-300">
-                            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-                              <div key={i} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden group hover:shadow-md transition-all">
-                                <div className="bg-gray-100 relative overflow-hidden h-48 transition-all">
-                                  <div className="absolute inset-0 flex items-center justify-center text-gray-300">
-                                    <ShoppingCart className="opacity-20 h-12 w-12 transition-all" />
-                                  </div>
-                                  <div className="absolute top-2 right-2 bg-white/80 backdrop-blur-sm p-1 rounded-full text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <ShoppingCart className="h-4 w-4" />
-                                  </div>
-                                </div>
-                                <div className="p-4">
-                                  <div className="h-4 w-2/3 bg-gray-200 rounded mb-2"></div>
-                                  <div className="h-3 w-1/3 bg-blue-100 rounded mb-4"></div>
-                                  <div className="flex items-center justify-between">
-                                    <div className="h-5 w-16 bg-gray-300 rounded"></div>
-                                    <div className="h-8 w-8 bg-blue-50 rounded-lg flex items-center justify-center">
-                                      <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </section>
-
-                        {/* Newsletter */}
-                        <section className="bg-gray-100 text-center rounded-xl border border-gray-200 p-16 max-w-4xl mx-auto mb-16 transition-all duration-300">
-                          <h4 className="font-bold mb-2">Join Our Newsletter</h4>
-                          <p className="text-sm text-gray-500 mb-6">Stay updated with latest trends and offers</p>
-                          <div className="flex gap-2 max-w-md mx-auto">
-                            <div className="flex-1 bg-white h-10 rounded-lg border border-gray-200"></div>
-                            <div className="w-24 bg-gray-900 h-10 rounded-lg"></div>
-                          </div>
-                        </section>
-                      </div>
-
-                      <ChatbotWidgetPreview
-                        key="preview-fullscreen"
-                        primaryColor={primaryColor || '#3B82F6'}
-                        headerText={formData.header_text}
-                        avatarUrl={formData.avatar_url}
-                        position={formData.position}
-                        offsetX={formData.offset_x}
-                        offsetY={formData.offset_y}
-                        welcomeMessage={formData.welcome_message}
-                        initialSuggestions={formData.initial_suggestions}
-                        showBranding={formData.show_branding}
-                        contained={true}
-                        readOnly={false}
-                        chatbotId={chatbotId}
-                      />
-                    </div>
-                  </div>,
-                  document.body
-                ) : null}
-
-                {/* Standard Preview (Always Visible when not fullscreen, or placeholder) */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Label className="text-sm font-semibold text-gray-700">Live Site Preview</Label>
-                    <div className="group relative">
-                      <div className="w-4 h-4 rounded-full bg-gray-300 flex items-center justify-center text-xs text-gray-600 cursor-help hover:bg-gray-400 transition-colors">
-                        i
-                      </div>
-                      <div className="absolute left-full ml-2 top-0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none bg-gray-900 text-white text-xs px-2 py-1 rounded whitespace-nowrap z-10">
-                        Test your chatbot exactly as it will operate on your site
-                      </div>
-                    </div>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setIsFullscreen(true)}
-                    className="h-8 gap-2"
-                  >
-                    <Maximize2 className="h-4 w-4" />
-                    Fullscreen Preview
-                  </Button>
-                </div>
-
-                <Card className="overflow-hidden border-2 border-blue-100 shadow-lg h-[700px]">
-                  <CardContent className="p-0 h-full relative">
-                    <div className="bg-gray-50 h-full relative overflow-hidden">
-                      {/* Mock E-commerce Website Structure */}
-                      <div className="absolute inset-0 overflow-y-auto pb-20">
-                        {/* Header */}
-                        <header className="bg-white border-b px-6 py-4 flex items-center justify-between sticky top-0 z-10">
-                          <div className="flex items-center gap-4">
-                            <MenuIcon className="h-5 w-5 text-gray-500" />
-                            <div className="font-bold text-xl tracking-tighter">STORE.CO</div>
-                          </div>
-                          <div className="hidden md:flex items-center gap-6 text-sm font-medium">
-                            <span className="text-blue-600 border-b-2 border-blue-600 pb-1">Home</span>
-                            <span className="text-gray-500 hover:text-blue-600 cursor-pointer transition-colors">Shop</span>
-                            <span className="text-gray-500 hover:text-blue-600 cursor-pointer transition-colors">Categories</span>
-                            <span className="text-gray-500 hover:text-blue-600 cursor-pointer transition-colors">Deals</span>
-                          </div>
-                          <div className="flex items-center gap-4">
-                            <SearchIcon className="h-5 w-5 text-gray-500" />
-                            <div className="relative">
-                              <ShoppingCart className="h-5 w-5 text-gray-500" />
-                              <span className="absolute -top-2 -right-2 bg-blue-600 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center">3</span>
-                            </div>
-                          </div>
-                        </header>
-
-                        {/* Hero Section */}
-                        <section className="bg-blue-600 text-white px-8 text-center relative overflow-hidden py-12">
-                          <div className="absolute top-0 left-0 w-full h-full opacity-10">
-                            <div className="absolute top-10 left-10 w-20 h-20 border-4 border-white rounded-full"></div>
-                            <div className="absolute bottom-10 right-10 w-32 h-32 border-4 border-white rounded-full"></div>
-                          </div>
-                          <h2 className="font-bold mb-4 relative z-10 text-3xl">Summer Collection 2026</h2>
-                          <p className="text-blue-100 mb-6 mx-auto relative z-10 text-sm max-w-md">Get up to 50% off on all new arrivals this season. Shop the latest trends now!</p>
-                          <Button variant="secondary" size="default" className="font-semibold relative z-10">Shop Now</Button>
-                        </section>
-
-                        {/* Product Grid */}
-                        <section className="p-8">
-                          <div className="flex items-center justify-between mb-6">
-                            <h3 className="font-bold text-lg">Featured Products</h3>
-                            <span className="text-blue-600 text-sm font-medium cursor-pointer">View All</span>
-                          </div>
-                          <div className="grid gap-6 grid-cols-2">
-                            {[1, 2, 3, 4].map((i) => (
-                              <div key={i} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden group hover:shadow-md transition-all">
-                                <div className="bg-gray-100 relative overflow-hidden h-32">
-                                  <div className="absolute inset-0 flex items-center justify-center text-gray-300">
-                                    <ShoppingCart className="opacity-20 h-10 w-10" />
-                                  </div>
-                                  <div className="absolute top-2 right-2 bg-white/80 backdrop-blur-sm p-1 rounded-full text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <ShoppingCart className="h-4 w-4" />
-                                  </div>
-                                </div>
-                                <div className="p-4">
-                                  <div className="h-4 w-2/3 bg-gray-200 rounded mb-2"></div>
-                                  <div className="h-3 w-1/3 bg-blue-100 rounded mb-4"></div>
-                                  <div className="flex items-center justify-between">
-                                    <div className="h-5 w-16 bg-gray-300 rounded"></div>
-                                    <div className="h-8 w-8 bg-blue-50 rounded-lg flex items-center justify-center">
-                                      <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </section>
-
-                        {/* Newsletter */}
-                        <section className="bg-gray-100 text-center rounded-xl border border-gray-200 p-8 mx-8 mb-8">
-                          <h4 className="font-bold mb-2">Join Our Newsletter</h4>
-                          <p className="text-sm text-gray-500 mb-6">Stay updated with latest trends and offers</p>
-                          <div className="flex gap-2 max-w-md mx-auto">
-                            <div className="flex-1 bg-white h-10 rounded-lg border border-gray-200"></div>
-                            <div className="w-24 bg-gray-900 h-10 rounded-lg"></div>
-                          </div>
-                        </section>
-                      </div>
-
-                      <ChatbotWidgetPreview
-                        key="preview-standard"
-                        primaryColor={primaryColor || '#3B82F6'}
-                        headerText={formData.header_text}
-                        avatarUrl={formData.avatar_url}
-                        position={formData.position}
-                        offsetX={formData.offset_x}
-                        offsetY={formData.offset_y}
-                        welcomeMessage={formData.welcome_message}
-                        initialSuggestions={formData.initial_suggestions}
-                        showBranding={formData.show_branding}
-                        contained={true}
-                        readOnly={false}
-                        chatbotId={chatbotId}
-                      />
-                    </div>
-                    <div className="p-3 bg-blue-50/50 flex items-center justify-center gap-2 border-t">
-                      <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-                      <p className="text-[11px] text-blue-700 font-semibold uppercase tracking-wider">
-                        Fully Interactive Preview
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
               </div>
             </div>
           </form>
@@ -2237,15 +2021,15 @@ export default function ChatbotDetailPage() {
       {chatbot && appearance && (
         <ChatbotWidgetPreview
           key={`widget-${chatbotId}`}
-          primaryColor={appearance.primary_color}
-          headerText={appearance.header_text}
-          avatarUrl={appearance.avatar_url}
-          position={appearance.position}
-          offsetX={appearance.offset_x}
-          offsetY={appearance.offset_y}
-          welcomeMessage={appearance.welcome_message}
-          initialSuggestions={appearance.initial_suggestions}
-          showBranding={appearance.show_branding}
+          primaryColor={watchedAppearanceValues.primary_color}
+          headerText={watchedAppearanceValues.header_text}
+          avatarUrl={watchedAppearanceValues.avatar_url}
+          position={watchedAppearanceValues.position}
+          offsetX={watchedAppearanceValues.offset_x}
+          offsetY={watchedAppearanceValues.offset_y}
+          welcomeMessage={watchedAppearanceValues.welcome_message}
+          initialSuggestions={watchedAppearanceValues.initial_suggestions}
+          showBranding={watchedAppearanceValues.show_branding}
           contained={false}
           initialOpen={false}
           readOnly={false}

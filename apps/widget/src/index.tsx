@@ -1,50 +1,15 @@
 import { render } from 'preact'
-import { ChatbotWidget } from './components/ChatbotWidget'
-import { widgetStyles } from './styles'
+import { ChatbotWidget, type ChatbotConfig } from '@chatbot/chatbot-widget'
 
-export interface ChatbotConfig {
-  apiUrl?: string
-  chatbotId?: string
-  tenantId?: string // Deprecated, use chatbotId
-  isPreview?: boolean
-  theme?: {
-    primaryColor?: string
-    position?: 'bottom-right' | 'bottom-left'
-  }
-  primaryColor?: string
-  headerText?: string
-  avatarUrl?: string | null
-  welcomeMessage?: string | null
-  initialSuggestions?: string[]
-  showBranding?: boolean
-  position?: 'bottom-right' | 'bottom-left'
-  offsetX?: number
-  offsetY?: number
-}
+// Re-export ChatbotConfig for backward compatibility
+export type { ChatbotConfig }
 
-function injectStyles() {
-  const styleId = 'chatbot-widget-styles';
-  if (!document.getElementById(styleId)) {
-    const style = document.createElement('style');
-    style.id = styleId;
-    
-    if (widgetStyles) {
-      style.textContent = widgetStyles;
-      document.head.appendChild(style);
-      console.log('Chatbot widget styles injected');
-    } else {
-      console.warn('Failed to get chatbot widget styles');
-    }
-  }
-}
+// Styles are imported via the shared component's CSS
 
 // Store widget root for updates
 const widgetRoots = new Map<HTMLElement, any>();
 
 export function initChatbot(config: ChatbotConfig = {}, containerElement?: HTMLElement) {
-  // Inject styles immediately
-  injectStyles();
-
   let container = containerElement || document.getElementById('chatbot-widget-container');
   if (!container) {
     container = document.createElement('div');

@@ -1,1 +1,7 @@
 add deleting delete source msg in recent activity
+
+anyone can copy widget script and run it 
+
+offset x & y is not working in neither preview nor embed widget.
+
+remove code which is not useful
