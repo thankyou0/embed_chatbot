@@ -2232,6 +2232,26 @@ export default function ChatbotDetailPage() {
           </Tabs>
         </TabsContent>
       </Tabs>
+
+      {/* Widget Preview - Visible in all tabs */}
+      {chatbot && appearance && (
+        <ChatbotWidgetPreview
+          key={`widget-${chatbotId}`}
+          primaryColor={appearance.primary_color}
+          headerText={appearance.header_text}
+          avatarUrl={appearance.avatar_url}
+          position={appearance.position}
+          offsetX={appearance.offset_x}
+          offsetY={appearance.offset_y}
+          welcomeMessage={appearance.welcome_message}
+          initialSuggestions={appearance.initial_suggestions}
+          showBranding={appearance.show_branding}
+          contained={false}
+          initialOpen={false}
+          readOnly={false}
+          chatbotId={chatbotId}
+        />
+      )}
     </div>
   )
 }

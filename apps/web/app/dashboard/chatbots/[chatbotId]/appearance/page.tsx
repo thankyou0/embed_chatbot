@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { Loader2, Upload, Sparkles, Save, Maximize2, Minimize2, ShoppingCart, Search as SearchIcon, Menu as MenuIcon } from 'lucide-react'
@@ -70,9 +70,11 @@ export default function AppearancePage() {
     handleSubmit,
     watch,
     setValue,
+    control,
     formState: { errors, isDirty },
   } = useForm<AppearanceFormData>({
     resolver: zodResolver(appearanceSchema),
+    mode: 'onChange', // Enable real-time validation and updates
     defaultValues: {
       primary_color: '#2563eb',
       header_text: 'Chat with us',
@@ -86,9 +88,9 @@ export default function AppearancePage() {
     },
   })
 
-  const formData = watch()
-  // Watch primary_color specifically for immediate updates
-  const primaryColor = watch('primary_color')
+  // Use useWatch for real-time updates - this will trigger re-renders when values change
+  const formData = useWatch({ control }) || watch()
+  const primaryColor = useWatch({ control, name: 'primary_color' }) || formData.primary_color || '#2563eb'
 
   useEffect(() => {
     fetchAppearance()
@@ -221,6 +223,9 @@ export default function AppearancePage() {
                   <Input
                     id="header_text"
                     {...register('header_text')}
+                    onChange={(e) => {
+                      setValue('header_text', e.target.value, { shouldValidate: false, shouldDirty: true })
+                    }}
                     placeholder="Chat with us"
                   />
                   {errors.header_text && (
@@ -233,6 +238,9 @@ export default function AppearancePage() {
                   <Textarea
                     id="welcome_message"
                     {...register('welcome_message')}
+                    onChange={(e) => {
+                      setValue('welcome_message', e.target.value, { shouldValidate: false, shouldDirty: true })
+                    }}
                     placeholder="Hi! How can I help you today?"
                     rows={3}
                   />
@@ -302,6 +310,9 @@ export default function AppearancePage() {
                     <Input
                       id="avatar_url"
                       {...register('avatar_url')}
+                      onChange={(e) => {
+                        setValue('avatar_url', e.target.value || null, { shouldValidate: false, shouldDirty: true })
+                      }}
                       placeholder="https://example.com/avatar.png"
                     />
                     <input ref={avatarInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={async (e) => {
@@ -442,6 +453,9 @@ export default function AppearancePage() {
                       id="offset_x"
                       type="number"
                       {...register('offset_x', { valueAsNumber: true })}
+                      onChange={(e) => {
+                        setValue('offset_x', parseInt(e.target.value) || 0, { shouldValidate: false, shouldDirty: true })
+                      }}
                       placeholder="0"
                     />
                     {errors.offset_x && (
@@ -454,6 +468,9 @@ export default function AppearancePage() {
                       id="offset_y"
                       type="number"
                       {...register('offset_y', { valueAsNumber: true })}
+                      onChange={(e) => {
+                        setValue('offset_y', parseInt(e.target.value) || 0, { shouldValidate: false, shouldDirty: true })
+                      }}
                       placeholder="0"
                     />
                     {errors.offset_y && (
@@ -634,8 +651,8 @@ export default function AppearancePage() {
                   </div>
 
                   <ChatbotWidgetPreview
-                    key="preview-fullscreen"
-                    primaryColor={primaryColor || '#2563eb'}
+                    key={`preview-fullscreen-${chatbotId}`}
+                    primaryColor={formData.primary_color || '#2563eb'}
                     headerText={formData.header_text}
                     avatarUrl={formData.avatar_url}
                     position={formData.position}
@@ -760,8 +777,8 @@ export default function AppearancePage() {
                   </div>
 
                   <ChatbotWidgetPreview
-                    key="preview-standard"
-                    primaryColor={primaryColor || '#2563eb'}
+                    key={`preview-standard-${chatbotId}`}
+                    primaryColor={formData.primary_color || '#2563eb'}
                     headerText={formData.header_text}
                     avatarUrl={formData.avatar_url}
                     position={formData.position}

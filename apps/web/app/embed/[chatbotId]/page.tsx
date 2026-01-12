@@ -47,8 +47,9 @@ export default function EmbedPage() {
 
 declare global {
   interface Window {
-    ChatbotWidget: {
-      init: (config: { chatbotId: string; apiUrl?: string }) => void
+    ChatbotWidget?: {
+      init: (config: any, containerElement?: HTMLElement) => void
+      destroy?: (containerId?: string) => void
     }
   }
 }

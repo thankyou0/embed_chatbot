@@ -11,6 +11,15 @@ export interface ChatbotConfig {
     primaryColor?: string
     position?: 'bottom-right' | 'bottom-left'
   }
+  primaryColor?: string
+  headerText?: string
+  avatarUrl?: string | null
+  welcomeMessage?: string | null
+  initialSuggestions?: string[]
+  showBranding?: boolean
+  position?: 'bottom-right' | 'bottom-left'
+  offsetX?: number
+  offsetY?: number
 }
 
 function injectStyles() {
@@ -29,18 +38,30 @@ function injectStyles() {
   }
 }
 
-export function initChatbot(config: ChatbotConfig = {}) {
+// Store widget root for updates
+const widgetRoots = new Map<HTMLElement, any>();
+
+export function initChatbot(config: ChatbotConfig = {}, containerElement?: HTMLElement) {
   // Inject styles immediately
   injectStyles();
 
-  let container = document.getElementById('chatbot-widget-container');
+  let container = containerElement || document.getElementById('chatbot-widget-container');
   if (!container) {
     container = document.createElement('div');
     container.id = 'chatbot-widget-container';
     document.body.appendChild(container);
   }
 
-  render(<ChatbotWidget config={config} />, container);
+  // Check if widget already exists in this container
+  const existingRoot = widgetRoots.get(container);
+  if (existingRoot) {
+    // Update existing widget with new config (Preact will handle prop updates)
+    render(<ChatbotWidget config={config} />, container, existingRoot);
+  } else {
+    // Create new widget
+    const root = render(<ChatbotWidget config={config} />, container);
+    widgetRoots.set(container, root);
+  }
 }
 
 // Auto-initialize if script has data attributes
@@ -58,6 +79,20 @@ if (typeof window !== 'undefined') {
 
 // Export for manual initialization
 if (typeof window !== 'undefined') {
-  ;(window as any).ChatbotWidget = { init: initChatbot }
+  ;(window as any).ChatbotWidget = { 
+    init: (config: ChatbotConfig = {}, containerElement?: HTMLElement) => {
+      initChatbot(config, containerElement);
+    },
+    // Helper to destroy widget instance
+    destroy: (containerId?: string) => {
+      const container = containerId 
+        ? document.getElementById(containerId)
+        : document.getElementById('chatbot-widget-container');
+      if (container) {
+        container.innerHTML = '';
+        widgetRoots.delete(container);
+      }
+    }
+  }
 }
 

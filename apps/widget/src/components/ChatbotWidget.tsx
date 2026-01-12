@@ -96,20 +96,66 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
   const apiUrl = config.apiUrl || 'http://localhost:8000'
   const chatbotId = config.chatbotId
 
-  const position = widgetConfig?.position || config.theme?.position || 'bottom-right'
+  // In preview mode, prioritize config prop over widgetConfig from API for real-time updates
+  // In production, use widgetConfig from API (fetched once)
+  const isPreview = config.isPreview || false
+  
+  const position = isPreview 
+    ? (config.position || config.theme?.position || 'bottom-right')
+    : (widgetConfig?.position || config.theme?.position || 'bottom-right')
+    
   const primaryColor = useMemo(() => {
-    const color = widgetConfig?.primary_color || config.theme?.primaryColor || '#2563eb'
+    const color = isPreview
+      ? (config.primaryColor || config.theme?.primaryColor || '#2563eb')
+      : (widgetConfig?.primary_color || config.theme?.primaryColor || '#2563eb')
     if (color && /^#[0-9A-Fa-f]{6}$/.test(color)) {
       return color
     }
     return '#2563eb'
-  }, [widgetConfig?.primary_color, config.theme?.primaryColor])
+  }, [isPreview, widgetConfig?.primary_color, config.primaryColor, config.theme?.primaryColor])
   
-  const headerText = widgetConfig?.header_text || 'Chat with us'
-  const avatarUrl = widgetConfig?.avatar_url || null
-  const welcomeMessage = widgetConfig?.welcome_message || 'Hi! How can I help you today?'
-  const initialSuggestions = widgetConfig?.initial_suggestions || []
-  const showBranding = widgetConfig?.show_branding !== false
+  const headerText = isPreview
+    ? (config.headerText || 'Chat with us')
+    : (widgetConfig?.header_text || config.headerText || 'Chat with us')
+    
+  const avatarUrl = isPreview
+    ? (config.avatarUrl || null)
+    : (widgetConfig?.avatar_url || config.avatarUrl || null)
+    
+  const welcomeMessage = isPreview
+    ? (config.welcomeMessage || 'Hi! How can I help you today?')
+    : (widgetConfig?.welcome_message || config.welcomeMessage || 'Hi! How can I help you today?')
+    
+  const initialSuggestions = isPreview
+    ? (config.initialSuggestions || [])
+    : (widgetConfig?.initial_suggestions || config.initialSuggestions || [])
+    
+  const showBranding = isPreview
+    ? (config.showBranding !== undefined ? config.showBranding : true)
+    : (widgetConfig?.show_branding !== false)
+  
+  // Update welcome message and suggestions when config changes in preview mode
+  useEffect(() => {
+    if (isPreview && isOpen && messages.length > 0) {
+      // Update welcome message if it changed
+      const welcomeMsg = config.welcomeMessage || "Hi! How can I help you today?"
+      const initialSugs = config.initialSuggestions || []
+      
+      setMessages((prev: Message[]) => {
+        // Update first message if it's the welcome message
+        if (prev.length > 0 && prev[0].role === 'assistant') {
+          const updated = [...prev]
+          updated[0] = {
+            ...updated[0],
+            content: welcomeMsg,
+            suggestions: initialSugs
+          }
+          return updated
+        }
+        return prev
+      })
+    }
+  }, [isPreview, isOpen, config.welcomeMessage, config.initialSuggestions])
 
   // Smart scroll logic - matches preview behavior
   useEffect(() => {
@@ -141,11 +187,24 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
   }
 
   // Fetch widget config and show welcome message on first open
+  // Skip API fetch in preview mode - use config prop directly
   useEffect(() => {
-    if (isOpen && messages.length === 0 && chatbotId) {
+    if (isOpen && messages.length === 0 && chatbotId && !isPreview) {
       fetchWidgetConfig()
+    } else if (isOpen && messages.length === 0 && isPreview) {
+      // In preview mode, use config prop directly
+      const welcomeMsg = config.welcomeMessage || "Hi! How can I help you today?"
+      const initialSugs = config.initialSuggestions || []
+      
+      setMessages([{
+        id: generateId(),
+        role: 'assistant',
+        content: welcomeMsg,
+        suggestions: initialSugs,
+        timestamp: new Date()
+      }])
     }
-  }, [isOpen, chatbotId])
+  }, [isOpen, chatbotId, isPreview, config.welcomeMessage, config.initialSuggestions])
 
   const fetchWidgetConfig = async () => {
     try {
