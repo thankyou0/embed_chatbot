@@ -19,7 +19,7 @@ class ChatbotPermissionAssign(BaseModel):
 class MemberCreate(BaseModel):
     """Request to add a new member to tenant"""
     email: EmailStr
-    username: str
+    username: Optional[str] = None
     password: str
     name: Optional[str] = None
     role: UserRole = UserRole.USER

@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.knowledge import Embedding, KnowledgeSourceType
 from app.models.chatbot import Chatbot
 from app.models.chat import ChatSession, ChatMessage, MessageRole
-from app.services.embedding_service import model
+from app.services.embedding_service import get_single_embedding
 from app.services.vision_service import VisionService, ImageAttributes
 from app.core.config import settings
 from app.core.logging import get_logger
@@ -147,8 +147,8 @@ class ChatService:
         # Search query includes message + summary for better context
         search_query = f"{effective_message} | Context: {summary}" if summary else effective_message
         
-        loop = asyncio.get_event_loop()
-        query_vector = await loop.run_in_executor(None, lambda: model.encode(search_query).tolist())
+        # Get query embedding from HuggingFace API
+        query_vector = await get_single_embedding(search_query)
         
         vector_stmt = select(
             Embedding,
@@ -200,9 +200,6 @@ class ChatService:
 
         context_text = "\n\n".join([c["embedding"].content for c in top_chunks])
         
-        # Check if we have any context
-        has_context = len(top_chunks) > 0 and context_text.strip()
-        
         # Build image context for LLM if image was analyzed
         image_context = ""
         if image_attrs and image_attrs.confidence >= VISION_CONFIDENCE_THRESHOLD:
@@ -214,66 +211,32 @@ class ChatService:
         elif image_attrs and image_attrs.confidence < VISION_CONFIDENCE_THRESHOLD:
             image_context = "\n\nNote: User uploaded an image but it was unclear. Ask for clarification if needed."
         
-        # Build message list for LLM
-        # if has_context:
-        #     system_prompt = (
-        #         f"You are a helpful assistant for {chatbot.name}. "
-        #         "Answer questions based ONLY on the provided context. If the answer is not in context, say so.\n\n"
-        #         f"Background Context: {summary}{image_context}\n\n"
-        #         "STRICT RESPONSE FORMAT:\n"
-        #         "1. Provide your helpful answer.\n"
-        #         "2. Immediately after the answer, add the tag: ---SUGGESTIONS---\n"
-        #         "3. Then provide a JSON list of exactly 2 follow-up questions.\n"
-        #         "4. End with the tag: ---END---\n\n"
-        #         "Example:\n"
-        #         "This is the answer. ---SUGGESTIONS---\n"
-        #         "[\"Question 1?\", \"Question 2?\"]\n"
-        #         "---END---"
-        #     )
-        # else:
-        #     # No knowledge base - be helpful but inform user
-        #     system_prompt = (
-        #         f"You are a helpful assistant for {chatbot.name}. "
-        #         "The knowledge base is currently empty, so you don't have specific information about products or services yet. "
-        #         "Be friendly and helpful. Suggest that the user can ask general questions or that the business owner should add knowledge sources.\n\n"
-        #         f"Background Context: {summary}{image_context}\n\n"
-        #         "STRICT RESPONSE FORMAT:\n"
-        #         "1. Provide your helpful answer.\n"
-        #         "2. Immediately after the answer, add the tag: ---SUGGESTIONS---\n"
-        #         "3. Then provide a JSON list of exactly 2 follow-up questions.\n"
-        #         "4. End with the tag: ---END---\n\n"
-        #         "Example:\n"
-        #         "This is the answer. ---SUGGESTIONS---\n"
-        #         "[\"Question 1?\", \"Question 2?\"]\n"
-        #         "---END---"
-        #     )
-        common_instruction = (
-            "STRICT RESPONSE FORMAT:\n"
-            "1. Provide your helpful answer.\n"
-            "2. Immediately after the answer, add the tag: ---SUGGESTIONS---\n"
-            "3. Provide a JSON list of exactly 2 follow-up questions written FROM THE USER'S PERSPECTIVE. "
-            "The questions should represent what the user might want to ask you next. Use 'I', 'me', or 'my' instead of 'you' or 'your'.\n"
-            "4. End with the tag: ---END---\n\n"
-            "Example:\n"
-            "We offer AI automation. ---SUGGESTIONS---\n"
-            "[\"Can you help me set this up?\", \"What are the costs for my business?\"]\n"
-            "---END---"
+        # improved System Prompt
+        system_prompt = (
+            f"You are a helpful AI assistant for {chatbot.name}.\n"
+            "Your goal is to assist users based on the provided Knowledge Base context.\n"
+            "\n"
+            "--- GUIDELINES ---\n"
+            "1. **Context-Only Principle**: Answer questions **exclusively** using the information in the 'Background Context' below. "
+            "Do not use outside knowledge or make assumptions. If the answer is not in the context, strictly state that you don't have that information.\n"
+            "2. **Greetings & Pleasantries**: If the user sends a greeting (e.g., 'Hi', 'Hello') or polite expression ('Thanks', 'Good job'), "
+            "reply naturally and politely. You do NOT need context for this.\n"
+            "3. **Irrelevant Queries**: If the user asks about topics completely unrelated to the business/context (e.g., political figures, celebrities, general trivia), "
+            "reply nicely that you can only answer questions related to {chatbot.name}, and append the tag `[[IRRELEVANT]]` to the very end of your response.\n"
+            "4. **Missing Information**: If the question IS relevant to the business but the specific answer is not in the context, "
+            "apologize and state you don't have that information, and append the tag `[[MISSING_INFO]]` to the very end of your response.\n"
+            "5. **Response Format**: Keep answers concise, professional and formatted in Markdown.\n"
+            "\n"
+            f"Background Context: {summary}{image_context}\n"
+            f"{context_text}\n"
+            "\n"
+            "--- STRICT RESPONSE FORMAT ---\n"
+            "1. Your Answer\n"
+            "2. (Optional) `[[IRRELEVANT]]` or `[[MISSING_INFO]]` tag if applicable. Do NOT output both.\n"
+            "3. `---SUGGESTIONS---`\n"
+            "4. JSON list of exactly 2 follow-up questions from the USER'S perspective (e.g. \"How do I...?\").\n"
+            "5. `---END---`"
         )
-
-        if has_context:
-            system_prompt = (
-                f"You are a helpful assistant for {chatbot.name}. "
-                "Answer questions based ONLY on the provided context. If the answer is not in context, say so.\n\n"
-                f"Background Context: {summary}{image_context}\n\n"
-                f"{common_instruction}"
-            )
-        else:
-            system_prompt = (
-                f"You are a helpful assistant for {chatbot.name}. "
-                "The knowledge base is currently empty. Be friendly and inform the user.\n\n"
-                f"Background Context: {summary}{image_context}\n\n"
-                f"{common_instruction}"
-            )
         
         llm_messages = [
             {
@@ -287,14 +250,9 @@ class ChatService:
             llm_messages.append({"role": h.role.value, "content": h.content})
         
         # Build user message content
-        if has_context:
-            user_content = f"Context:\n{context_text}\n\nUser question: {text_content}"
-            if image_attrs:
-                user_content += f"\n\n(User is looking for: {effective_message})"
-        else:
-            user_content = f"User question: {text_content}"
-            if image_attrs:
-                user_content += f"\n\n(User uploaded an image and is looking for: {effective_message})"
+        user_content = f"User question: {text_content}"
+        if image_attrs:
+            user_content += f"\n\n(User uploaded an image and is looking for: {effective_message})"
         
         llm_messages.append({"role": "user", "content": user_content})
 
@@ -318,7 +276,7 @@ class ChatService:
                     json={
                         "model": "llama-3.3-70b-versatile",
                         "messages": llm_messages,
-                        "temperature": 0.2
+                        "temperature": 0.1 # Lower temperature for adherence
                     },
                     timeout=30.0
                 )
@@ -329,6 +287,13 @@ class ChatService:
                 
                 res_data = response.json()
                 full_content = res_data["choices"][0]["message"]["content"]
+                
+                # Check for control tags
+                is_irrelevant = "[[IRRELEVANT]]" in full_content
+                is_missing_info = "[[MISSING_INFO]]" in full_content
+                
+                # Clean content
+                full_content = full_content.replace("[[IRRELEVANT]]", "").replace("[[MISSING_INFO]]", "")
                 
                 parts = full_content.split("---SUGGESTIONS---")
                 final_message = parts[0].strip()
@@ -347,15 +312,24 @@ class ChatService:
                 final_message = re.sub(r'---SUGGESTIONS---.*', '', final_message, flags=re.DOTALL).strip()
 
                 # --- 8. Save messages to DB ---
-                # Calculate response time
                 response_time_ms = int((time.time() - start_time) * 1000)
                 
-                # Determine if query was answered based on confidence threshold
-                was_answered = retrieval_confidence >= chatbot.confidence_threshold
+                # Determine "Was Answered" Status
+                # Logic:
+                # 1. If [[MISSING_INFO]] -> False (Valid query, but we failed to answer)
+                # 2. If [[IRRELEVANT]] -> True (Handled correctly by ignoring/refusing)
+                # 3. If Retrieval Confidence High -> True
+                # 4. If Retrieval Confidence Low BUT no negative tags -> True (Assume LLM answered via general chit-chat capability or found weak signal)
                 
+                if is_missing_info:
+                    was_answered = False
+                elif is_irrelevant:
+                    was_answered = True # Don't log as "Unanswered" (Action Item)
+                else:
+                    was_answered = True # Default to answered (including greetings)
+
                 user_metadata = {}
                 if image_attrs:
-                    # Store image analysis in user message metadata
                     user_metadata["image_analysis"] = image_attrs.to_dict()
                     user_metadata["effective_query"] = effective_message
                 
@@ -366,13 +340,14 @@ class ChatService:
                     metadata_json=user_metadata
                 )
                 
-                # Store analytics metadata in assistant message
                 assistant_metadata = {
                     "suggestions": suggestions,
                     "retrieval_confidence": round(retrieval_confidence, 3),
                     "sources_count": sources_count,
                     "response_time_ms": response_time_ms,
-                    "was_answered": was_answered
+                    "was_answered": was_answered,
+                    "is_irrelevant": is_irrelevant,
+                    "is_missing_info": is_missing_info
                 }
                 
                 assistant_msg = ChatMessage(
@@ -385,20 +360,17 @@ class ChatService:
                 db.add(assistant_msg)
                 
                 # --- 9. Update Summary if needed ---
-                # Check turn count (every 4 messages, meaning every 2 user-assistant pairs)
                 from sqlalchemy import func
                 count_stmt = select(func.count(ChatMessage.id)).where(ChatMessage.session_id == session.id)
                 count_res = await db.execute(count_stmt)
                 existing_count = count_res.scalar() or 0
                 total_messages = existing_count + 2
 
-                if total_messages % 8 == 0: # Every 4 turns = 8 messages
+                if total_messages % 8 == 0:
                     new_summary = await ChatService.summarize_conversation(session, history + [user_msg, assistant_msg])
                     session.conversation_summary = new_summary
                 
-                # Update last_message_at
                 session.last_message_at = func.now()
-                
                 await db.commit()
 
                 return ChatMessageResponse(
@@ -411,4 +383,6 @@ class ChatService:
                 
             except Exception as e:
                 logger.error(f"Error in chat service: {e}")
+                import traceback
+                traceback.print_exc()
                 return ChatMessageResponse(session_id=str(session.id), message="An error occurred.", sources=[], suggestions=[])

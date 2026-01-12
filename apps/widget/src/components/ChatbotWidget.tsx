@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'preact/hooks'
+import { useState, useRef, useEffect, useMemo } from 'preact/hooks'
 import type { ChatbotConfig } from '../index'
 
 interface Message {
@@ -7,6 +7,7 @@ interface Message {
   content: string
   suggestions?: string[]
   imagePreview?: string
+  isTyping?: boolean
   timestamp: Date
 }
 
@@ -81,29 +82,63 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
   const [inputValue, setInputValue] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
+  const [isTyping, setIsTyping] = useState(false)
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [selectedImage, setSelectedImage] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [widgetConfig, setWidgetConfig] = useState<any>(null)
-  const [error, setError] = useState<string | null>(null)
-  
+  const [_error, setError] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const messagesContainerRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const isAtBottomRef = useRef(true)
   
   const apiUrl = config.apiUrl || 'http://localhost:8000'
   const chatbotId = config.chatbotId
 
-  const position = config.theme?.position || 'bottom-right'
-  const positionClasses = {
-    'bottom-right': 'ecw-bottom-right',
-    'bottom-left': 'ecw-bottom-left',
-  }
+  const position = widgetConfig?.position || config.theme?.position || 'bottom-right'
+  const primaryColor = useMemo(() => {
+    const color = widgetConfig?.primary_color || config.theme?.primaryColor || '#2563eb'
+    if (color && /^#[0-9A-Fa-f]{6}$/.test(color)) {
+      return color
+    }
+    return '#2563eb'
+  }, [widgetConfig?.primary_color, config.theme?.primaryColor])
+  
+  const headerText = widgetConfig?.header_text || 'Chat with us'
+  const avatarUrl = widgetConfig?.avatar_url || null
+  const welcomeMessage = widgetConfig?.welcome_message || 'Hi! How can I help you today?'
+  const initialSuggestions = widgetConfig?.initial_suggestions || []
+  const showBranding = widgetConfig?.show_branding !== false
 
-  // Scroll to bottom when new messages arrive
+  // Smart scroll logic - matches preview behavior
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+    const container = messagesContainerRef.current
+    if (!container) return
+
+    const lastMessage = messages[messages.length - 1]
+    if (lastMessage?.role === 'user') {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+      isAtBottomRef.current = true
+      return
+    }
+
+    if (isAtBottomRef.current) {
+      messagesEndRef.current?.scrollIntoView({ behavior: isTyping ? 'auto' : 'smooth' })
+    }
+  }, [messages, isTyping])
+
+  const handleScroll = () => {
+    const container = messagesContainerRef.current
+    if (!container) return
+    
+    const threshold = 20
+    const position = container.scrollTop + container.clientHeight
+    const height = container.scrollHeight
+    const isAtBottom = height - position <= threshold
+    
+    isAtBottomRef.current = isAtBottom
+  }
 
   // Fetch widget config and show welcome message on first open
   useEffect(() => {
@@ -120,17 +155,23 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
         setWidgetConfig(data)
         
         // Show welcome message
-        const welcomeMsg = data.welcome_message || "Hello! How can I help you today?"
-        const initialSuggestions = data.initial_suggestions || [
-          "What products do you have?",
-          "Tell me about your return policy"
-        ]
+        const welcomeMsg = data.welcome_message || "Hi! How can I help you today?"
+        const initialSugs = data.initial_suggestions || []
         
         setMessages([{
           id: generateId(),
           role: 'assistant',
           content: welcomeMsg,
-          suggestions: initialSuggestions.slice(0, 2),
+          suggestions: initialSugs,
+          timestamp: new Date()
+        }])
+      } else {
+        // Fallback to default
+        setMessages([{
+          id: generateId(),
+          role: 'assistant',
+          content: "Hi! How can I help you today?",
+          suggestions: [],
           timestamp: new Date()
         }])
       }
@@ -140,8 +181,8 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
       setMessages([{
         id: generateId(),
         role: 'assistant',
-        content: "Hello! How can I help you today?",
-        suggestions: ["What products do you have?", "Tell me about your return policy"],
+        content: "Hi! How can I help you today?",
+        suggestions: [],
         timestamp: new Date()
       }])
     }
@@ -175,7 +216,45 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
     }
   }
 
+  // Type message character by character (matches preview)
+  const typeMessage = (fullText: string, suggestions?: string[]) => {
+    let currentIndex = 0
+    const typingMessage: Message = {
+      id: generateId(),
+      role: 'assistant',
+      content: '',
+      isTyping: true,
+      suggestions,
+      timestamp: new Date()
+    }
+    
+    setMessages((prev: Message[]) => [...prev, typingMessage])
+    
+    const typingInterval = setInterval(() => {
+      currentIndex++
+      const partialText = fullText.slice(0, currentIndex)
+      
+      setMessages((prev: Message[]) => {
+        const newMessages = [...prev]
+        const lastMessage = newMessages[newMessages.length - 1]
+        if (lastMessage && lastMessage.isTyping) {
+          lastMessage.content = partialText
+          if (currentIndex >= fullText.length) {
+            lastMessage.isTyping = false
+            clearInterval(typingInterval)
+          }
+        }
+        return newMessages
+      })
+      
+      if (currentIndex >= fullText.length) {
+        clearInterval(typingInterval)
+      }
+    }, 20) // 20ms per character
+  }
+
   const sendMessage = async (messageText?: string) => {
+    if (isTyping) return
     const text = messageText || inputValue.trim()
     if (!text && !selectedImage) return
     if (!chatbotId) {
@@ -191,9 +270,9 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
       imagePreview: imagePreview || undefined,
       timestamp: new Date()
     }
-    setMessages(prev => [...prev, userMessage])
-    setInputValue('')
-    setIsLoading(true)
+    setMessages((prev: Message[]) => [...prev, userMessage])
+    if (!messageText) setInputValue('')
+    setIsTyping(true)
     setError(null)
 
     try {
@@ -215,10 +294,6 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
         }
       }
 
-      if (config.isPreview) {
-        formData.append('is_preview', 'true')
-      }
-
       const response = await fetch(`${apiUrl}/api/v1/chat/${chatbotId}/message`, {
         method: 'POST',
         body: formData
@@ -235,92 +310,157 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
         setSessionId(data.session_id)
       }
 
-      // Add assistant response
-      const assistantMessage: Message = {
-        id: generateId(),
-        role: 'assistant',
-        content: data.message,
-        suggestions: data.suggestions?.slice(0, 2) || [],
-        timestamp: new Date()
-      }
-      setMessages(prev => [...prev, assistantMessage])
+      setIsTyping(false)
+      removeImage()
+      
+      // Use typing effect to show response
+      typeMessage(data.message, data.suggestions)
 
     } catch (err) {
       console.error('Failed to send message:', err)
-      setError('Failed to send message. Please try again.')
-      
-      // Add error message
-      setMessages(prev => [...prev, {
-        id: generateId(),
-        role: 'assistant',
-        content: "I'm sorry, I encountered an error. Please try again.",
-        timestamp: new Date()
-      }])
-    } finally {
-      setIsLoading(false)
+      setIsTyping(false)
       removeImage()
+      typeMessage("I'm sorry, I encountered an error. Please try again.")
     }
   }
 
   const handleSuggestionClick = (suggestion: string) => {
+    if (isTyping) return
     sendMessage(suggestion)
   }
 
-  const handleKeyPress = (e: KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      sendMessage()
-    }
+  const handleClose = () => {
+    setIsOpen(false)
+    setTimeout(() => {
+      setMessages([{
+        id: generateId(),
+        role: 'assistant',
+        content: welcomeMessage,
+        suggestions: initialSuggestions,
+        timestamp: new Date()
+      }])
+      setSessionId(null)
+      removeImage()
+    }, 300)
   }
 
-  const primaryColor = widgetConfig?.primary_color || config.theme?.primaryColor || '#6366f1'
+  const handleMinimize = () => {
+    setIsOpen(false)
+  }
+
+  const positionStyle: any = {
+    bottom: `${16}px`,
+    [position === 'bottom-right' ? 'right' : 'left']: `${16}px`,
+  }
 
   return (
-    <div className={`ecw-widget ${positionClasses[position]}`}>
+    <div className="chatbot-widget-container" style={positionStyle}>
       {isOpen ? (
-        <div className="ecw-window">
+        <div className="chatbot-window">
           {/* Header */}
-          <div className="ecw-header" style={{ backgroundColor: primaryColor }}>
-            <div className="ecw-header-info">
-              {widgetConfig?.avatar_url && (
-                <img src={widgetConfig.avatar_url} alt="" className="ecw-header-avatar" />
+          <div className="chatbot-header" style={{ backgroundColor: primaryColor }}>
+            <div className="chatbot-header-content">
+              {avatarUrl ? (
+                <img
+                  src={avatarUrl}
+                  alt="Bot Avatar"
+                  className="chatbot-header-avatar"
+                />
+              ) : (
+                <div className="chatbot-header-avatar-placeholder">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                  </svg>
+                </div>
               )}
               <div>
-                <h3 className="ecw-header-title">{widgetConfig?.display_name || 'Chat Support'}</h3>
-                <span className="ecw-header-subtitle">We typically reply instantly</span>
+                <h3 className="chatbot-header-title">{headerText}</h3>
+                <div className="chatbot-online-indicator">
+                  <span className="chatbot-online-dot"></span>
+                  <p className="chatbot-online-text">Online</p>
+                </div>
               </div>
             </div>
-            <button className="ecw-close-btn" onClick={() => setIsOpen(false)}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M18 6L6 18M6 6l12 12" />
-              </svg>
-            </button>
+            <div className="chatbot-header-actions">
+              <button
+                type="button"
+                onClick={handleMinimize}
+                title="Minimize"
+                className="chatbot-header-button"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" />
+                </svg>
+              </button>
+              <button
+                type="button"
+                onClick={handleClose}
+                title="Close and Reset"
+                className="chatbot-header-button"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M18 6L6 18M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
           </div>
 
           {/* Messages */}
-          <div className="ecw-messages">
-            {messages.map((msg) => (
-              <div key={msg.id} className={`ecw-message ecw-message-${msg.role}`}>
-                {msg.imagePreview && (
-                  <div className="ecw-message-image">
-                    <img src={msg.imagePreview} alt="Uploaded" />
+          <div 
+            ref={messagesContainerRef}
+            className="chatbot-messages"
+            onScroll={handleScroll}
+          >
+            {messages.map((msg: Message) => (
+              <div key={msg.id} className="chatbot-message-wrapper">
+                <div className={`chatbot-message ${msg.role === 'user' ? 'user' : 'bot'}`}>
+                  {msg.role === 'assistant' && (
+                    <div className="chatbot-message-avatar">
+                      {avatarUrl ? (
+                        <img
+                          src={avatarUrl}
+                          alt="Bot"
+                          className="chatbot-avatar-small"
+                        />
+                      ) : (
+                        <div className="chatbot-avatar-placeholder">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                          </svg>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  <div className={`chatbot-message-content ${msg.role === 'user' ? 'user' : 'bot'}`}>
+                    {msg.imagePreview && (
+                      <img 
+                        src={msg.imagePreview} 
+                        alt="Uploaded" 
+                        className="chatbot-message-image"
+                      />
+                    )}
+                    <div
+                      className={`chatbot-message-bubble ${msg.role === 'user' ? 'user' : 'bot'}`}
+                      style={msg.role === 'user' ? { backgroundColor: primaryColor } : {}}
+                    >
+                      <p className="chatbot-message-text">
+                        {msg.content}
+                        {msg.isTyping && <span className="chatbot-typing-cursor">|</span>}
+                      </p>
+                    </div>
                   </div>
-                )}
-                <div 
-                  className="ecw-message-bubble"
-                  style={msg.role === 'user' ? { backgroundColor: primaryColor } : {}}
-                >
-                  {msg.content}
                 </div>
-                {/* Suggestions */}
-                {msg.role === 'assistant' && msg.suggestions && msg.suggestions.length > 0 && (
-                  <div className="ecw-suggestions">
-                    {msg.suggestions.map((suggestion, idx) => (
+                
+                {/* Suggestions for this message - only show when typing is complete */}
+                {msg.role === 'assistant' && !msg.isTyping && msg.suggestions && msg.suggestions.length > 0 && (
+                  <div className="chatbot-suggestions-inline">
+                    {msg.suggestions.map((suggestion: string, idx: number) => (
                       <button
                         key={idx}
-                        className="ecw-suggestion-btn"
+                        type="button"
+                        disabled={isTyping}
                         onClick={() => handleSuggestionClick(suggestion)}
-                        style={{ borderColor: primaryColor, color: primaryColor }}
+                        className="chatbot-suggestion-button"
                       >
                         {suggestion}
                       </button>
@@ -329,91 +469,138 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
                 )}
               </div>
             ))}
-            
-            {/* Loading indicator */}
-            {isLoading && (
-              <div className="ecw-message ecw-message-assistant">
-                <div className="ecw-message-bubble ecw-loading">
-                  <span className="ecw-dot"></span>
-                  <span className="ecw-dot"></span>
-                  <span className="ecw-dot"></span>
+
+            {isTyping && !messages.some((m: Message) => m.isTyping) && (
+              <div className="chatbot-typing-indicator">
+                <div>
+                  <span className="chatbot-typing-dot"></span>
+                  <span className="chatbot-typing-dot" style={{ animationDelay: '0.2s' }}></span>
+                  <span className="chatbot-typing-dot" style={{ animationDelay: '0.4s' }}></span>
                 </div>
               </div>
             )}
             
             <div ref={messagesEndRef} />
+
+            {/* Initial Suggestions */}
+            {messages.length === 1 && initialSuggestions.length > 0 && (
+              <div className="chatbot-initial-suggestions">
+                <p className="chatbot-suggestions-label">Suggested</p>
+                <div className="chatbot-suggestions-list">
+                  {/* {initialSuggestions.map((suggestion, index) => ( */}
+                  {initialSuggestions.map((suggestion: string, index: number) => (
+                    <button
+                      key={index}
+                      type="button"
+                      disabled={isTyping}
+                      onClick={() => handleSuggestionClick(suggestion)}
+                      className="chatbot-suggestion-button"
+                    >
+                      {suggestion}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Error display */}
-          {error && (
-            <div className="ecw-error">
-              {error}
-              <button onClick={() => setError(null)}>×</button>
-            </div>
-          )}
-
-          {/* Image preview */}
-          {imagePreview && (
-            <div className="ecw-image-preview">
-              <img src={imagePreview} alt="Selected" />
-              <button className="ecw-image-remove" onClick={removeImage}>
+          {/* Input */}
+          <div className="chatbot-input-area">
+            {/* Image Preview */}
+            {imagePreview && (
+              <div className="chatbot-image-preview">
+                <img 
+                  src={imagePreview} 
+                  alt="Selected" 
+                  className="chatbot-image-preview-img"
+                />
+                <span className="chatbot-image-preview-text">Image selected</span>
+                <button
+                  type="button"
+                  onClick={removeImage}
+                  className="chatbot-image-preview-remove"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M18 6L6 18M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            )}
+            
+            <div className="chatbot-input-row">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageSelect}
+                className="chatbot-file-input"
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isTyping}
+                className="chatbot-image-button"
+                title="Upload image"
+              >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M18 6L6 18M6 6l12 12" />
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                  <circle cx="8.5" cy="8.5" r="1.5" />
+                  <polyline points="21 15 16 10 5 21" />
+                </svg>
+              </button>
+              <input
+                type="text"
+                className="chatbot-input"
+                placeholder="Type your message..."
+                value={inputValue}
+                onInput={(e: Event) => setInputValue((e.target as HTMLInputElement).value)}
+                onKeyPress={(e: KeyboardEvent) => {
+                  if (e.key === 'Enter' && !isTyping) {
+                    e.preventDefault()
+                    sendMessage()
+                  }
+                }}
+                disabled={isTyping}
+              />
+              <button 
+                type="button"
+                disabled={isTyping || (!inputValue.trim() && !selectedImage)}
+                onClick={() => sendMessage()}
+                className="chatbot-send-button"
+                style={{ backgroundColor: primaryColor }}
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
                 </svg>
               </button>
             </div>
-          )}
-
-          {/* Input */}
-          <div className="ecw-input-area">
-            <input
-              type="file"
-              ref={fileInputRef}
-              accept="image/*"
-              onChange={handleImageSelect}
-              style={{ display: 'none' }}
-            />
-            <button 
-              className="ecw-image-btn"
-              onClick={() => fileInputRef.current?.click()}
-              title="Upload image"
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                <circle cx="8.5" cy="8.5" r="1.5" />
-                <polyline points="21 15 16 10 5 21" />
-              </svg>
-            </button>
-            <input
-              type="text"
-              className="ecw-text-input"
-              placeholder="Type your message..."
-              value={inputValue}
-              onInput={(e) => setInputValue((e.target as HTMLInputElement).value)}
-              onKeyPress={handleKeyPress}
-              disabled={isLoading}
-            />
-            <button 
-              className="ecw-send-btn"
-              onClick={() => sendMessage()}
-              disabled={isLoading || (!inputValue.trim() && !selectedImage)}
-              style={{ backgroundColor: primaryColor }}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
-              </svg>
-            </button>
+            
+            {showBranding && (
+              <p className="chatbot-branding">
+                Powered by ChatBot
+              </p>
+            )}
           </div>
         </div>
       ) : (
+        /* Minimized Button / Bubble */
         <button
-          className="ecw-toggle"
+          type="button"
           onClick={() => setIsOpen(true)}
+          className="chatbot-bubble"
           style={{ backgroundColor: primaryColor }}
         >
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-          </svg>
+          {avatarUrl ? (
+            <img
+              src={avatarUrl}
+              alt="Bot"
+              className="chatbot-bubble-avatar"
+            />
+          ) : (
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+          )}
         </button>
       )}
     </div>

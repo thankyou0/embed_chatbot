@@ -48,11 +48,20 @@ class MemberService:
         if existing_user:
             raise BadRequestError("Email already registered")
         
+        # Determine username
+        username = request.username if request.username else request.email
+
         # Check if username already exists
-        result = await db.execute(select(User).where(User.username == request.username))
+        result = await db.execute(select(User).where(User.username == username))
         existing_username = result.scalar_one_or_none()
         if existing_username:
-            raise BadRequestError("Username already taken")
+            if request.username:
+                raise BadRequestError("Username already taken")
+            else:
+                # If we're using email as username and it's taken (but email check passed),
+                # it means someone deliberately set their username to this email. 
+                # Rare edge case.
+                raise BadRequestError("Username (derived from email) already exists")
         
         # Calculate password expiration
         password_expires_at = datetime.now(timezone.utc) + timedelta(hours=request.password_expiry_hours)
@@ -61,7 +70,7 @@ class MemberService:
         member = User(
             tenant_id=tenant_id,
             email=request.email,
-            username=request.username,
+            username=username,
             password_hash=get_password_hash(request.password),
             name=request.name,
             role=request.role,

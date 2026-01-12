@@ -272,13 +272,14 @@ class CrawlerService:
                     )
                 )
 
-                # Update knowledge source
+                # Update knowledge source (keep status as CRAWLING - embeddings will set to COMPLETED or FAILED)
                 await db.execute(
                     update(KnowledgeSource)
                     .where(KnowledgeSource.id == knowledge_source_id)
                     .values(
-                        status=KnowledgeSourceStatus.COMPLETED, 
                         pages_found=total_pages
+                        # Don't set status to COMPLETED here - let embedding service handle it
+                        # Status stays as CRAWLING until embeddings complete
                     )
                 )
                 
@@ -297,8 +298,17 @@ class CrawlerService:
                 )
 
                 # Trigger embedding process for new/updated pages
+                # Embedding service will update status to COMPLETED on success or FAILED on error
                 if pages_added > 0 or pages_updated > 0:
                     await EmbeddingService.process_knowledge_source(knowledge_source_id)
+                else:
+                    # If no new/updated pages, set status to COMPLETED since no embeddings needed
+                    await db.execute(
+                        update(KnowledgeSource)
+                        .where(KnowledgeSource.id == knowledge_source_id)
+                        .values(status=KnowledgeSourceStatus.COMPLETED)
+                    )
+                    await db.commit()
 
             except Exception as e:
                 logger.error(f"Crawl failed for {base_url}: {str(e)}")

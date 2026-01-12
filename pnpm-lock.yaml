@@ -109,6 +109,9 @@ importers:
       '@preact/preset-vite':
         specifier: ^2.8.2
         version: 2.10.2(@babel/core@7.28.5)(preact@10.28.2)(vite@5.4.21(@types/node@20.19.27))
+      '@types/node':
+        specifier: ^20.19.27
+        version: 20.19.27
       typescript:
         specifier: ^5.2.2
         version: 5.9.3

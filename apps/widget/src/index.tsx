@@ -1,6 +1,6 @@
 import { render } from 'preact'
 import { ChatbotWidget } from './components/ChatbotWidget'
-import './styles.css'
+import { widgetStyles } from './styles'
 
 export interface ChatbotConfig {
   apiUrl?: string
@@ -13,12 +13,34 @@ export interface ChatbotConfig {
   }
 }
 
-export function initChatbot(config: ChatbotConfig = {}) {
-  const container = document.createElement('div')
-  container.id = 'chatbot-widget-container'
-  document.body.appendChild(container)
+function injectStyles() {
+  const styleId = 'chatbot-widget-styles';
+  if (!document.getElementById(styleId)) {
+    const style = document.createElement('style');
+    style.id = styleId;
+    
+    if (widgetStyles) {
+      style.textContent = widgetStyles;
+      document.head.appendChild(style);
+      console.log('Chatbot widget styles injected');
+    } else {
+      console.warn('Failed to get chatbot widget styles');
+    }
+  }
+}
 
-  render(<ChatbotWidget config={config} />, container)
+export function initChatbot(config: ChatbotConfig = {}) {
+  // Inject styles immediately
+  injectStyles();
+
+  let container = document.getElementById('chatbot-widget-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'chatbot-widget-container';
+    document.body.appendChild(container);
+  }
+
+  render(<ChatbotWidget config={config} />, container);
 }
 
 // Auto-initialize if script has data attributes

@@ -37,7 +37,7 @@ services:
     ports:
       - "8000:8000"
     env_file:
-      - ../.env
+      - .env
     volumes:
       # Mount source code for hot reload
       - ./apps/api:/app
@@ -45,6 +45,7 @@ services:
       - api_uploads:/app/uploads
     environment:
       - DATABASE_URL=postgresql+asyncpg://postgres:post@postgres:5432/embed_chatbot
+      - CORS_ORIGINS=["http://localhost:3000","http://localhost:3001","http://localhost:3005","http://127.0.0.1:3000","http://127.0.0.1:3001","http://127.0.0.1:3005"]
     depends_on:
       postgres:
         condition: service_healthy
@@ -62,12 +63,18 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      # Mount source code for hot reload
-      - ./apps/web:/app
-      - /app/node_modules
-      - /app/.next
+      # Mount entire workspace for hot reload
+      - .:/app
+      # Preserve node_modules from container build (these take precedence)
+      - web_root_node_modules:/app/node_modules
+      - web_app_node_modules:/app/apps/web/node_modules
+      - web_widget_node_modules:/app/apps/widget/node_modules
+      - web_shared_node_modules:/app/packages/shared/node_modules
+      - web_ui_node_modules:/app/packages/ui/node_modules
+      - web_next:/app/apps/web/.next
     environment:
       - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - CI=true
     depends_on:
       - api
     networks:
@@ -84,11 +91,17 @@ services:
     ports:
       - "3001:3001"
     volumes:
-      # Mount source code for hot reload
-      - ./apps/widget:/app
-      - /app/node_modules
+      # Mount entire workspace for hot reload
+      - .:/app
+      # Preserve node_modules from container build (these take precedence)
+      - widget_root_node_modules:/app/node_modules
+      - widget_app_node_modules:/app/apps/widget/node_modules
+      - widget_web_node_modules:/app/apps/web/node_modules
+      - widget_shared_node_modules:/app/packages/shared/node_modules
+      - widget_ui_node_modules:/app/packages/ui/node_modules
     environment:
       - VITE_PUBLIC_API_URL=http://localhost:8000
+      - CI=true
     depends_on:
       - api
     networks:
@@ -98,6 +111,17 @@ services:
 volumes:
   postgres_data:
   api_uploads:
+  web_root_node_modules:
+  web_app_node_modules:
+  web_widget_node_modules:
+  web_shared_node_modules:
+  web_ui_node_modules:
+  web_next:
+  widget_root_node_modules:
+  widget_app_node_modules:
+  widget_web_node_modules:
+  widget_shared_node_modules:
+  widget_ui_node_modules:
 
 networks:
   chatbot_network:

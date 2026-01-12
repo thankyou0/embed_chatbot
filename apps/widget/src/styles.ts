@@ -1,3 +1,4 @@
+export const widgetStyles = `
 /* Chatbot Widget Styles - Matching Preview UI */
 /* Reset to prevent inheritance from host page */
 .chatbot-widget-container,
@@ -582,3 +583,4 @@
   white-space: nowrap;
   border-width: 0;
 }
+`;

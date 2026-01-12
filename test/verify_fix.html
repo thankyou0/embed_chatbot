@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Widget Fix Verification</title>
+    <style>
+        body { font-family: sans-serif; padding: 50px; background: #f0f0f0; }
+        .container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Widget Fix Verification</h1>
+        <p>If the widget below looks like Image 2 (with a clean header and proper buttons), then the fix is working.</p>
+        <p>This test file does NOT include any external CSS, only the widget JS.</p>
+    </div>
+
+    <script src="http://localhost:3001/widget.umd.js"></script>
+    <script>
+        window.onload = function() {
+            if (window.ChatbotWidget) {
+                window.ChatbotWidget.init({
+                    chatbotId: "325606cb-3e80-4815-8190-20afe12537e0",
+                    apiUrl: "http://localhost:8000"
+                });
+            } else {
+                alert('Widget script not loaded. Make sure the widget server is running on port 3001.');
+            }
+        };
+    </script>
+</body>
+</html>

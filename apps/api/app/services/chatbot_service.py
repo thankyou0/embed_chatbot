@@ -715,8 +715,11 @@ class ChatbotService:
         appearance = result.scalar_one_or_none()
         
         if not appearance:
-            # Create default appearance
-            appearance = ChatbotAppearance(chatbot_id=chatbot_id)
+            # Create default appearance with explicit defaults to avoid server_default issues
+            appearance = ChatbotAppearance(
+                chatbot_id=chatbot_id,
+                initial_suggestions=[]  # Explicitly set to avoid server_default issues with JSONB
+            )
             db.add(appearance)
             await db.commit()
             await db.refresh(appearance)
@@ -768,12 +771,16 @@ class ChatbotService:
         )
         appearance = result.scalar_one_or_none()
         if not appearance:
-            appearance = ChatbotAppearance(chatbot_id=chatbot_id)
+            # Create new appearance with explicit defaults to avoid server_default issues
+            appearance = ChatbotAppearance(
+                chatbot_id=chatbot_id,
+                initial_suggestions=[]  # Explicitly set to avoid server_default issues with JSONB
+            )
             db.add(appearance)
-            await db.flush()
+            await db.commit()
+            await db.refresh(appearance)
 
         appearance.avatar_url = avatar_url
-        db.add(appearance)
         await db.commit()
 
         return AvatarUploadResponse(chatbot_id=chatbot_id, avatar_url=avatar_url)
@@ -809,9 +816,13 @@ class ChatbotService:
         appearance = result.scalar_one_or_none()
         
         if not appearance:
-            # Create with provided values
-            appearance = ChatbotAppearance(chatbot_id=chatbot_id)
+            # Create with explicit defaults to avoid server_default issues with JSONB
+            appearance = ChatbotAppearance(
+                chatbot_id=chatbot_id,
+                initial_suggestions=[]  # Explicitly set to avoid server_default issues with JSONB
+            )
             db.add(appearance)
+            await db.flush()  # Flush to get the ID and apply defaults
         
         # Update fields
         update_data = request.model_dump(exclude_unset=True)
@@ -853,8 +864,11 @@ class ChatbotService:
         appearance = result.scalar_one_or_none()
         
         if not appearance:
-            # Create default appearance
-            appearance = ChatbotAppearance(chatbot_id=chatbot_id)
+            # Create default appearance with explicit defaults to avoid server_default issues
+            appearance = ChatbotAppearance(
+                chatbot_id=chatbot_id,
+                initial_suggestions=[]  # Explicitly set to avoid server_default issues with JSONB
+            )
             db.add(appearance)
             await db.commit()
             await db.refresh(appearance)
@@ -1468,7 +1482,9 @@ class ChatbotService:
     ) -> KnowledgeSourceResponse:
         """Bulk upload QA pairs from XLSX"""
         
-        await ChatbotService.get_chatbot(db, tenant_id, chatbot_id, user)
+        # Verify access and permission (can_manage_knowledge)
+        if not await ChatbotService.has_permission(db, chatbot_id, user, "can_manage_knowledge"):
+            raise ForbiddenError("Insufficient permissions to manage QA pairs")
         
         if not file.filename.endswith(('.xlsx', '.xls')):
             raise BadRequestError("Please upload an Excel file (.xlsx or .xls)")
@@ -1563,7 +1579,13 @@ class ChatbotService:
         qa = (await db.execute(stmt)).scalar_one_or_none()
         if not qa: raise NotFoundError("QA pair not found")
         
-        # Verify access to parent chatbot... (simplified for now)
+        # Get parent knowledge source to find chatbot
+        stmt = select(KnowledgeSource).where(KnowledgeSource.id == qa.knowledge_source_id)
+        ks = (await db.execute(stmt)).scalar_one()
+        
+        # Verify permission
+        if not await ChatbotService.has_permission(db, ks.chatbot_id, user, "can_manage_knowledge"):
+            raise ForbiddenError("Insufficient permissions to update QA pairs")
         
         qa.question = request.question
         qa.answer = request.answer
@@ -1583,6 +1605,14 @@ class ChatbotService:
         stmt = select(QAPair).where(QAPair.id == qa_id)
         qa = (await db.execute(stmt)).scalar_one_or_none()
         if not qa: raise NotFoundError("QA pair not found")
+        
+        # Get parent knowledge source to find chatbot
+        stmt = select(KnowledgeSource).where(KnowledgeSource.id == qa.knowledge_source_id)
+        ks = (await db.execute(stmt)).scalar_one()
+        
+        # Verify permission
+        if not await ChatbotService.has_permission(db, ks.chatbot_id, user, "can_manage_knowledge"):
+            raise ForbiddenError("Insufficient permissions to delete QA pairs")
         
         ks_id = qa.knowledge_source_id
         
@@ -1610,10 +1640,12 @@ class ChatbotService:
         chatbot_id: UUID,
         user: User
     ) -> ChatbotStatsResponse:
-        """Get overview statistics for a chatbot"""
-        # Verify access and permission (can_view_analytics)
+        """Get overview statistics for a specific chatbot"""
+        # Verify access and analytics permission
+        await ChatbotService.get_chatbot(db, tenant_id, chatbot_id, user)
+        
         if not await ChatbotService.has_permission(db, chatbot_id, user, "can_view_analytics"):
-            raise ForbiddenError("Insufficient permissions to view stats")
+            raise ForbiddenError("Insufficient permissions to view analytics")
 
         # 1. Total Conversations (Sessions with actual messages, excluding previews)
         # Only count sessions that have at least one user message
@@ -1803,9 +1835,8 @@ class ChatbotService:
             raise NotFoundError("Knowledge source not found")
         
         if user.role != UserRole.ADMIN:
-            perm = await ChatbotService._get_user_permission(db, ks.chatbot_id, user)
-            if not perm or perm not in [PermissionLevel.EDITOR, PermissionLevel.OWNER]:
-                raise ForbiddenError("Insufficient permissions")
+            if not await ChatbotService.has_permission(db, ks.chatbot_id, user, "can_manage_knowledge"):
+                raise ForbiddenError("Insufficient permissions to manage crawl schedule")
         
         # Only allow scheduling for crawled URLs
         if ks.source_type != KnowledgeSourceType.CRAWLED_URL:
@@ -1837,9 +1868,8 @@ class ChatbotService:
             raise NotFoundError("Knowledge source not found")
         
         if user.role != UserRole.ADMIN:
-            perm = await ChatbotService._get_user_permission(db, ks.chatbot_id, user)
-            if not perm or perm not in [PermissionLevel.EDITOR, PermissionLevel.OWNER]:
-                raise ForbiddenError("Insufficient permissions")
+            if not await ChatbotService.has_permission(db, ks.chatbot_id, user, "can_manage_knowledge"):
+                raise ForbiddenError("Insufficient permissions to update crawl schedule")
         
         # Get existing schedule
         stmt = select(CrawlSchedule).where(CrawlSchedule.knowledge_source_id == knowledge_source_id)
@@ -1884,9 +1914,8 @@ class ChatbotService:
             raise NotFoundError("Knowledge source not found")
         
         if user.role != UserRole.ADMIN:
-            perm = await ChatbotService._get_user_permission(db, ks.chatbot_id, user)
-            if not perm or perm not in [PermissionLevel.EDITOR, PermissionLevel.OWNER]:
-                raise ForbiddenError("Insufficient permissions")
+            if not await ChatbotService.has_permission(db, ks.chatbot_id, user, "can_manage_knowledge"):
+                raise ForbiddenError("Insufficient permissions to trigger crawl")
         
         # Only allow for crawled URLs
         if ks.source_type != KnowledgeSourceType.CRAWLED_URL:

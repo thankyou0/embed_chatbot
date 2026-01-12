@@ -1,6 +1,6 @@
 # ============================================
 # Next.js Web Dashboard Dockerfile
-# Supports both local development and production
+# Optimized for development with hot reload
 # ============================================
 
 # ---- Base Stage ----
@@ -9,65 +9,90 @@ FROM node:18-alpine AS base
 # Install dependencies only when needed
 RUN apk add --no-cache libc6-compat wget
 
+# Install pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
 WORKDIR /app
+
+# Set CI=true to avoid TTY issues
+ENV CI=true
 
 # ---- Dependencies Stage ----
 FROM base AS dependencies
 
-# Copy root package.json and pnpm-workspace.yaml for monorepo
-COPY package.json pnpm-workspace.yaml* ./
+# Copy workspace configuration files
+COPY package.json pnpm-lock.yaml* pnpm-workspace.yaml* ./
 
-# Copy package files (handle optional packages)
+# Copy all package.json files for workspace resolution
 COPY apps/web/package.json ./apps/web/package.json
+COPY apps/widget/package.json ./apps/widget/package.json
+COPY packages/shared/package.json ./packages/shared/package.json
+COPY packages/ui/package.json ./packages/ui/package.json
 
-# Install pnpm and dependencies
-RUN corepack enable && corepack prepare pnpm@latest --activate
-# Install without frozen lockfile for DigitalOcean compatibility
-RUN pnpm install || (echo "pnpm install failed, trying npm install" && npm install)
+# Install all dependencies
+RUN pnpm install --frozen-lockfile || pnpm install
 
 # ---- Development Stage ----
 FROM base AS development
 
 WORKDIR /app
 
-# Copy dependencies
-COPY --from=dependencies /app/node_modules ./node_modules
+# Copy workspace files
+COPY --from=dependencies /app/package.json ./package.json
+COPY --from=dependencies /app/pnpm-lock.yaml* ./pnpm-lock.yaml*
+COPY --from=dependencies /app/pnpm-workspace.yaml* ./pnpm-workspace.yaml*
 
-# Copy application code
-COPY apps/web ./
+# Copy all node_modules from dependencies stage
+COPY --from=dependencies /app/node_modules ./node_modules
+COPY --from=dependencies /app/apps/web/node_modules ./apps/web/node_modules
+COPY --from=dependencies /app/apps/widget/node_modules ./apps/widget/node_modules
+COPY --from=dependencies /app/packages/shared/node_modules ./packages/shared/node_modules
+COPY --from=dependencies /app/packages/ui/node_modules ./packages/ui/node_modules
+
+# Copy all package.json files
+COPY apps/web/package.json ./apps/web/package.json
+COPY apps/widget/package.json ./apps/widget/package.json
+COPY packages/shared/package.json ./packages/shared/package.json
+COPY packages/ui/package.json ./packages/ui/package.json
+
+# Copy application source (will be overridden by volume mount)
+COPY apps/web ./apps/web
+COPY packages ./packages
 
 # Expose port
 EXPOSE 3000
 
-# Set environment
+# Set environment variables
 ENV NODE_ENV=development
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV CI=true
 
-# Run development server
-CMD ["npx", "next", "dev"]
+# Run development server with dependency check
+# If node_modules are missing (due to volume mount), install them first
+CMD sh -c "corepack enable && if [ ! -d 'node_modules/next' ] || [ ! -d 'apps/web/node_modules' ]; then echo 'Installing dependencies (first run only)...' && pnpm install --frozen-lockfile --reporter=silent || pnpm install --reporter=silent; fi && pnpm --filter @chatbot/web dev"
 
 # ---- Builder Stage ----
 FROM base AS builder
 
 WORKDIR /app
 
-# Copy all dependencies and workspace files
+# Copy dependencies
 COPY --from=dependencies /app/node_modules ./node_modules
 COPY --from=dependencies /app/apps/web/node_modules ./apps/web/node_modules
 COPY --from=dependencies /app/package.json ./package.json
 COPY --from=dependencies /app/pnpm-workspace.yaml* ./pnpm-workspace.yaml
 
-# Copy application code
+# Copy source code
 COPY apps/web ./apps/web
+COPY packages ./packages
 
-# Set production environment for build
+# Set production environment
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
 # Build the application
 WORKDIR /app/apps/web
-RUN corepack enable && (pnpm run build || npm run build)
-WORKDIR /app
+RUN pnpm run build
 
 # ---- Production Stage ----
 FROM base AS production

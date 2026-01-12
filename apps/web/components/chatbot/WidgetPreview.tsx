@@ -52,6 +52,8 @@ export function ChatbotWidgetPreview({
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   
+  const isAtBottomRef = useRef(true) // Start assuming we are at bottom
+  
   // Force open if embedded
   if (embedded && !isOpen) {
     setIsOpen(true)
@@ -64,12 +66,36 @@ export function ChatbotWidgetPreview({
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Auto-scroll to bottom when messages change
+  // Smart scroll logic
   useEffect(() => {
-    if (messagesContainerRef.current) {
-      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight
+    const container = messagesContainerRef.current
+    if (!container) return
+
+    // Logic:
+    // 1. If user message, always scroll (and reset stickiness).
+    const lastMessage = messages[messages.length - 1]
+    if (lastMessage?.isUser) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+      return
+    }
+
+    // 2. If bot message, scroll ONLY if we were previously at the bottom (sticky)
+    if (isAtBottomRef.current) {
+      messagesEndRef.current?.scrollIntoView({ behavior: isTyping ? 'auto' : 'smooth' })
     }
   }, [messages, isTyping])
+
+  const handleScroll = () => {
+    const container = messagesContainerRef.current
+    if (!container) return
+    
+    const threshold = 20 // Use a small threshold to detect if user has scrolled up
+    const position = container.scrollTop + container.clientHeight
+    const height = container.scrollHeight
+    const isAtBottom = height - position <= threshold
+    
+    isAtBottomRef.current = isAtBottom
+  }
 
   // Function to type out message character by character
   const typeMessage = (fullText: string, suggestions?: string[]) => {
@@ -77,13 +103,13 @@ export function ChatbotWidgetPreview({
     const typingMessage = { text: '', isUser: false, isTyping: true, suggestions }
     
     // Add empty typing message first
-    setMessages((prev) => [...prev, typingMessage])
+    setMessages((prev: typeof messages[number]) => [...prev, typingMessage])
     
     const typingInterval = setInterval(() => {
       currentIndex++
       const partialText = fullText.slice(0, currentIndex)
       
-      setMessages((prev) => {
+      setMessages((prev: typeof messages[number]) => {
         const newMessages = [...prev]
         const lastMessage = newMessages[newMessages.length - 1]
         if (lastMessage && lastMessage.isTyping) {
@@ -139,7 +165,7 @@ export function ChatbotWidgetPreview({
   }
 
   const handleSendMessage = async (text?: string) => {
-    if (readOnly) return
+    if (readOnly || isTyping) return
     const messageText = text || inputValue
     if (!messageText.trim() && !selectedImage) return
 
@@ -148,7 +174,7 @@ export function ChatbotWidgetPreview({
       isUser: true,
       imagePreview: imagePreview || undefined
     }
-    setMessages((prev) => [...prev, userMessage])
+    setMessages((prev: typeof messages[number]) => [...prev, userMessage])
     if (!text) setInputValue('')
     
     setIsTyping(true)
@@ -167,7 +193,7 @@ export function ChatbotWidgetPreview({
         }
         formData.append('is_preview', 'true')
 
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/chat/${chatbotId}/message`, {
+        const response = await fetch(`${process?.env?.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/chat/${chatbotId}/message`, {
           method: 'POST',
           body: formData, // No Content-Type header - browser sets it automatically with boundary
         })
@@ -206,7 +232,7 @@ export function ChatbotWidgetPreview({
   }
 
   const handleSuggestionClick = (suggestion: string) => {
-    if (readOnly) return
+    if (readOnly || isTyping) return
     handleSendMessage(suggestion)
   }
 
@@ -275,6 +301,7 @@ export function ChatbotWidgetPreview({
           <div 
             ref={messagesContainerRef}
             className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50/50"
+            onScroll={handleScroll}
           >
             {messages.map((message, index) => (
               <div key={index} className="space-y-2">
@@ -296,7 +323,7 @@ export function ChatbotWidgetPreview({
                       )}
                     </div>
                   )}
-                  <div className={`max-w-[75%] ${message.isUser ? 'flex flex-col items-end gap-1' : ''}`}>
+                  <div className={`max-w-[90%] ${message.isUser ? 'flex flex-col items-end gap-1' : ''}`}>
                     {message.imagePreview && (
                       <img 
                         src={message.imagePreview} 

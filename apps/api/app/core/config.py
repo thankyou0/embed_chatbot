@@ -63,12 +63,26 @@ class Settings(BaseSettings):
     CORS_ORIGINS: List[str] = [
         "http://localhost:3000",
         "http://localhost:3001",
+        "http://localhost:3005",  # Test site
         "http://127.0.0.1:3000",
         "http://127.0.0.1:3001",
+        "http://127.0.0.1:3005",  # Test site
     ]
 
     # LLM
     GROQ_API_KEY: Optional[str] = None
+    
+    # HuggingFace API for Embeddings
+    # Primary: HF_API_KEY (preferred name)
+    # Also supports HUGGINGFACE_API_KEY for backward compatibility
+    HF_API_KEY: Optional[str] = None
+    HUGGINGFACE_API_KEY: Optional[str] = None
+    EMBEDDING_MODEL: str = "sentence-transformers/all-MiniLM-L6-v2"
+    
+    @property
+    def huggingface_api_key(self) -> Optional[str]:
+        """Get HuggingFace API key, checking HF_API_KEY first, then HUGGINGFACE_API_KEY."""
+        return self.HF_API_KEY or self.HUGGINGFACE_API_KEY
 
     @field_validator('CORS_ORIGINS', mode='before')
     @classmethod

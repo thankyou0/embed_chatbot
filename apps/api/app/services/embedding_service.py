@@ -2,21 +2,86 @@ import asyncio
 import gc
 from typing import List, Dict, Any
 from uuid import UUID
-from sqlalchemy import select, delete
+from sqlalchemy import select, delete, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from sentence_transformers import SentenceTransformer
+from huggingface_hub import InferenceClient
 from app.models.knowledge import KnowledgeSource, CrawledPage, Embedding, KnowledgeSourceStatus, KnowledgeSourceType, QAPair
 from app.core.database import get_session_factory
+from app.core.config import settings
 from app.core.logging import get_logger
 
 logger = get_logger(__name__)
 
-# Initialize the model globally to avoid reloading
-# 'all-MiniLM-L6-v2' produces 384-dimensional embeddings
-model = SentenceTransformer('all-MiniLM-L6-v2')
-
-# Batch size for embedding generation to prevent OOM on low-memory instances
+# Batch size for embedding generation
 EMBEDDING_BATCH_SIZE = 32
+
+# Initialize HuggingFace Inference Client (handles endpoint changes automatically)
+_hf_client = None
+
+def get_hf_client() -> InferenceClient:
+    """Get or create HuggingFace Inference Client."""
+    global _hf_client
+    if _hf_client is None:
+        api_key = settings.HF_API_KEY
+        if not api_key:
+            raise ValueError("HF_API_KEY is not set in environment variables")
+        _hf_client = InferenceClient(token=api_key)
+    return _hf_client
+
+
+async def get_embeddings_from_api(texts: List[str]) -> List[List[float]]:
+    """
+    Get embeddings from HuggingFace Inference API using the official SDK.
+    Uses the sentence-transformers/all-MiniLM-L6-v2 model which produces 384-dimensional embeddings.
+    """
+    client = get_hf_client()
+    model = settings.EMBEDDING_MODEL
+    
+    # Run in thread pool since huggingface_hub is synchronous
+    loop = asyncio.get_event_loop()
+    
+    try:
+        # Use feature_extraction for sentence-transformers models
+        result = await loop.run_in_executor(
+            None,
+            lambda: client.feature_extraction(
+                text=texts,
+                model=model
+            )
+        )
+        
+        # Handle the result format
+        import numpy as np
+        embeddings = []
+        
+        # result can be a list of embeddings or nested arrays
+        for item in result:
+            if isinstance(item, list) and len(item) > 0:
+                if isinstance(item[0], list):
+                    # Token-level embeddings - perform mean pooling
+                    token_embeddings = np.array(item)
+                    pooled = np.mean(token_embeddings, axis=0).tolist()
+                    embeddings.append(pooled)
+                else:
+                    # Already pooled embedding
+                    embeddings.append(item)
+            else:
+                # Single embedding vector
+                embeddings.append(list(item) if hasattr(item, '__iter__') else [item])
+        
+        logger.info(f"Successfully got {len(embeddings)} embeddings from HuggingFace")
+        return embeddings
+        
+    except Exception as e:
+        logger.error(f"HuggingFace API error: {e}")
+        raise Exception(f"HuggingFace API error: {str(e)}")
+
+
+async def get_single_embedding(text: str) -> List[float]:
+    """Get embedding for a single text string."""
+    embeddings = await get_embeddings_from_api([text])
+    return embeddings[0]
+
 
 class EmbeddingService:
     @staticmethod
@@ -65,7 +130,7 @@ class EmbeddingService:
         """
         1. Get all crawled_pages for knowledge_source
         2. Chunk each page's content
-        3. Generate embeddings for each chunk
+        3. Generate embeddings for each chunk using HuggingFace API
         4. Store in embeddings table with metadata
         """
         session_factory = get_session_factory()
@@ -81,6 +146,17 @@ class EmbeddingService:
                     return
 
                 logger.info(f"Starting embedding pipeline for KS: {ks.id} (Type: {ks.source_type})")
+                
+                # Update status to indicate we're processing embeddings
+                # Keep current status if it's CRAWLING, otherwise set to CRAWLING
+                # (We'll update to COMPLETED or FAILED at the end)
+                if ks.status != KnowledgeSourceStatus.CRAWLING:
+                    await db.execute(
+                        update(KnowledgeSource)
+                        .where(KnowledgeSource.id == ks.id)
+                        .values(status=KnowledgeSourceStatus.CRAWLING)
+                    )
+                    await db.commit()
 
                 # Fetch all pages
                 stmt_pages = select(CrawledPage).where(CrawledPage.knowledge_source_id == ks.id)
@@ -133,11 +209,10 @@ class EmbeddingService:
                     logger.warning(f"No content chunks generated for KS: {ks.id}")
                     return
 
-                # 3. Generate embeddings in batches to prevent OOM
+                # 3. Generate embeddings in batches using HuggingFace API
                 total_chunks = len(all_chunks)
                 logger.info(f"Generating embeddings for {total_chunks} chunks in batches of {EMBEDDING_BATCH_SIZE}...")
                 
-                loop = asyncio.get_event_loop()
                 total_stored = 0
                 
                 for batch_start in range(0, total_chunks, EMBEDDING_BATCH_SIZE):
@@ -145,11 +220,12 @@ class EmbeddingService:
                     batch_chunks = all_chunks[batch_start:batch_end]
                     batch_metadata = all_metadata[batch_start:batch_end]
                     
-                    # Generate embeddings for this batch
-                    batch_embeddings = await loop.run_in_executor(
-                        None, 
-                        lambda chunks=batch_chunks: model.encode(chunks)
-                    )
+                    # Generate embeddings for this batch via HuggingFace API
+                    try:
+                        batch_embeddings = await get_embeddings_from_api(batch_chunks)
+                    except Exception as e:
+                        logger.error(f"Failed to get embeddings from API: {e}")
+                        raise
                     
                     # 4. Store batch in database
                     for chunk_text, vector, meta in zip(batch_chunks, batch_embeddings, batch_metadata):
@@ -158,25 +234,46 @@ class EmbeddingService:
                             knowledge_source_id=ks.id,
                             source_type=ks.source_type,
                             content=chunk_text,
-                            embedding=vector.tolist(),
+                            embedding=vector,
                             metadata_json=meta,
                             priority_weight=1.0
                         )
                         db.add(emb_obj)
                     
-                    # Commit each batch and clear memory
+                    # Commit each batch
                     await db.commit()
                     total_stored += len(batch_chunks)
                     
                     # Force garbage collection to free memory
-                    del batch_embeddings
                     gc.collect()
                     
                     logger.info(f"Batch {batch_start // EMBEDDING_BATCH_SIZE + 1}: Stored {total_stored}/{total_chunks} embeddings")
 
+                # Update status to COMPLETED after successful embedding
+                await db.execute(
+                    update(KnowledgeSource)
+                    .where(KnowledgeSource.id == ks.id)
+                    .values(status=KnowledgeSourceStatus.COMPLETED)
+                )
+                await db.commit()
+                
                 logger.success(f"Successfully processed and stored {total_stored} embeddings for KS: {ks.id}")
 
             except Exception as e:
                 logger.error(f"Error in embedding pipeline for KS {knowledge_source_id}: {str(e)}")
                 await db.rollback()
-
+                
+                # Update status to FAILED when embeddings fail
+                try:
+                    await db.execute(
+                        update(KnowledgeSource)
+                        .where(KnowledgeSource.id == knowledge_source_id)
+                        .values(
+                            status=KnowledgeSourceStatus.FAILED
+                        )
+                    )
+                    await db.commit()
+                    logger.error(f"Updated knowledge source {knowledge_source_id} status to FAILED due to embedding error")
+                except Exception as update_error:
+                    logger.error(f"Failed to update knowledge source status: {update_error}")
+                    await db.rollback()

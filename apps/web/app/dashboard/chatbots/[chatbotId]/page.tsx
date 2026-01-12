@@ -2013,7 +2013,7 @@ export default function ChatbotDetailPage() {
                 <div>
                   <h4 className="text-sm font-semibold mb-2">Embed Code</h4>
                   <div className="bg-slate-950 text-slate-50 p-4 rounded-md font-mono text-sm">
-                    <pre id="embed-script">{`<script src="${process.env.NEXT_PUBLIC_APP_URL || 'https://chatbot.example.com'}/widget.js"></script>
+                    <pre id="embed-script">{`<script src="${process.env.NEXT_PUBLIC_WIDGET_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001'}/widget.umd.js"></script>
 <script>
   ChatbotWidget.init({
     chatbotId: "${chatbotId}"${process.env.NEXT_PUBLIC_API_URL ? `,\n    apiUrl: "${process.env.NEXT_PUBLIC_API_URL}"` : ''}

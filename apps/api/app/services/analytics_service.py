@@ -10,6 +10,11 @@ from sqlalchemy.dialects.postgresql import JSONB
 from app.models.chat import ChatSession, ChatMessage, MessageRole
 from app.models.chatbot import Chatbot
 from app.models.user import User
+from app.core.exceptions import (
+    UnauthorizedError,
+    NotFoundError,
+    ForbiddenError,
+)
 from app.schemas.analytics import (
     AnalyticsOverviewResponse,
     UnansweredQueriesResponse,
@@ -61,6 +66,10 @@ class AnalyticsService:
         if chatbot_id:
             # Verify access to specific chatbot
             await ChatbotService.get_chatbot(db, tenant_id, chatbot_id, user)
+            
+            if not await ChatbotService.has_permission(db, chatbot_id, user, "can_view_analytics"):
+                raise ForbiddenError("Insufficient permissions to view analytics")
+                
             query = query.where(ChatSession.chatbot_id == chatbot_id)
         else:
             # Get all chatbot IDs user has access to
@@ -169,6 +178,9 @@ class AnalyticsService:
         
         # Verify access
         await ChatbotService.get_chatbot(db, tenant_id, chatbot_id, user)
+        
+        if not await ChatbotService.has_permission(db, chatbot_id, user, "can_view_analytics"):
+            raise ForbiddenError("Insufficient permissions to view analytics")
         
         period_start = AnalyticsService._get_period_start(period)
         
@@ -281,7 +293,11 @@ class AnalyticsService:
     ) -> None:
         """Mark queries as resolved for a chatbot"""
         # Verify access
+        # Verify access
         chatbot = await ChatbotService.get_chatbot(db, tenant_id, chatbot_id, user)
+        
+        if not await ChatbotService.has_permission(db, chatbot_id, user, "can_resolve_queries"):
+            raise ForbiddenError("Insufficient permissions to resolve queries")
         
         # For now, we'll store resolved queries in a simple way
         # In a production system, you'd want a proper resolved_queries table
