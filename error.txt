@@ -5,3 +5,5 @@ anyone can copy widget script and run it
 offset x & y is not working in neither preview nor embed widget.
 
 remove code which is not useful
+
+Status changed from ChatbotStatus.DRAFT to ChatbotStatus.ACTIVE by a@gmail.com
