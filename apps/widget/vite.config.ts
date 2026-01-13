@@ -35,7 +35,11 @@ export default defineConfig({
     alias: {
       'react': 'preact/compat',
       'react-dom': 'preact/compat',
-    }
+    },
+    // Ensure workspace dependencies are resolved from root
+    dedupe: ['preact', 'preact/compat', 'preact/jsx-runtime'],
+    // Resolve from root node_modules for workspace packages
+    conditions: ['import', 'module', 'browser', 'default'],
   },
   build: {
     lib: {
@@ -47,12 +51,28 @@ export default defineConfig({
     rollupOptions: {
       output: {
         extend: true,
-      }
+        globals: {
+          'preact': 'Preact',
+          'preact/jsx-runtime': 'PreactJSXRuntime',
+        },
+      },
+      // Don't externalize preact - bundle it
+      external: (id) => {
+        // Only externalize node built-ins
+        return id.startsWith('node:');
+      },
     },
     emptyOutDir: true,
     cssCodeSplit: false,
+    commonjsOptions: {
+      include: [/node_modules/],
+      transformMixedEsModules: true,
+    },
   },
   define: {
     'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV),
-  }
+  },
+  optimizeDeps: {
+    include: ['preact', 'preact/jsx-runtime', '@chatbot/chatbot-widget'],
+  },
 })
