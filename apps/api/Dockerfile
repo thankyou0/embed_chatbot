@@ -27,8 +27,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # ---- Dependencies Stage ----
 FROM base AS dependencies
 
-# Copy requirements
-COPY apps/api/requirements.txt /app/requirements.txt
+# Copy requirements (using root requirements.txt)
+COPY requirements.txt /app/requirements.txt
 
 # Install Python dependencies WITHOUT cache
 RUN pip install --no-cache-dir --upgrade pip && \

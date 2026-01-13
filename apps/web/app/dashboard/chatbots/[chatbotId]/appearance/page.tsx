@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { useForm, Controller, useWatch } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { Loader2, Upload, Sparkles, Save } from 'lucide-react'
@@ -38,10 +38,6 @@ interface AppearanceData extends AppearanceFormData {
 }
 
 export default function AppearancePage() {
-  // #region agent log
-  console.log('🚀 APPEARANCE PAGE COMPONENT MOUNTED')
-  fetch('http://127.0.0.1:7246/ingest/3c40b17e-07a6-4ce0-b083-a3056da5f5f2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'appearance/page.tsx:44',message:'Component mounted',data:{timestamp:Date.now()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch((e)=>{console.error('Log fetch failed:',e)});
-  // #endregion
   const params = useParams()
   const router = useRouter()
   const chatbotId = params.chatbotId as string
@@ -75,88 +71,6 @@ export default function AppearancePage() {
       show_branding: true,
     },
   })
-  // #region agent log
-  console.log('📋 FORM INITIALIZED - control exists:', !!control, 'mode:', 'onChange')
-  fetch('http://127.0.0.1:7246/ingest/3c40b17e-07a6-4ce0-b083-a3056da5f5f2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'appearance/page.tsx:89',message:'Form initialized',data:{hasControl:!!control,mode:'onChange'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch((e)=>{console.error('Log fetch failed:',e)});
-  // #endregion
-
-  // Use useWatch with defaultValue to ensure it works correctly
-  // This is the key for live preview - each field change triggers a re-render
-  const watchedPrimaryColor = useWatch({ control, name: 'primary_color', defaultValue: '#2563eb' })
-  const watchedHeaderText = useWatch({ control, name: 'header_text', defaultValue: 'Chat with us' })
-  const watchedWelcomeMessage = useWatch({ control, name: 'welcome_message', defaultValue: null })
-  const watchedAvatarUrl = useWatch({ control, name: 'avatar_url', defaultValue: null })
-  const watchedPosition = useWatch({ control, name: 'position', defaultValue: 'bottom-right' })
-  const watchedOffsetX = useWatch({ control, name: 'offset_x', defaultValue: 0 })
-  const watchedOffsetY = useWatch({ control, name: 'offset_y', defaultValue: 0 })
-  const watchedInitialSuggestions = useWatch({ control, name: 'initial_suggestions', defaultValue: [] })
-  const watchedShowBranding = useWatch({ control, name: 'show_branding', defaultValue: true })
-  
-  // #region agent log
-  console.log('👀 USEWATCH CALLED - headerText:', watchedHeaderText, 'primaryColor:', watchedPrimaryColor, 'hasControl:', !!control)
-  fetch('http://127.0.0.1:7246/ingest/3c40b17e-07a6-4ce0-b083-a3056da5f5f2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'appearance/page.tsx:101',message:'useWatch hooks called',data:{watchedHeaderText,watchedPrimaryColor,hasControl:!!control},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch((e)=>{console.error('Log fetch failed:',e)});
-  // #endregion
-  
-  // Alternative: Use watch() subscription to force re-renders when form changes
-  const [renderKey, setRenderKey] = useState(0)
-  useEffect(() => {
-    // #region agent log
-    console.log('📺 Setting up watch subscription')
-    // #endregion
-    const subscription = watch((value, { name, type }) => {
-      // #region agent log
-      console.log('📺 WATCH SUBSCRIPTION - field changed:', name, 'type:', type, 'value:', name ? value[name as keyof typeof value] : 'all')
-      fetch('http://127.0.0.1:7246/ingest/3c40b17e-07a6-4ce0-b083-a3056da5f5f2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'appearance/page.tsx:120',message:'Watch subscription triggered',data:{fieldName:name,fieldType:type,value:name ? value[name as keyof typeof value] : value},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch((e)=>{console.error('Log fetch failed:',e)});
-      // #endregion
-      setRenderKey(prev => prev + 1) // Force re-render
-    })
-    return () => subscription.unsubscribe()
-  }, [watch])
-  
-  // Debug: Log when individual watched values change
-  useEffect(() => {
-    // #region agent log
-    fetch('http://127.0.0.1:7246/ingest/3c40b17e-07a6-4ce0-b083-a3056da5f5f2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'appearance/page.tsx:107',message:'Watched Header Text changed',data:{watchedHeaderText},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-    // #endregion
-    console.log('🔍 Watched Header Text changed:', watchedHeaderText)
-  }, [watchedHeaderText])
-  
-  useEffect(() => {
-    // #region agent log
-    fetch('http://127.0.0.1:7246/ingest/3c40b17e-07a6-4ce0-b083-a3056da5f5f2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'appearance/page.tsx:113',message:'Watched Primary Color changed',data:{watchedPrimaryColor},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-    // #endregion
-    console.log('🔍 Watched Primary Color changed:', watchedPrimaryColor)
-  }, [watchedPrimaryColor])
-  
-  // Get current form values using watch() - this ensures we have the latest values
-  const currentFormValues = watch()
-  
-  // Combine watched values with current form values (fallback to watch() if useWatch returns undefined)
-  const watchedValues = {
-    primary_color: watchedPrimaryColor ?? currentFormValues?.primary_color ?? '#2563eb',
-    header_text: watchedHeaderText ?? currentFormValues?.header_text ?? 'Chat with us',
-    welcome_message: watchedWelcomeMessage ?? currentFormValues?.welcome_message ?? null,
-    avatar_url: watchedAvatarUrl ?? currentFormValues?.avatar_url ?? null,
-    position: watchedPosition ?? currentFormValues?.position ?? 'bottom-right',
-    offset_x: watchedOffsetX ?? currentFormValues?.offset_x ?? 0,
-    offset_y: watchedOffsetY ?? currentFormValues?.offset_y ?? 0,
-    initial_suggestions: watchedInitialSuggestions ?? currentFormValues?.initial_suggestions ?? [],
-    show_branding: watchedShowBranding !== undefined ? watchedShowBranding : (currentFormValues?.show_branding ?? true),
-  }
-  
-  // #region agent log
-  useEffect(() => {
-    console.log('🔄 RENDER KEY CHANGED (form updated):', renderKey, 'watchedValues:', watchedValues)
-  }, [renderKey])
-  // #endregion
-  
-  // Debug: Log when watchedValues object changes
-  useEffect(() => {
-    // #region agent log
-    fetch('http://127.0.0.1:7246/ingest/3c40b17e-07a6-4ce0-b083-a3056da5f5f2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'appearance/page.tsx:144',message:'Watched Values Object changed',data:watchedValues,timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-    // #endregion
-    console.log('📊 Watched Values Object:', watchedValues)
-  }, [watchedValues.primary_color, watchedValues.header_text, watchedValues.welcome_message])
 
   useEffect(() => {
     fetchAppearance()
@@ -180,9 +94,6 @@ export default function AppearancePage() {
       // Set form values
       Object.keys(data).forEach((key) => {
         if (key in appearanceSchema.shape) {
-          // #region agent log
-          fetch('http://127.0.0.1:7246/ingest/3c40b17e-07a6-4ce0-b083-a3056da5f5f2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'appearance/page.tsx:171',message:'setValue called in fetchAppearance',data:{key,value:data[key as keyof AppearanceData]},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-          // #endregion
           setValue(key as keyof AppearanceFormData, data[key as keyof AppearanceData] as any)
         }
       })
@@ -229,14 +140,14 @@ export default function AppearancePage() {
 
   const handleAddSuggestion = () => {
     if (newSuggestion.trim()) {
-      const currentSuggestions = watchedValues.initial_suggestions || []
+      const currentSuggestions = watch('initial_suggestions') || []
       setValue('initial_suggestions', [...currentSuggestions, newSuggestion.trim()], { shouldDirty: true })
       setNewSuggestion('')
     }
   }
 
   const handleRemoveSuggestion = (index: number) => {
-    const currentSuggestions = watchedValues.initial_suggestions || []
+    const currentSuggestions = watch('initial_suggestions') || []
     setValue(
       'initial_suggestions',
       currentSuggestions.filter((_, i) => i !== index),
@@ -276,9 +187,6 @@ export default function AppearancePage() {
         </div>
       )}
 
-      {/* #region agent log */}
-      {console.log('🎨 RENDERING FORM - watchedValues:', watchedValues)}
-      {/* #endregion */}
       <form onSubmit={handleSubmit(onSubmit)}>
         <div className="max-w-4xl">
           {/* Settings Form */}
@@ -299,15 +207,7 @@ export default function AppearancePage() {
                       <Input
                         value={field.value || ''}
                         onChange={(e: any) => {
-                          // #region agent log
-                          fetch('http://127.0.0.1:7246/ingest/3c40b17e-07a6-4ce0-b083-a3056da5f5f2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'appearance/page.tsx:264',message:'Header Text onChange fired',data:{newValue:e.target.value,oldValue:field.value},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-                          // #endregion
-                          console.log('✏️ Header Text onChange called with:', e.target.value)
                           field.onChange(e.target.value)
-                          // #region agent log
-                          fetch('http://127.0.0.1:7246/ingest/3c40b17e-07a6-4ce0-b083-a3056da5f5f2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'appearance/page.tsx:267',message:'field.onChange called',data:{value:e.target.value},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-                          // #endregion
-                          console.log('✅ field.onChange called, current field.value:', field.value)
                         }}
                         onBlur={field.onBlur}
                         ref={field.ref}
@@ -357,23 +257,15 @@ export default function AppearancePage() {
                   <div className="flex gap-2 items-center mt-1">
                     <div 
                       className="relative w-12 h-10 rounded-md border border-input overflow-hidden shrink-0 shadow-sm transition-colors duration-200"
-                      style={{ backgroundColor: watchedValues.primary_color || '#2563eb' }}
+                      style={{ backgroundColor: watch('primary_color') || '#2563eb' }}
                     >
                     <input
                       type="color"
                       id="primary_color_picker"
-                      value={watchedValues.primary_color || '#2563eb'}
+                      value={watch('primary_color') || '#2563eb'}
                       onChange={(e) => {
                         const colorValue = e.target.value
-                        // #region agent log
-                        fetch('http://127.0.0.1:7246/ingest/3c40b17e-07a6-4ce0-b083-a3056da5f5f2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'appearance/page.tsx:321',message:'Color picker onChange fired',data:{colorValue},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-                        // #endregion
-                        console.log('🎨 Color picker onChange called with:', colorValue)
                         setValue('primary_color', colorValue, { shouldDirty: true, shouldValidate: true })
-                        // #region agent log
-                        fetch('http://127.0.0.1:7246/ingest/3c40b17e-07a6-4ce0-b083-a3056da5f5f2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'appearance/page.tsx:324',message:'setValue called for primary_color',data:{colorValue},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-                        // #endregion
-                        console.log('✅ setValue called for primary_color')
                       }}
                       className="absolute inset-0 w-[200%] h-[200%] -top-1/2 -left-1/2 cursor-pointer opacity-0"
                     />
@@ -385,19 +277,11 @@ export default function AppearancePage() {
                         name="primary_color"
                         placeholder="2563eb"
                         className="pl-7 font-mono"
-                        value={(watchedValues.primary_color || '').replace(/^#/, '')} // Use watchedValues here
+                        value={(watch('primary_color') || '').replace(/^#/, '')}
                         onChange={(e) => {
                           let val = e.target.value.trim().replace(/^#/, '').replace(/[^0-9A-Fa-f]/g, '').slice(0, 6);
                           const colorValue = val ? '#' + val : '';
-                          // #region agent log
-                          fetch('http://127.0.0.1:7246/ingest/3c40b17e-07a6-4ce0-b083-a3056da5f5f2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'appearance/page.tsx:370',message:'Color input onChange fired',data:{colorValue,rawValue:e.target.value},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-                          // #endregion
-                          console.log('🎨 Color input onChange called with:', colorValue)
                           setValue('primary_color', colorValue, { shouldDirty: true }); 
-                          // #region agent log
-                          fetch('http://127.0.0.1:7246/ingest/3c40b17e-07a6-4ce0-b083-a3056da5f5f2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'appearance/page.tsx:373',message:'setValue called for primary_color from input',data:{colorValue},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-                          // #endregion
-                          console.log('✅ setValue called for primary_color from input')
                         }}
                       />
                     </div>
@@ -520,7 +404,7 @@ export default function AppearancePage() {
                   </div>
                   <Switch
                     id="show_branding"
-                    checked={watchedValues.show_branding}
+                    checked={watch('show_branding') ?? true}
                     onCheckedChange={(checked) => setValue('show_branding', checked, { shouldDirty: true })}
                   />
                 </div>
@@ -537,7 +421,7 @@ export default function AppearancePage() {
                 <div>
                   <Label>Widget Position</Label>
                   <RadioGroup
-                    value={watchedValues.position}
+                    value={watch('position') || 'bottom-right'}
                     onValueChange={(value) => setValue('position', value as 'bottom-right' | 'bottom-left', { shouldDirty: true })}
                     className="flex gap-4 mt-2"
                   >
@@ -611,7 +495,7 @@ export default function AppearancePage() {
                     Quick prompts users can click to start a conversation
                   </p>
                   <div className="space-y-2">
-                    {watchedValues.initial_suggestions?.map((suggestion: string, index: number) => (
+                    {(watch('initial_suggestions') || []).map((suggestion: string, index: number) => (
                       <div key={index} className="flex items-center gap-2">
                         <Input value={suggestion} readOnly className="flex-1 bg-gray-50" />
                         <Button
