@@ -43,7 +43,7 @@ export default defineConfig({
   },
   build: {
     lib: {
-      entry: 'src/index.tsx',
+      entry: 'src/main.tsx',
       name: 'ChatbotWidget',
       fileName: (format) => `widget.${format}.js`,
       formats: ['es', 'umd']

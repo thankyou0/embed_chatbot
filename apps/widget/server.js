@@ -27,6 +27,17 @@ const MIME_TYPES = {
 };
 
 const server = http.createServer((req, res) => {
+  // Handle CORS preflight
+  if (req.method === 'OPTIONS') {
+    res.writeHead(200, {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+    });
+    res.end();
+    return;
+  }
+  
   // Remove query string and decode URI
   let filePath = decodeURIComponent(req.url.split('?')[0]);
   
@@ -78,7 +89,16 @@ const server = http.createServer((req, res) => {
       const ext = path.extname(fullPath).toLowerCase();
       const contentType = MIME_TYPES[ext] || 'application/octet-stream';
       
-      res.writeHead(200, { 'Content-Type': contentType });
+      // Add CORS headers for widget files
+      const headers = {
+        'Content-Type': contentType,
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type',
+        'Cache-Control': ext === '.js' ? 'public, max-age=31536000, immutable' : 'public, max-age=3600'
+      };
+      
+      res.writeHead(200, headers);
       res.end(data);
     });
   });
