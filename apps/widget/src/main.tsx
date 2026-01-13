@@ -1,6 +1,11 @@
 import { render } from 'preact'
 import { App } from './app'
 import widgetStyles from './widget.css?inline'
+import { widgetStyles as fallbackStyles } from './styles'
+
+// #region agent log
+fetch('http://127.0.0.1:7246/ingest/3c40b17e-07a6-4ce0-b083-a3056da5f5f2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.tsx:3',message:'widgetStyles imported',data:{type:typeof widgetStyles,isString:typeof widgetStyles==='string',hasDefault:!!(widgetStyles as any)?.default,contentLength:typeof widgetStyles==='string'?widgetStyles.length:((widgetStyles as any)?.default?.length||0),isUndefined:widgetStyles===undefined,isNull:widgetStyles===null},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+// #endregion
 
 interface ChatbotConfig {
   chatbotId: string;
@@ -56,25 +61,62 @@ async function fetchWidgetConfig(chatbotId: string, apiUrl?: string): Promise<Wi
 }
 
 function injectStyles() {
+  // #region agent log
+  fetch('http://127.0.0.1:7246/ingest/3c40b17e-07a6-4ce0-b083-a3056da5f5f2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.tsx:58',message:'injectStyles called',data:{widgetStylesType:typeof widgetStyles,widgetStylesExists:widgetStyles!==undefined&&widgetStyles!==null},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+  // #endregion
+  
   const styleId = 'chatbot-widget-styles';
-  if (!document.getElementById(styleId)) {
+  const existingStyle = document.getElementById(styleId);
+  
+  // #region agent log
+  fetch('http://127.0.0.1:7246/ingest/3c40b17e-07a6-4ce0-b083-a3056da5f5f2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.tsx:62',message:'checking existing style',data:{styleId,existingStyleExists:!!existingStyle},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+  // #endregion
+  
+  if (!existingStyle) {
     const style = document.createElement('style');
     style.id = styleId;
     // In build mode with ?inline, it might be a string or { default: string }
-    const cssText = typeof widgetStyles === 'string' ? widgetStyles : (widgetStyles as any).default;
-    if (cssText) {
+    let cssText = typeof widgetStyles === 'string' ? widgetStyles : (widgetStyles as any)?.default;
+    
+    // Fallback to styles.ts if inline import failed (production build issue)
+    if (!cssText || cssText.length === 0) {
+      cssText = fallbackStyles;
+    }
+    
+    // #region agent log
+    fetch('http://127.0.0.1:7246/ingest/3c40b17e-07a6-4ce0-b083-a3056da5f5f2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.tsx:66',message:'cssText extracted',data:{cssTextType:typeof cssText,cssTextExists:!!cssText,cssTextLength:cssText?.length||0,cssTextPreview:cssText?.substring(0,100)||'N/A',usedFallback:!widgetStyles||(typeof widgetStyles!=='string'&&!(widgetStyles as any)?.default)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+    
+    if (cssText && cssText.length > 0) {
       style.textContent = cssText;
       document.head.appendChild(style);
+      
+      // #region agent log
+      fetch('http://127.0.0.1:7246/ingest/3c40b17e-07a6-4ce0-b083-a3056da5f5f2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.tsx:72',message:'style element added to DOM',data:{styleElementId:style.id,styleInHead:!!document.head.querySelector('#'+styleId),styleTextLength:style.textContent?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
+      
       console.log('Chatbot widget styles injected');
     } else {
-      console.error('Failed to get chatbot widget styles');
+      // #region agent log
+      fetch('http://127.0.0.1:7246/ingest/3c40b17e-07a6-4ce0-b083-a3056da5f5f2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.tsx:76',message:'cssText is empty or falsy after fallback',data:{cssText, widgetStyles, fallbackStyles:fallbackStyles?.substring(0,50)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
+      
+      console.error('Failed to get chatbot widget styles - both inline and fallback failed');
     }
   }
 }
 
 async function initChatbotWidget(config: ChatbotConfig) {
+  // #region agent log
+  fetch('http://127.0.0.1:7246/ingest/3c40b17e-07a6-4ce0-b083-a3056da5f5f2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.tsx:75',message:'initChatbotWidget called',data:{chatbotId:config.chatbotId,apiUrl:config.apiUrl},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+  // #endregion
+  
   // Inject styles immediately
   injectStyles();
+  
+  // #region agent log
+  setTimeout(()=>{fetch('http://127.0.0.1:7246/ingest/3c40b17e-07a6-4ce0-b083-a3056da5f5f2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.tsx:80',message:'after injectStyles - verify DOM',data:{styleInDOM:!!document.getElementById('chatbot-widget-styles'),headStylesCount:document.head.querySelectorAll('style').length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});},100);
+  // #endregion
 
   let container = document.getElementById('chatbot-widget-container');
   if (!container) {
