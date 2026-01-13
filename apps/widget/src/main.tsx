@@ -62,47 +62,58 @@ async function fetchWidgetConfig(chatbotId: string, apiUrl?: string): Promise<Wi
 
 function injectStyles() {
   // #region agent log
-  fetch('http://127.0.0.1:7246/ingest/3c40b17e-07a6-4ce0-b083-a3056da5f5f2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.tsx:58',message:'injectStyles called',data:{widgetStylesType:typeof widgetStyles,widgetStylesExists:widgetStyles!==undefined&&widgetStyles!==null},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+  fetch('http://127.0.0.1:7246/ingest/3c40b17e-07a6-4ce0-b083-a3056da5f5f2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.tsx:63',message:'injectStyles called',data:{widgetStylesType:typeof widgetStyles,widgetStylesExists:widgetStyles!==undefined&&widgetStyles!==null,fallbackStylesType:typeof fallbackStyles,fallbackStylesLength:fallbackStyles?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
   // #endregion
   
   const styleId = 'chatbot-widget-styles';
-  const existingStyle = document.getElementById(styleId);
+  let existingStyle = document.getElementById(styleId);
   
   // #region agent log
-  fetch('http://127.0.0.1:7246/ingest/3c40b17e-07a6-4ce0-b083-a3056da5f5f2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.tsx:62',message:'checking existing style',data:{styleId,existingStyleExists:!!existingStyle},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+  fetch('http://127.0.0.1:7246/ingest/3c40b17e-07a6-4ce0-b083-a3056da5f5f2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.tsx:69',message:'checking existing style',data:{styleId,existingStyleExists:!!existingStyle},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
   // #endregion
   
-  if (!existingStyle) {
-    const style = document.createElement('style');
-    style.id = styleId;
-    // In build mode with ?inline, it might be a string or { default: string }
-    let cssText = typeof widgetStyles === 'string' ? widgetStyles : (widgetStyles as any)?.default;
-    
-    // Fallback to styles.ts if inline import failed (production build issue)
-    if (!cssText || cssText.length === 0) {
-      cssText = fallbackStyles;
-    }
+  // Always inject/reinject to ensure styles are present (handles cases where styles were removed)
+  if (existingStyle) {
+    existingStyle.remove();
+  }
+  
+  const style = document.createElement('style');
+  style.id = styleId;
+  // In build mode with ?inline, it might be a string or { default: string }
+  let cssText = typeof widgetStyles === 'string' ? widgetStyles : (widgetStyles as any)?.default;
+  
+  // Fallback to styles.ts if inline import failed (production build issue)
+  if (!cssText || cssText.length === 0) {
+    console.warn('[ChatbotWidget] Inline CSS failed, using fallback styles');
+    cssText = fallbackStyles;
+  }
+  
+  // #region agent log
+  fetch('http://127.0.0.1:7246/ingest/3c40b17e-07a6-4ce0-b083-a3056da5f5f2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.tsx:82',message:'cssText extracted',data:{cssTextType:typeof cssText,cssTextExists:!!cssText,cssTextLength:cssText?.length||0,cssTextPreview:cssText?.substring(0,100)||'N/A',usedFallback:!widgetStyles||(typeof widgetStyles!=='string'&&!(widgetStyles as any)?.default)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
+  
+  if (cssText && cssText.length > 0) {
+    style.textContent = cssText;
+    // Insert at the beginning of head to ensure it loads first
+    document.head.insertBefore(style, document.head.firstChild);
     
     // #region agent log
-    fetch('http://127.0.0.1:7246/ingest/3c40b17e-07a6-4ce0-b083-a3056da5f5f2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.tsx:66',message:'cssText extracted',data:{cssTextType:typeof cssText,cssTextExists:!!cssText,cssTextLength:cssText?.length||0,cssTextPreview:cssText?.substring(0,100)||'N/A',usedFallback:!widgetStyles||(typeof widgetStyles!=='string'&&!(widgetStyles as any)?.default)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7246/ingest/3c40b17e-07a6-4ce0-b083-a3056da5f5f2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.tsx:90',message:'style element added to DOM',data:{styleElementId:style.id,styleInHead:!!document.head.querySelector('#'+styleId),styleTextLength:style.textContent?.length||0,headFirstChild:document.head.firstChild?.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
     // #endregion
     
-    if (cssText && cssText.length > 0) {
-      style.textContent = cssText;
-      document.head.appendChild(style);
-      
-      // #region agent log
-      fetch('http://127.0.0.1:7246/ingest/3c40b17e-07a6-4ce0-b083-a3056da5f5f2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.tsx:72',message:'style element added to DOM',data:{styleElementId:style.id,styleInHead:!!document.head.querySelector('#'+styleId),styleTextLength:style.textContent?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-      // #endregion
-      
-      console.log('Chatbot widget styles injected');
-    } else {
-      // #region agent log
-      fetch('http://127.0.0.1:7246/ingest/3c40b17e-07a6-4ce0-b083-a3056da5f5f2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.tsx:76',message:'cssText is empty or falsy after fallback',data:{cssText, widgetStyles, fallbackStyles:fallbackStyles?.substring(0,50)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
-      
-      console.error('Failed to get chatbot widget styles - both inline and fallback failed');
-    }
+    console.log('[ChatbotWidget] Styles injected successfully', { 
+      length: cssText.length, 
+      usedFallback: !widgetStyles || (typeof widgetStyles !== 'string' && !(widgetStyles as any)?.default)
+    });
+  } else {
+    // #region agent log
+    fetch('http://127.0.0.1:7246/ingest/3c40b17e-07a6-4ce0-b083-a3056da5f5f2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.tsx:97',message:'cssText is empty after fallback',data:{widgetStyles,fallbackStyles:fallbackStyles?.substring(0,50)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+    
+    console.error('[ChatbotWidget] CRITICAL: Failed to inject styles - both inline and fallback failed!', {
+      widgetStyles,
+      fallbackStyles: fallbackStyles?.substring(0, 100)
+    });
   }
 }
 
