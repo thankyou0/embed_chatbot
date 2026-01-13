@@ -7,7 +7,7 @@ function App() {
   return (
     <div className="App">
       <h1>Chatbot Widget Test Site</h1>
-      <p>Running on port 3005</p>
+      <p>Running on port 3000</p>
       Add iframe here
       {/* <iframe
         src={`http://localhost:3000/embed/325606cb-3e80-4815-8190-20afe12537e0`}

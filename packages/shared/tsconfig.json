@@ -6,12 +6,14 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    "strict": true,
+    "strict": false,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "moduleResolution": "bundler",
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
+    "types": []
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules"]

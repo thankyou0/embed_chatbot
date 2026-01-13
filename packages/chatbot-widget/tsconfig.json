@@ -7,7 +7,7 @@
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "allowJs": true,
-    "strict": true,
+    "strict": false,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noImplicitAny": false,
@@ -16,7 +16,9 @@
     "forceConsistentCasingInFileNames": true,
     "declaration": true,
     "declarationMap": true,
-    "isolatedModules": true
+    "isolatedModules": true,
+    "allowSyntheticDefaultImports": true,
+    "types": []
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]

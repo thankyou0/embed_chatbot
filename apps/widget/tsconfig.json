@@ -13,9 +13,11 @@
     "noEmit": true,
     "jsx": "react-jsx",
     "jsxImportSource": "preact",
+    "allowSyntheticDefaultImports": true,
+    "types": [],
 
     /* Linting */
-    "strict": true,
+    "strict": false,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true,

@@ -127,6 +127,9 @@ importers:
 
   packages/chatbot-widget:
     dependencies:
+      preact:
+        specifier: ^10.0.0
+        version: 10.28.2
       react:
         specifier: ^18.2.0
         version: 18.3.1
