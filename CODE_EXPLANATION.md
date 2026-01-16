@@ -311,6 +311,10 @@ The application uses SQLAlchemy ORM models representing the database schema:
   4. Call LLM API (Groq) with context
   5. Stream response back to client
   6. Save conversation to history
+- **LLM Configuration** (currently hardcoded):
+  - Model: `llama-3.3-70b-versatile` (main chat)
+  - Temperature: 0.1 (for consistent answers)
+  - System prompt: Built dynamically with knowledge context
 
 #### EmbeddingService (`services/embedding_service.py`)
 - Convert text to vector embeddings
@@ -445,12 +449,11 @@ app/
 1. User clicks "Create Chatbot"
 2. Form opens with fields:
    - Name
-   - System prompt
-   - Model selection
-   - Temperature setting
+   - Welcome message
+   - Status (draft/active)
 3. User submits form
 4. Frontend calls `POST /chatbots`
-5. Backend creates chatbot
+5. Backend creates chatbot with default settings
 6. Frontend updates list
 
 ---
@@ -613,10 +616,11 @@ ChatbotWidget.init({
 - **Purpose**: Chatbot configurations
 - **Key Fields**: 
   - `id`, `tenant_id`, `name`
-  - `system_prompt` - Instructions for AI
-  - `model` - LLM model to use (e.g., "llama3-70b")
-  - `temperature` - Creativity level (0-1)
-  - `max_tokens` - Response length limit
+  - `welcome_message` - Greeting shown to users
+  - `status` - draft, active, or paused
+  - `confidence_threshold` - Minimum confidence for answers (default: 0.7)
+  - `created_by` - User who created the chatbot
+- **Note**: LLM settings (model, temperature, system prompt) are currently hardcoded in the chat service
 
 #### 4. `chatbot_appearance`
 - **Purpose**: UI customization
@@ -930,14 +934,13 @@ async def chat(message: str):
 
 1. User fills form in dashboard
    ├→ Name: "Support Bot"
-   ├→ System Prompt: "You are a helpful assistant..."
-   ├→ Model: "llama3-70b"
-   └→ Temperature: 0.7
+   ├→ Welcome Message: "Hello! How can I help you?"
+   └→ Status: "active"
         │
         ▼
 2. Frontend: POST /chatbots
    Headers: { Authorization: Bearer <token> }
-   Body: { name, system_prompt, model, temperature }
+   Body: { name, welcome_message }
         │
         ▼
 3. chatbots.py: create_chatbot() route
@@ -947,6 +950,8 @@ async def chat(message: str):
 4. chatbot_service.py: create_chatbot()
    ├→ Create Chatbot record
    │  └→ tenant_id = current_user.tenant_id
+   │  └→ status = "draft" (default)
+   │  └→ confidence_threshold = 0.7 (default)
    ├→ Create default ChatbotAppearance
    │  └→ primary_color = "#007bff"
    │  └→ position = "bottom-right"
@@ -954,7 +959,7 @@ async def chat(message: str):
         │
         ▼
 5. Return chatbot data
-   { id, name, system_prompt, ... }
+   { id, name, welcome_message, status, ... }
         │
         ▼
 6. Frontend updates UI
