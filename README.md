@@ -2,6 +2,16 @@
 
 A monorepo for an embeddable AI chatbot SaaS platform.
 
+## 📚 Documentation
+
+**NEW! Want to understand the complete codebase?**
+- **[CODE_EXPLANATION.md](./CODE_EXPLANATION.md)** - Comprehensive guide explaining the entire codebase from architecture to implementation
+  - Complete architecture overview
+  - Detailed explanation of backend, frontend, and widget
+  - Data flow diagrams and request lifecycle
+  - Key features implementation
+  - Perfect starting point for understanding the code!
+
 ## Structure
 
 ```
