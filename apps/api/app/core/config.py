@@ -36,8 +36,9 @@ def get_env_file_path() -> Optional[str]:
             return str(local_env)
     except IndexError:
         pass
-
-    # No .env file found - rely on environment variables
+# 4️⃣ If no .env found
+# Returns None, meaning:
+# 👉 Your app will rely only on system environment variables (typical for production servers).
     return None
 
 
@@ -56,7 +57,7 @@ class Settings(BaseSettings):
 
     # JWT
     JWT_ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 150
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 1500
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
     # CORS

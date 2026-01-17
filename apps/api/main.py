@@ -10,7 +10,7 @@ from pathlib import Path
 
 from app.core.config import settings
 from app.core.logging import get_logger, setup_uvicorn_logging
-from app.core.exceptions import APIException, DatabaseError
+from app.core.exceptions import APIException
 from app.core.database import check_database_connection
 from app.api.v1.router import api_router
 from sqlalchemy.exc import SQLAlchemyError, OperationalError, IntegrityError

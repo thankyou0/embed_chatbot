@@ -1,8 +1,6 @@
 import { render } from 'preact'
 import { ChatbotWidget, type ChatbotConfig } from '@chatbot/chatbot-widget'
 
-// Re-export ChatbotConfig for backward compatibility
-export type { ChatbotConfig }
 
 // Styles are imported via the shared component's CSS
 
@@ -32,24 +30,6 @@ export function initChatbot(config: Partial<ChatbotConfig> = {}, containerElemen
     // Create new widget
     const root = render(<ChatbotWidget config={config as ChatbotConfig} />, container);
     widgetRoots.set(container, root);
-  }
-}
-
-// Auto-initialize if script has data attributes
-if (typeof window !== 'undefined') {
-  const script = document.currentScript as HTMLScriptElement
-  if (script?.dataset.autoInit === 'true') {
-    const chatbotId = script.dataset.chatbotId || script.dataset.tenantId;
-    if (chatbotId) {
-      const config: ChatbotConfig = {
-        apiUrl: script.dataset.apiUrl,
-        chatbotId: chatbotId,
-        isPreview: script.dataset.isPreview === 'true'
-      }
-      initChatbot(config)
-    } else {
-      console.error('ChatbotWidget: chatbotId is required for auto-initialization');
-    }
   }
 }
 

@@ -1,4 +1,27 @@
 
+// Create and load the widget script
+const script = document.createElement('script');
+script.src = 'http://localhost:3001/widget.umd.js';
+script.onload = function() {
+  console.log('Widget script loaded successfully!');
+  
+  // Initialize the widget
+  if (window.ChatbotWidget) {
+    ChatbotWidget.init({
+      chatbotId: "9399fcdd-cad3-466d-8be3-1d2e3c5d0c11",
+      apiUrl: "http://localhost:8000"
+    });
+    console.log('Widget initialized!');
+  } else {
+    console.error('ChatbotWidget not found on window object');
+  }
+};
+script.onerror = function() {
+  console.error('Failed to load widget script');
+};
+document.head.appendChild(script);
+
+
 # 🚀 Sprint Structure: E-Commerce Embeddable AI Chatbot SaaS
 
 Here's your complete sprint roadmap with prompts for each step. Each sprint delivers a **working, testable feature**.
@@ -315,7 +338,7 @@ Call this after crawl completes.
 Create chatbot creation wizard in Next.js:
 
 FLOW:
-/dashboard/chatbots/new - Multi-step wizard
+/dashboard/chatbots - Multi-step wizard
 
 Step 1: Basic Info
 - Chatbot name (required)

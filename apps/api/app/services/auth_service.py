@@ -23,7 +23,6 @@ from app.schemas.tenant import TenantResponse
 
 logger = get_logger(__name__)
 
-
 class AuthService:
     @staticmethod
     async def signup(db: AsyncSession, request: SignupRequest) -> dict:
@@ -103,7 +102,7 @@ class AuthService:
         user = result.scalar_one_or_none()
         
         if not user:
-            raise UnauthorizedError("Incorrect email or password")
+            raise UnauthorizedError("Email is not registered")
         
         # Check if user is active
         if not user.is_active:
@@ -111,7 +110,7 @@ class AuthService:
         
         # Verify password
         if not verify_password(request.password, user.password_hash):
-            raise UnauthorizedError("Incorrect email or password")
+            raise UnauthorizedError("Incorrect password")
         
         # Check if temporary password has expired
         if user.password_expires_at and user.password_expires_at < datetime.now(timezone.utc):
