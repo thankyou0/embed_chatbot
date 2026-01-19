@@ -314,11 +314,14 @@ class ChatbotService:
             old_status = chatbot.status
             chatbot.status = request.status
             if old_status != request.status:
+                # Use only the status name (e.g., DRAFT, ACTIVE) instead of enum representation
+                old_status_name = old_status.name if hasattr(old_status, 'name') else str(old_status)
+                new_status_name = request.status.name if hasattr(request.status, 'name') else str(request.status)
                 activity = ChatbotActivity(
                     chatbot_id=chatbot_id,
                     user_id=user.id,
                     activity_type="status_change",
-                    description=f"Status changed from {old_status} to {request.status} by {user.name or user.email}"
+                    description=f"Status changed from {old_status_name} to {new_status_name} by {user.name or user.email}"
                 )
                 db.add(activity)
         
@@ -826,7 +829,11 @@ class ChatbotService:
         
         # Update fields
         update_data = request.model_dump(exclude_unset=True)
+        changed_fields = []
         for field, value in update_data.items():
+            old_value = getattr(appearance, field, None)
+            if old_value != value:
+                changed_fields.append(field)
             setattr(appearance, field, value)
         
         # Update timestamp
@@ -835,6 +842,16 @@ class ChatbotService:
         await db.commit()
         await db.refresh(appearance)
         
+        # Log activity if any field changed
+        if changed_fields:
+            activity = ChatbotActivity(
+                chatbot_id=chatbot_id,
+                user_id=user.id,
+                activity_type="appearance_updated",
+                description=f"Appearance updated: changed {', '.join(changed_fields)} by {user.name or user.email}"
+            )
+            db.add(activity)
+            await db.commit()
         logger.success(f"Appearance updated for chatbot {chatbot_id}")
         
         return ChatbotAppearanceResponse.model_validate(appearance)
@@ -887,6 +904,7 @@ class ChatbotService:
             welcome_message=appearance.welcome_message,
             initial_suggestions=appearance.initial_suggestions or [],
             show_branding=appearance.show_branding,
+            is_paused=chatbot.status == ChatbotStatus.PAUSED,
         )
 
     # ============== Knowledge Base Management ==============
@@ -1182,11 +1200,28 @@ class ChatbotService:
         # (CASCADE should handle this, but being explicit ensures it works)
         await db.execute(delete(Embedding).where(Embedding.knowledge_source_id == ks_id))
         
-        # 5. Delete crawl-related records (CrawlHistory, CrawlSchedule) to avoid FK constraint
+        # 5. Delete all related records to avoid FK constraints
         await db.execute(delete(CrawlHistory).where(CrawlHistory.knowledge_source_id == ks_id))
         await db.execute(delete(CrawlSchedule).where(CrawlSchedule.knowledge_source_id == ks_id))
         
-        # 6. Delete from database (cascade will handle pages, files, qa_pairs)
+        # Import the models we need for deletion
+        from app.models.knowledge import CrawledPage, UploadedFile, QAPair
+        
+        # Delete all crawled pages, uploaded files, and QA pairs
+        await db.execute(delete(CrawledPage).where(CrawledPage.knowledge_source_id == ks_id))
+        await db.execute(delete(UploadedFile).where(UploadedFile.knowledge_source_id == ks_id))
+        await db.execute(delete(QAPair).where(QAPair.knowledge_source_id == ks_id))
+        
+        # 6. Log activity before deleting
+        activity = ChatbotActivity(
+            chatbot_id=ks.chatbot_id,
+            user_id=user.id,
+            activity_type="knowledge_source_deleted",
+            description=f"Knowledge source deleted: {ks.source_url or str(ks_id)[:8]}... by {user.name or user.email}"
+        )
+        db.add(activity)
+        
+        # 7. Delete from database (cascade will handle pages, files, qa_pairs)
         await db.execute(delete(KnowledgeSource).where(KnowledgeSource.id == ks_id))
         await db.commit()
         logger.success(f"Deleted knowledge source {ks_id} and all associated embeddings")
@@ -1629,7 +1664,35 @@ class ChatbotService:
         
         # Delete the QA pair
         await db.delete(qa)
+        
+        # Update the knowledge source pages_found count
+        ks.pages_found = max(0, ks.pages_found - 1)
+        
+        # Check if this was the last QA pair in the knowledge source
+        remaining_qa_count = await db.execute(
+            select(func.count(QAPair.id)).where(
+                QAPair.knowledge_source_id == ks_id,
+                QAPair.id != qa_id  # Exclude the one we're about to delete
+            )
+        )
+        remaining_count = remaining_qa_count.scalar() or 0
+        
+        # Log activity
+        activity = ChatbotActivity(
+            chatbot_id=ks.chatbot_id,
+            user_id=user.id,
+            activity_type="qa_pair_deleted",
+            description=f"Q&A pair deleted: '{qa.question[:50]}...' by {user.name or user.email}"
+        )
+        db.add(activity)
+        
         await db.commit()
+        
+        # If this was the last QA pair, delete the knowledge source entirely
+        if remaining_count == 0 and ks.source_type == KnowledgeSourceType.QA_PAIR:
+            await db.execute(delete(KnowledgeSource).where(KnowledgeSource.id == ks_id))
+            await db.commit()
+            logger.success(f"Deleted empty QA knowledge source {ks_id}")
         
         logger.success(f"Deleted QA pair {qa_id} and its embedding")
 

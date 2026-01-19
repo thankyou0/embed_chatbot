@@ -10,7 +10,7 @@ from sqlalchemy import select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.knowledge import Embedding, KnowledgeSourceType
-from app.models.chatbot import Chatbot
+from app.models.chatbot import Chatbot, ChatbotStatus
 from app.models.chat import ChatSession, ChatMessage, MessageRole
 from app.services.embedding_service import get_single_embedding
 from app.services.vision_service import VisionService, ImageAttributes
@@ -112,6 +112,43 @@ class ChatService:
         chatbot_stmt = select(Chatbot).where(Chatbot.id == chatbot_id)
         chatbot_res = await db.execute(chatbot_stmt)
         chatbot = chatbot_res.scalar_one()
+        
+        # Check if chatbot is paused (and not in preview mode)
+        if not is_preview and chatbot.status == ChatbotStatus.PAUSED:
+            # Return a paused message
+            paused_message = (
+                f"🚧 {chatbot.name} is currently offline for maintenance. "
+                "Please check back later. We appreciate your patience!"
+            )
+            
+            # Save user message but return paused response
+            if message:
+                user_msg = ChatMessage(
+                    session_id=session.id, 
+                    role=MessageRole.USER, 
+                    content=message,
+                    metadata_json={"paused_chatbot": True}
+                )
+                db.add(user_msg)
+            
+            assistant_msg = ChatMessage(
+                session_id=session.id, 
+                role=MessageRole.ASSISTANT, 
+                content=paused_message,
+                metadata_json={
+                    "is_paused_response": True,
+                    "response_time_ms": int((time.time() - start_time) * 1000)
+                }
+            )
+            db.add(assistant_msg)
+            await db.commit()
+            
+            return ChatMessageResponse(
+                session_id=str(session.id),
+                message=paused_message,
+                sources=[],
+                suggestions=[]
+            )
         
         history = await ChatService.get_history(db, session.id, limit=6)
         summary = session.conversation_summary or ""

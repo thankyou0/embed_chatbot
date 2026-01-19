@@ -169,7 +169,7 @@ services:
       - api_uploads:/app/uploads
     environment:
       DATABASE_URL: postgresql+asyncpg://postgres:post@postgres:5432/embed_chatbot
-      CORS_ORIGINS: '["http://localhost:3000","http://localhost:3001","http://localhost:3005","http://127.0.0.1:3000","http://127.0.0.1:3001","http://127.0.0.1:3005"]'
+      CORS_ORIGINS: '["http://localhost:3000","http://localhost:3001","*","http://127.0.0.1:3000","http://127.0.0.1:3001","http://127.0.0.1:3005"]'
     depends_on:
       postgres:
         condition: service_healthy

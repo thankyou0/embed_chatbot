@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,36 +18,49 @@ import {
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import Link from "next/link";
+import { apiRequest } from "@/lib/api";
 
-const loginSchema = z.object({
+const forgotPasswordSchema = z.object({
   email: z.string().email("Invalid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
-type LoginFormData = z.infer<typeof loginSchema>;
+type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema>;
 
-export default function LoginPage() {
+interface ForgotPasswordResponse {
+  message: string;
+}
+
+export default function ForgotPasswordPage() {
   const router = useRouter();
-  const { login, loading } = useAuth();
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<LoginFormData>({
-    resolver: zodResolver(loginSchema),
+    reset,
+  } = useForm<ForgotPasswordFormData>({
+    resolver: zodResolver(forgotPasswordSchema),
   });
 
-  const onSubmit = async (data: LoginFormData) => {
+  const onSubmit = async (data: ForgotPasswordFormData) => {
     setError(null);
+    setSuccess(null);
     setIsSubmitting(true);
+
     try {
-      await login({
-        email: data.email,
-        password: data.password,
-      });
+      const response = await apiRequest<ForgotPasswordResponse>(
+        "/api/v1/auth/forgot-password",
+        {
+          method: "POST",
+          body: JSON.stringify(data),
+        }
+      );
+
+      setSuccess(response.message);
+      reset(); // Clear the form
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
@@ -60,9 +72,10 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
+          <CardTitle className="text-2xl font-bold">Forgot Password</CardTitle>
           <CardDescription>
-            Enter your email and password to sign in
+            Enter your email address and we'll send you a link to reset your
+            password.
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit(onSubmit)}>
@@ -70,6 +83,13 @@ export default function LoginPage() {
             {error && (
               <Alert variant="destructive">
                 <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+            {success && (
+              <Alert>
+                <AlertDescription className="text-green-700 dark:text-green-300">
+                  {success}
+                </AlertDescription>
               </Alert>
             )}
             <div className="space-y-2">
@@ -87,37 +107,22 @@ export default function LoginPage() {
                 </p>
               )}
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                {...register("password")}
-                disabled={isSubmitting}
-              />
-              {errors.password && (
-                <p className="text-sm text-destructive">
-                  {errors.password.message}
-                </p>
-              )}
-            </div>
           </CardContent>
           <CardFooter className="flex flex-col space-y-4">
             <Button
               type="submit"
               className="w-full"
-              disabled={isSubmitting || loading}
+              disabled={isSubmitting || success !== null}
             >
-              {isSubmitting ? "Signing in..." : "Sign in"}
+              {isSubmitting ? "Sending..." : "Send Reset Link"}
             </Button>
             <div className="flex flex-col space-y-2 text-sm text-center text-muted-foreground">
-              <Link
-                href="/forgot-password"
-                className="text-primary hover:underline"
-              >
-                Forgot your password?
-              </Link>
+              <p>
+                Remember your password?{" "}
+                <Link href="/login" className="text-primary hover:underline">
+                  Sign in
+                </Link>
+              </p>
               <p>
                 Don&apos;t have an account?{" "}
                 <Link href="/signup" className="text-primary hover:underline">

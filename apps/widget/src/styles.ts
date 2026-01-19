@@ -377,30 +377,6 @@ export const widgetStyles = `
   margin-left: 32px; /* ml-8 = 32px */
 }
 
-.chatbot-initial-suggestions {
-  margin-top: 16px; /* space-y-2 = 8px, but we need more space */
-  margin-left: 32px; /* ml-8 = 32px */
-}
-
-.chatbot-suggestions-label {
-  font-size: 10px; /* text-[10px] */
-  color: #9ca3af; /* text-gray-400 */
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.05em; /* tracking-wider */
-  margin-bottom: 8px; /* space-y-2 = 8px */
-}
-
-.chatbot-suggestions-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px; /* gap-2 = 8px */
-}
-
-.chatbot-suggestions-list .chatbot-suggestion-button {
-  padding: 6px 12px; /* py-1.5 = 6px, px-3 = 12px for initial suggestions */
-}
-
 .chatbot-suggestion-button {
   text-align: left;
   padding: 4px 12px; /* py-1 = 4px, px-3 = 12px */

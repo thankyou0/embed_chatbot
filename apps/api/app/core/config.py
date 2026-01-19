@@ -80,6 +80,20 @@ class Settings(BaseSettings):
     HUGGINGFACE_API_KEY: Optional[str] = None
     EMBEDDING_MODEL: str = "sentence-transformers/all-MiniLM-L6-v2"
     
+    # Email configuration
+    SMTP_HOST: str = "smtp.gmail.com"
+    SMTP_PORT: int = 587
+    SMTP_USER: Optional[str] = None
+    SMTP_PASSWORD: Optional[str] = None
+    SMTP_TLS: bool = True
+    SMTP_SSL: bool = False
+    
+    # Email settings
+    EMAIL_FROM: Optional[str] = None
+    EMAIL_FROM_NAME: str = "Chatbot Platform"
+    FRONTEND_URL: str = "http://localhost:3000"
+    PASSWORD_RESET_TOKEN_EXPIRE_HOURS: int = 1
+    
     @property
     def huggingface_api_key(self) -> Optional[str]:
         """Get HuggingFace API key, checking HF_API_KEY first, then HUGGINGFACE_API_KEY."""

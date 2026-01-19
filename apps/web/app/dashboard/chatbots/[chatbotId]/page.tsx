@@ -489,7 +489,8 @@ export default function ChatbotDetailPage() {
 
     try {
       setIsCrawling(true);
-      const token = getAccessToken();1
+      const token = getAccessToken();
+      1;
       if (!token) return;
 
       // Get the response which includes the new knowledge source
@@ -738,8 +739,8 @@ export default function ChatbotDetailPage() {
       type === "pages"
         ? selectedPages
         : type === "files"
-        ? selectedFiles
-        : selectedQAs;
+          ? selectedFiles
+          : selectedQAs;
     if (ids.length === 0) return;
     if (!confirm(`Are you sure you want to delete ${ids.length} items?`))
       return;
@@ -834,8 +835,9 @@ export default function ChatbotDetailPage() {
         body: JSON.stringify({ status: newStatus }),
       });
 
-      // Refresh chatbot data
+      // Refresh chatbot data and stats to update overview and recent activity
       fetchChatbotDetails();
+      fetchChatbotStats();
     } catch (err) {
       console.error("Failed to toggle status:", err);
     }
@@ -884,6 +886,7 @@ export default function ChatbotDetailPage() {
 
       setSettingsSuccess("Settings saved successfully!");
       fetchChatbotDetails();
+      fetchChatbotStats();
       setTimeout(() => setSettingsSuccess(null), 3000);
     } catch (err: any) {
       setSettingsError(err.message || "Failed to save settings");
@@ -1033,8 +1036,8 @@ export default function ChatbotDetailPage() {
                 chatbot.status === "active"
                   ? "success"
                   : chatbot.status === "paused"
-                  ? "warning"
-                  : "secondary"
+                    ? "warning"
+                    : "secondary"
               }
             >
               {chatbot.status.charAt(0).toUpperCase() + chatbot.status.slice(1)}
@@ -1182,39 +1185,51 @@ export default function ChatbotDetailPage() {
             <CardContent>
               {stats?.recent_activity && stats.recent_activity.length > 0 ? (
                 <div className="space-y-4">
-                  {stats.recent_activity.map((item) => (
-                    <div
-                      key={item.id}
-                      className="flex items-start gap-4 text-sm"
-                    >
+                  {stats.recent_activity.map((item) => {
+                    const isTeamActivity =
+                      item.type === "team_member_added" ||
+                      item.type === "team_member_updated" ||
+                      item.type === "team_member_removed" ||
+                      item.type === "team_permissions_updated";
+
+                    return (
                       <div
-                        className={cn(
-                          "mt-1 p-1.5 rounded-full",
-                          item.type === "knowledge_source"
-                            ? "bg-blue-100 text-blue-600"
-                            : item.type === "conversation"
-                            ? "bg-green-100 text-green-600"
-                            : "bg-gray-100 text-gray-600"
-                        )}
+                        key={item.id}
+                        className="flex items-start gap-4 text-sm"
                       >
-                        {item.type === "knowledge_source" ? (
-                          <Database className="h-3.5 w-3.5" />
-                        ) : item.type === "conversation" ? (
-                          <MessageSquare className="h-3.5 w-3.5" />
-                        ) : (
-                          <Settings className="h-3.5 w-3.5" />
-                        )}
+                        <div
+                          className={cn(
+                            "mt-1 p-1.5 rounded-full",
+                            item.type === "knowledge_source"
+                              ? "bg-blue-100 text-blue-600"
+                              : item.type === "conversation"
+                                ? "bg-green-100 text-green-600"
+                                : isTeamActivity
+                                  ? "bg-purple-100 text-purple-600"
+                                  : "bg-gray-100 text-gray-600"
+                          )}
+                        >
+                          {item.type === "knowledge_source" ? (
+                            <Database className="h-3.5 w-3.5" />
+                          ) : item.type === "conversation" ? (
+                            <MessageSquare className="h-3.5 w-3.5" />
+                          ) : isTeamActivity ? (
+                            <Users className="h-3.5 w-3.5" />
+                          ) : (
+                            <Settings className="h-3.5 w-3.5" />
+                          )}
+                        </div>
+                        <div className="flex-1 space-y-0.5">
+                          <p className="font-medium text-gray-900">
+                            {item.description}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(item.created_at).toLocaleString()}
+                          </p>
+                        </div>
                       </div>
-                      <div className="flex-1 space-y-0.5">
-                        <p className="font-medium text-gray-900">
-                          {item.description}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {new Date(item.created_at).toLocaleString()}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="text-sm text-muted-foreground">
@@ -2176,10 +2191,10 @@ export default function ChatbotDetailPage() {
 <script>
   ChatbotWidget.init({
     chatbotId: "${chatbotId}"${
-                      process.env.NEXT_PUBLIC_API_URL
-                        ? `,\n    apiUrl: "${process.env.NEXT_PUBLIC_API_URL}"`
-                        : ""
-                    }
+      process.env.NEXT_PUBLIC_API_URL
+        ? `,\n    apiUrl: "${process.env.NEXT_PUBLIC_API_URL}"`
+        : ""
+    }
   });
 </script>`}</pre>
                   </div>
@@ -2230,7 +2245,7 @@ export default function ChatbotDetailPage() {
                   <div className="bg-slate-950 text-slate-50 p-4 rounded-md font-mono text-sm">
                     <pre id="embed-iframe">{`<iframe
   src="${
-    process.env.NEXT_PUBLIC_APP_URL || "https://chatbot.example.com"
+    process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
   }/embed/${chatbotId}"
   width="400"
   height="600"

@@ -8,7 +8,9 @@
 }
 
 .chatbot-widget-container {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu",
+    "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-size: 14px;
@@ -27,8 +29,12 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); /* shadow-xl */
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  box-shadow:
+    0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04); /* shadow-xl */
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
   border: 2px solid white;
   outline: none;
   color: white;
@@ -138,7 +144,8 @@
 }
 
 @keyframes pulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
   }
   50% {
@@ -318,10 +325,12 @@
 }
 
 @keyframes blink {
-  0%, 50% {
+  0%,
+  50% {
     opacity: 1;
   }
-  51%, 100% {
+  51%,
+  100% {
     opacity: 0;
   }
 }
@@ -357,7 +366,9 @@
 }
 
 @keyframes bounce {
-  0%, 80%, 100% {
+  0%,
+  80%,
+  100% {
     transform: scale(0.8);
     opacity: 0.5;
   }
@@ -374,30 +385,6 @@
   gap: 8px; /* gap-2 = 8px */
   margin-top: 8px;
   margin-left: 32px; /* ml-8 = 32px */
-}
-
-.chatbot-initial-suggestions {
-  margin-top: 16px; /* space-y-2 = 8px, but we need more space */
-  margin-left: 32px; /* ml-8 = 32px */
-}
-
-.chatbot-suggestions-label {
-  font-size: 10px; /* text-[10px] */
-  color: #9ca3af; /* text-gray-400 */
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.05em; /* tracking-wider */
-  margin-bottom: 8px; /* space-y-2 = 8px */
-}
-
-.chatbot-suggestions-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px; /* gap-2 = 8px */
-}
-
-.chatbot-suggestions-list .chatbot-suggestion-button {
-  padding: 6px 12px; /* py-1.5 = 6px, px-3 = 12px for initial suggestions */
 }
 
 .chatbot-suggestion-button {
@@ -494,7 +481,9 @@
   align-items: center;
   justify-content: center;
   color: #4b5563;
-  transition: background-color 0.2s, border-color 0.2s;
+  transition:
+    background-color 0.2s,
+    border-color 0.2s;
   outline: none;
 }
 
@@ -518,7 +507,9 @@
   outline: none;
   background-color: white;
   color: #1f2937;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
 }
 
 .chatbot-input::placeholder {
@@ -546,7 +537,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: opacity 0.2s, transform 0.1s;
+  transition:
+    opacity 0.2s,
+    transform 0.1s;
   outline: none;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05); /* shadow-sm */
   background-color: #2563eb;

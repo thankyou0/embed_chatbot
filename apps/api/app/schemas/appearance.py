@@ -47,6 +47,7 @@ class WidgetConfigResponse(BaseModel):
     welcome_message: Optional[str]
     initial_suggestions: List[str]
     show_branding: bool
+    is_paused: bool = False
 
     class Config:
         from_attributes = True

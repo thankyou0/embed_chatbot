@@ -33,4 +33,5 @@ class User(Base):
     created_chatbots = relationship("Chatbot", back_populates="creator", foreign_keys="Chatbot.created_by")
     chatbot_permissions = relationship("ChatbotPermission", back_populates="user", foreign_keys="ChatbotPermission.user_id")
     inviter = relationship("User", remote_side=[id], foreign_keys=[invited_by])
+    password_reset_tokens = relationship("PasswordResetToken", back_populates="user", cascade="all, delete-orphan")
 

@@ -113,6 +113,27 @@ class MemberService:
         await db.commit()
         await db.refresh(member)
         
+        # Log team activity to all chatbots in the tenant (limited to first 5)
+        from app.models.chatbot import ChatbotActivity, Chatbot
+        
+        chatbots_stmt = select(Chatbot.id).where(
+            Chatbot.tenant_id == tenant_id,
+            Chatbot.deleted_at.is_(None)
+        ).limit(5)
+        chatbot_ids = (await db.execute(chatbots_stmt)).scalars().all()
+        
+        for chatbot_id in chatbot_ids:
+            activity = ChatbotActivity(
+                chatbot_id=chatbot_id,
+                user_id=admin_user.id,
+                activity_type="team_member_added",
+                description=f"New team member added: {member.email} by {admin_user.email}"
+            )
+            db.add(activity)
+        
+        if chatbot_ids:
+            await db.commit()
+        
         logger.success(f"Member added: {member.email} to tenant {tenant_id} with temp password expiring at {password_expires_at}")
         
         # Get chatbot permissions for response
@@ -254,8 +275,28 @@ class MemberService:
         await db.commit()
         await db.refresh(member)
         
-        logger.success(f"Member updated: {member.email}")
+        # Log team activity to all chatbots in the tenant (limited to first 5)
+        from app.models.chatbot import ChatbotActivity, Chatbot
         
+        chatbots_stmt = select(Chatbot.id).where(
+            Chatbot.tenant_id == tenant_id,
+            Chatbot.deleted_at.is_(None)
+        ).limit(5)
+        chatbot_ids = (await db.execute(chatbots_stmt)).scalars().all()
+        
+        for chatbot_id in chatbot_ids:
+            activity = ChatbotActivity(
+                chatbot_id=chatbot_id,
+                user_id=admin_user.id,
+                activity_type="team_member_updated",
+                description=f"Team member updated: {member.email} by {admin_user.email}"
+            )
+            db.add(activity)
+        
+        if chatbot_ids:
+            await db.commit()
+            
+        logger.success(f"Member updated: {member.email}")
         permissions = await MemberService._get_member_chatbot_permissions(db, member.id)
         return MemberService._to_member_response(member, permissions)
     
@@ -362,8 +403,28 @@ class MemberService:
         await db.commit()
         await db.refresh(member)
         
-        logger.success(f"Permissions updated for member: {member.email}")
+        # Log team activity to all chatbots in the tenant (limited to first 5)
+        from app.models.chatbot import ChatbotActivity, Chatbot
         
+        chatbots_stmt = select(Chatbot.id).where(
+            Chatbot.tenant_id == tenant_id,
+            Chatbot.deleted_at.is_(None)
+        ).limit(5)
+        chatbot_ids = (await db.execute(chatbots_stmt)).scalars().all()
+        
+        for chatbot_id in chatbot_ids:
+            activity = ChatbotActivity(
+                chatbot_id=chatbot_id,
+                user_id=admin_user.id,
+                activity_type="team_permissions_updated",
+                description=f"Team member permissions updated: {member.email} by {admin_user.email}"
+            )
+            db.add(activity)
+        
+        if chatbot_ids:
+            await db.commit()
+            
+        logger.success(f"Permissions updated for member: {member.email}")
         permissions = await MemberService._get_member_chatbot_permissions(db, member.id)
         return MemberService._to_member_response(member, permissions)
     
@@ -398,8 +459,32 @@ class MemberService:
             delete(ChatbotPermission).where(ChatbotPermission.user_id == member_id)
         )
         
+        # Store member email before deletion
+        member_email = member.email
+        
         await db.delete(member)
         await db.commit()
         
-        logger.success(f"Member removed: {member.email} from tenant {tenant_id}")
+        # Log team activity to all chatbots in the tenant (limited to first 5)
+        from app.models.chatbot import ChatbotActivity, Chatbot
+        
+        chatbots_stmt = select(Chatbot.id).where(
+            Chatbot.tenant_id == tenant_id,
+            Chatbot.deleted_at.is_(None)
+        ).limit(5)
+        chatbot_ids = (await db.execute(chatbots_stmt)).scalars().all()
+        
+        for chatbot_id in chatbot_ids:
+            activity = ChatbotActivity(
+                chatbot_id=chatbot_id,
+                user_id=admin_user.id,
+                activity_type="team_member_removed",
+                description=f"Team member removed: {member_email} by {admin_user.email}"
+            )
+            db.add(activity)
+        
+        if chatbot_ids:
+            await db.commit()
+            
+        logger.success(f"Member removed: {member_email} from tenant {tenant_id}")
 

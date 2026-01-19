@@ -51,14 +51,21 @@
       })();
     </script> -->
     <!-- Chatbot Widget Embed Code for DigitalOcean Deployment -->
-    <script src="https://ecom-chatbot-widget-3fhmc.ondigitalocean.app/widget.umd.js"></script>
+    <!-- <script src="https://ecom-chatbot-widget-3fhmc.ondigitalocean.app/widget.umd.js"></script>
 <script>
   ChatbotWidget.init({
     chatbotId: "30df9111-1401-46c1-9356-b4ed6b81c203",
     apiUrl: "https://ecom-chatbot-api-8bwdf.ondigitalocean.app"
   });
-</script>
+</script> -->
 
+<script src="http://localhost:3001/widget.umd.js"></script>
+<script>
+  ChatbotWidget.init({
+    chatbotId: "9399fcdd-cad3-466d-8be3-1d2e3c5d0c11",
+    apiUrl: "http://localhost:8000"
+  });
+</script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
