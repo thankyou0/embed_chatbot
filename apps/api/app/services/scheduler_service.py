@@ -87,7 +87,7 @@ class SchedulerService:
                             CrawlerService.start_crawl(
                                 knowledge_source_id=str(knowledge_source.id),
                                 base_url=knowledge_source.source_url,
-                                max_pages=500,
+                                max_pages=100,
                                 is_recrawl=True
                             )
                         )

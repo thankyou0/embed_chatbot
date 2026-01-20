@@ -1,7 +1,168 @@
 import React, { useState, useRef, useEffect, useMemo } from "react";
-import type { Message, ChatbotWidgetProps, ChatbotConfig } from "./types";
+import type {
+  Message,
+  ChatbotWidgetProps,
+  ChatbotConfig,
+  ProductInfo,
+} from "./types";
 import { compressImage, generateId } from "./utils";
 import "./styles.css";
+
+// Product Carousel Component
+function ProductCarousel({ products }: { products: ProductInfo[] }) {
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const checkScrollability = () => {
+    const container = scrollContainerRef.current;
+    if (container) {
+      setCanScrollLeft(container.scrollLeft > 0);
+      setCanScrollRight(
+        container.scrollLeft <
+          container.scrollWidth - container.clientWidth - 5,
+      );
+    }
+  };
+
+  useEffect(() => {
+    checkScrollability();
+    const container = scrollContainerRef.current;
+    if (container) {
+      container.addEventListener("scroll", checkScrollability);
+      return () => container.removeEventListener("scroll", checkScrollability);
+    }
+  }, [products]);
+
+  const scroll = (direction: "left" | "right") => {
+    const container = scrollContainerRef.current;
+    if (container) {
+      const scrollAmount = 180; // Width of one card + gap
+      container.scrollBy({
+        left: direction === "left" ? -scrollAmount : scrollAmount,
+        behavior: "smooth",
+      });
+    }
+  };
+
+  const formatPrice = (price?: string | null, currency?: string | null) => {
+    if (!price) return null;
+    return currency ? `${currency}${price}` : price;
+  };
+
+  if (!products || products.length === 0) return null;
+
+  return (
+    <div className="product-carousel-wrapper">
+      {/* Left Arrow */}
+      {canScrollLeft && (
+        <button
+          className="product-carousel-arrow left"
+          onClick={() => scroll("left")}
+          aria-label="Scroll left"
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
+            <path d="M15 18l-6-6 6-6" />
+          </svg>
+        </button>
+      )}
+
+      {/* Carousel Container */}
+      <div ref={scrollContainerRef} className="product-carousel-container">
+        {products.map((product, index) => (
+          <a
+            key={index}
+            href={product.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="product-card"
+          >
+            {/* Product Image */}
+            {product.image ? (
+              <div className="product-card-image">
+                <img
+                  src={product.image}
+                  alt={product.name}
+                  loading="lazy"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = "none";
+                    target.parentElement?.classList.add("no-image");
+                  }}
+                />
+              </div>
+            ) : (
+              <div className="product-card-image no-image">
+                <svg
+                  width="32"
+                  height="32"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                >
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                  <circle cx="8.5" cy="8.5" r="1.5" />
+                  <polyline points="21 15 16 10 5 21" />
+                </svg>
+              </div>
+            )}
+
+            {/* Product Info */}
+            <div className="product-card-info">
+              <h4 className="product-card-name" title={product.name}>
+                {product.name}
+              </h4>
+              {formatPrice(product.price, product.currency) && (
+                <p className="product-card-price">
+                  {formatPrice(product.price, product.currency)}
+                </p>
+              )}
+              {product.rating && (
+                <div className="product-card-rating">
+                  <span className="rating-star">★</span>
+                  <span>{product.rating.toFixed(1)}</span>
+                  {product.review_count && (
+                    <span className="review-count">
+                      ({product.review_count})
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          </a>
+        ))}
+      </div>
+
+      {/* Right Arrow */}
+      {canScrollRight && (
+        <button
+          className="product-carousel-arrow right"
+          onClick={() => scroll("right")}
+          aria-label="Scroll right"
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
+            <path d="M9 18l6-6-6-6" />
+          </svg>
+        </button>
+      )}
+    </div>
+  );
+}
 
 export function ChatbotWidget({ config }: ChatbotWidgetProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -257,7 +418,11 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
   };
 
   // Type message character by character (matches preview)
-  const typeMessage = (fullText: string, suggestions?: string[]) => {
+  const typeMessage = (
+    fullText: string,
+    suggestions?: string[],
+    products?: ProductInfo[],
+  ) => {
     let currentIndex = 0;
     const typingMessage: Message = {
       id: generateId(),
@@ -265,6 +430,7 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
       content: "",
       isTyping: true,
       suggestions,
+      products,
       timestamp: new Date(),
     };
 
@@ -345,7 +511,7 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
         {
           method: "POST",
           body: formData,
-        }
+        },
       );
 
       if (!response.ok) {
@@ -362,8 +528,8 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
       setIsTyping(false);
       removeImage();
 
-      // Use typing effect to show response
-      typeMessage(data.message, data.suggestions);
+      // Use typing effect to show response with products
+      typeMessage(data.message, data.suggestions, data.products);
     } catch (err) {
       console.error("Failed to send message:", err);
       setIsTyping(false);
@@ -552,6 +718,14 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
                   </div>
                 </div>
 
+                {/* Product Carousel - show after message when typing is complete */}
+                {msg.role === "assistant" &&
+                  !msg.isTyping &&
+                  msg.products &&
+                  msg.products.length > 0 && (
+                    <ProductCarousel products={msg.products} />
+                  )}
+
                 {/* Suggestions for this message - only show when typing is complete */}
                 {msg.role === "assistant" &&
                   !msg.isTyping &&
@@ -569,7 +743,7 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
                           >
                             {suggestion}
                           </button>
-                        )
+                        ),
                       )}
                     </div>
                   )}

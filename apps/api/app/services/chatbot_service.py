@@ -924,6 +924,10 @@ class ChatbotService:
         if not await ChatbotService.has_permission(db, chatbot_id, user, "can_manage_knowledge"):
             raise ForbiddenError("Insufficient permissions to add knowledge source")
 
+        # Normalize URL - strip trailing slash to prevent duplicates
+        # https://example.com/ and https://example.com should be treated as the same
+        normalized_url = request.base_url.rstrip('/')
+        
         # Check if this URL is already a knowledge source for this chatbot
         # Use selectinload to eagerly load relationships for Pydantic validation
         stmt = select(KnowledgeSource).options(
@@ -933,26 +937,40 @@ class ChatbotService:
         ).where(
             KnowledgeSource.chatbot_id == chatbot_id,
             KnowledgeSource.source_type == KnowledgeSourceType.CRAWLED_URL,
-            KnowledgeSource.source_url == request.base_url
+            KnowledgeSource.source_url == normalized_url
         )
         existing_ks = (await db.execute(stmt)).scalar_one_or_none()
         
         if existing_ks:
-            # If already exists, just trigger a re-crawl
+            # If already exists, update status to CRAWLING and clear error message immediately
+            await db.execute(
+                update(KnowledgeSource)
+                .where(KnowledgeSource.id == existing_ks.id)
+                .values(
+                    status=KnowledgeSourceStatus.CRAWLING,
+                    error_message=None  # Clear any previous error
+                )
+            )
+            await db.commit()
+            
+            # Refresh to get updated values
+            await db.refresh(existing_ks)
+            
+            # Trigger a re-crawl
             background_tasks.add_task(
                 CrawlerService.start_crawl,
                 knowledge_source_id=existing_ks.id,
-                base_url=request.base_url,
+                base_url=normalized_url,
                 max_pages=request.max_pages,
                 is_recrawl=True
             )
             return KnowledgeSourceResponse.model_validate(existing_ks)
 
-        # Create knowledge source
+        # Create knowledge source with normalized URL
         ks = KnowledgeSource(
             chatbot_id=chatbot_id,
             source_type=KnowledgeSourceType.CRAWLED_URL,
-            source_url=request.base_url,
+            source_url=normalized_url,
             status=KnowledgeSourceStatus.PENDING,
             pages_found=0
         )
@@ -963,7 +981,7 @@ class ChatbotService:
             chatbot_id=chatbot_id,
             user_id=user.id,
             activity_type="knowledge_source",
-            description=f"Added website knowledge source: {request.base_url} by {user.name or user.email}"
+            description=f"Added website knowledge source: {normalized_url} by {user.name or user.email}"
         )
         db.add(activity)
 
@@ -1727,10 +1745,14 @@ class ChatbotService:
         ks_result = await db.execute(ks_stmt)
         ks_list = ks_result.scalars().all()
         
-        total_ks = len(ks_list)
+        # Exclude failed knowledge sources from total count
+        total_ks = len([ks for ks in ks_list if ks.status != KnowledgeSourceStatus.FAILED])
         active_ks = len([ks for ks in ks_list if ks.status == KnowledgeSourceStatus.COMPLETED])
 
         # 2.5. Calculate detailed breakdown and total knowledge base size
+        # Only count knowledge sources with COMPLETED status in breakdown stats
+        completed_ks_list = [ks for ks in ks_list if ks.status == KnowledgeSourceStatus.COMPLETED]
+        
         total_kb_size = 0
         breakdown = {
             'total_crawled_urls': 0,
@@ -1741,33 +1763,33 @@ class ChatbotService:
             'total_qa_count': 0
         }
 
-        if ks_list:
-            ks_ids = [ks.id for ks in ks_list]
+        if completed_ks_list:
+            completed_ks_ids = [ks.id for ks in completed_ks_list]
             
-            # Count by source type
-            breakdown['total_crawled_urls'] = len([ks for ks in ks_list if ks.source_type == KnowledgeSourceType.CRAWLED_URL])
-            breakdown['total_uploaded_files'] = len([ks for ks in ks_list if ks.source_type == KnowledgeSourceType.UPLOADED_FILE])
-            breakdown['total_qa_pairs'] = len([ks for ks in ks_list if ks.source_type == KnowledgeSourceType.QA_PAIR])
+            # Count by source type - only completed sources
+            breakdown['total_crawled_urls'] = len([ks for ks in completed_ks_list if ks.source_type == KnowledgeSourceType.CRAWLED_URL])
+            breakdown['total_uploaded_files'] = len([ks for ks in completed_ks_list if ks.source_type == KnowledgeSourceType.UPLOADED_FILE])
+            breakdown['total_qa_pairs'] = len([ks for ks in completed_ks_list if ks.source_type == KnowledgeSourceType.QA_PAIR])
             
-            # Sum uploaded file sizes
+            # Sum uploaded file sizes - only from completed sources
             uploaded_files_stmt = select(func.sum(UploadedFile.file_size)).where(
-                UploadedFile.knowledge_source_id.in_(ks_ids)
+                UploadedFile.knowledge_source_id.in_(completed_ks_ids)
             )
             uploaded_size = (await db.execute(uploaded_files_stmt)).scalar() or 0
             breakdown['total_file_size'] = uploaded_size
             total_kb_size += uploaded_size
 
-            # Count and estimate crawled content size (average ~2KB per page)
+            # Count and estimate crawled content size (average ~2KB per page) - only from completed sources
             crawled_pages_stmt = select(func.count(CrawledPage.id)).where(
-                CrawledPage.knowledge_source_id.in_(ks_ids)
+                CrawledPage.knowledge_source_id.in_(completed_ks_ids)
             )
             crawled_pages_count = (await db.execute(crawled_pages_stmt)).scalar() or 0
             breakdown['total_crawled_pages'] = crawled_pages_count
             total_kb_size += crawled_pages_count * 2000  # Estimate 2KB per page
 
-            # Count and estimate QA pairs size (average ~500 bytes per pair)
+            # Count and estimate QA pairs size (average ~500 bytes per pair) - only from completed sources
             qa_pairs_stmt = select(func.count(QAPair.id)).where(
-                QAPair.knowledge_source_id.in_(ks_ids)
+                QAPair.knowledge_source_id.in_(completed_ks_ids)
             )
             qa_pairs_count = (await db.execute(qa_pairs_stmt)).scalar() or 0
             breakdown['total_qa_count'] = qa_pairs_count
@@ -1988,6 +2010,18 @@ class ChatbotService:
         if ks.status == KnowledgeSourceStatus.CRAWLING:
             raise BadRequestError("Crawl already in progress")
         
+        # IMPORTANT: Update status to CRAWLING immediately so frontend sees it without refresh
+        from sqlalchemy import update as sql_update
+        await db.execute(
+            sql_update(KnowledgeSource)
+            .where(KnowledgeSource.id == knowledge_source_id)
+            .values(
+                status=KnowledgeSourceStatus.CRAWLING,
+                error_message=None  # Clear any previous error
+            )
+        )
+        await db.commit()
+        
         # Create crawl history entry
         crawl_history = CrawlHistory(
             knowledge_source_id=knowledge_source_id,
@@ -2007,7 +2041,7 @@ class ChatbotService:
             CrawlerService.start_crawl,
             knowledge_source_id=str(knowledge_source_id),
             base_url=ks.source_url,
-            max_pages=500,
+            max_pages=100,
             is_recrawl=True,
             crawl_history_id=str(crawl_history.id)
         )

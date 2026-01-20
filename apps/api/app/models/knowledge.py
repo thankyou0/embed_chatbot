@@ -78,6 +78,7 @@ class KnowledgeSource(Base):
     source_url = Column(String(2048), nullable=True)
     status = Column(KnowledgeSourceStatusDB(), nullable=False, default=KnowledgeSourceStatus.PENDING)
     pages_found = Column(Integer, nullable=False, default=0)
+    error_message = Column(Text, nullable=True)  # Store error message when status is FAILED
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
@@ -98,6 +99,8 @@ class CrawledPage(Base):
     content = Column(Text, nullable=True)
     content_hash = Column(String(64), nullable=True)
     is_removed = Column(Boolean, nullable=False, default=False)
+    is_product = Column(Boolean, nullable=False, default=False)  # Quick filter for product pages
+    product_metadata = Column(JSONB, nullable=True)  # Structured product data (price, images, etc.)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 

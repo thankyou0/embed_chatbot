@@ -124,7 +124,7 @@ export async function refreshAccessToken(): Promise<string> {
     {
       method: "POST",
       body: JSON.stringify({ refresh_token: refreshToken }),
-    }
+    },
   );
 
   Cookies.set(ACCESS_TOKEN_KEY, response.access_token, { expires: 1 / 96 });
@@ -150,7 +150,7 @@ export async function getMe(): Promise<MeResponse> {
 }
 
 export async function changePassword(
-  data: ChangePasswordData
+  data: ChangePasswordData,
 ): Promise<ChangePasswordResponse> {
   const token = getAccessToken();
   if (!token) {
@@ -163,33 +163,33 @@ export async function changePassword(
     {
       method: "POST",
       body: JSON.stringify(data),
-    }
+    },
   );
   return response;
 }
 
 export async function forgotPassword(
-  data: ForgotPasswordData
+  data: ForgotPasswordData,
 ): Promise<ForgotPasswordResponse> {
   const response = await apiRequest<ForgotPasswordResponse>(
     "/api/v1/auth/forgot-password",
     {
       method: "POST",
       body: JSON.stringify(data),
-    }
+    },
   );
   return response;
 }
 
 export async function resetPassword(
-  data: ResetPasswordData
+  data: ResetPasswordData,
 ): Promise<ResetPasswordResponse> {
   const response = await apiRequest<ResetPasswordResponse>(
     "/api/v1/auth/reset-password",
     {
       method: "POST",
       body: JSON.stringify(data),
-    }
+    },
   );
   return response;
 }

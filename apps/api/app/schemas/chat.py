@@ -25,10 +25,23 @@ class ChatSource(BaseModel):
     url: Optional[str] = None
 
 
+class ProductInfo(BaseModel):
+    """Product information for display in chat carousel."""
+    name: str
+    url: str
+    price: Optional[str] = None
+    currency: Optional[str] = None
+    image: Optional[str] = None
+    brand: Optional[str] = None
+    rating: Optional[float] = None
+    review_count: Optional[int] = None
+
+
 class ChatMessageResponse(BaseModel):
     session_id: str
     message: str
     sources: List[ChatSource] = []
     suggestions: List[str] = []
     image_analysis: Optional[ImageAnalysisResult] = None
+    products: List[ProductInfo] = []  # Product carousel data
 

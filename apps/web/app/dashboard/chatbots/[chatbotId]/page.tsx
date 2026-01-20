@@ -23,6 +23,7 @@ import {
   X as CloseIcon,
   Search,
   RefreshCcw,
+  RefreshCw,
   ExternalLink,
   Upload,
   FileText,
@@ -34,6 +35,8 @@ import {
   Square,
   Save,
   Users,
+  CheckCircle2,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CrawlScheduleModal } from "@/components/dashboard/CrawlScheduleModal";
@@ -87,6 +90,7 @@ interface KnowledgeSource {
   source_url: string | null;
   status: "pending" | "crawling" | "completed" | "failed";
   pages_found: number;
+  error_message: string | null; // Error message when status is failed
   created_at: string;
   updated_at: string;
   files?: {
@@ -117,7 +121,16 @@ interface QAPair {
 
 interface RecentActivity {
   id: string;
-  type: "knowledge_source" | "conversation" | "status_change";
+  type:
+    | "knowledge_source"
+    | "conversation"
+    | "status_change"
+    | "team_member_added"
+    | "team_member_updated"
+    | "team_member_removed"
+    | "team_permissions_updated"
+    | "crawl_failed"
+    | "embedding_failed";
   description: string;
   created_at: string;
 }
@@ -168,7 +181,7 @@ export default function ChatbotDetailPage() {
 
   const [chatbot, setChatbot] = useState<ChatbotDetail | null>(null);
   const [knowledgeSources, setKnowledgeSources] = useState<KnowledgeSource[]>(
-    []
+    [],
   );
   const [stats, setStats] = useState<ChatbotStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -180,7 +193,7 @@ export default function ChatbotDetailPage() {
   // Knowledge base state
   const [isAddKnowledgeOpen, setIsAddKnowledgeOpen] = useState(false);
   const [knowledgeType, setKnowledgeType] = useState<"url" | "file" | "qa">(
-    "url"
+    "url",
   );
   const [newUrl, setNewUrl] = useState("");
   const [isCrawling, setIsCrawling] = useState(false);
@@ -219,7 +232,7 @@ export default function ChatbotDetailPage() {
   // Crawl scheduling state
   const [isCrawlScheduleOpen, setIsCrawlScheduleOpen] = useState(false);
   const [selectedCrawlSource, setSelectedCrawlSource] = useState<any | null>(
-    null
+    null,
   );
 
   // Polling state - only poll when we explicitly start a crawl
@@ -227,6 +240,13 @@ export default function ChatbotDetailPage() {
   const [pollingStartTime, setPollingStartTime] = useState<number | null>(null);
   const MAX_POLLING_DURATION = 5 * 60 * 1000; // 5 minutes max polling
   const [manuallyStartedCrawl, setManuallyStartedCrawl] = useState(false);
+
+  // Toast notification state for crawl status changes
+  const [toastMessage, setToastMessage] = useState<{
+    type: "success" | "error" | "info";
+    message: string;
+  } | null>(null);
+  const previousKnowledgeSourcesRef = useRef<KnowledgeSource[]>([]);
 
   // Appearance form setup
   const {
@@ -332,7 +352,7 @@ export default function ChatbotDetailPage() {
       const response = await apiRequestWithAuth<ChatbotStats>(
         `/api/v1/chatbots/${chatbotId}/stats`,
         token,
-        { method: "GET" }
+        { method: "GET" },
       );
       setStats(response);
     } catch (err) {
@@ -357,9 +377,41 @@ export default function ChatbotDetailPage() {
       return status === "crawling" || status === "pending";
     });
 
+    // Detect status changes and show toast notifications
+    if (previousKnowledgeSourcesRef.current.length > 0) {
+      knowledgeSources.forEach((current) => {
+        const previous = previousKnowledgeSourcesRef.current.find(
+          (p) => p.id === current.id,
+        );
+        if (previous && previous.status !== current.status) {
+          // Status changed!
+          console.log(
+            `✅ Status changed for ${current.source_url}: ${previous.status} → ${current.status}`,
+          );
+
+          if (current.status === "completed") {
+            setToastMessage({
+              type: "success",
+              message: `Crawl completed for ${current.source_url}`,
+            });
+          } else if (current.status === "failed") {
+            setToastMessage({
+              type: "error",
+              message:
+                current.error_message ||
+                `Crawl failed for ${current.source_url}`,
+            });
+          }
+          // Refresh stats when any status changes
+          fetchChatbotStats();
+        }
+      });
+    }
+    previousKnowledgeSourcesRef.current = knowledgeSources;
+
     // Stop polling if all crawls are complete
     if (!hasCrawlingSources) {
-      console.log("All crawls complete, stopping polling");
+      console.log("✅ All crawls complete, stopping polling");
       setIsPolling(false);
       setPollingStartTime(null);
       setManuallyStartedCrawl(false);
@@ -368,6 +420,7 @@ export default function ChatbotDetailPage() {
 
     // Start polling if we have active crawls
     if (!isPolling) {
+      console.log("🚀 Starting polling - active crawls detected");
       setIsPolling(true);
       setPollingStartTime(Date.now());
     }
@@ -377,7 +430,11 @@ export default function ChatbotDetailPage() {
   useEffect(() => {
     if (!isPolling) return;
 
-    const interval = setInterval(() => {
+    console.log("🔄 Polling started - checking every 2 seconds");
+
+    const interval = setInterval(async () => {
+      console.log("📡 Polling tick - fetching knowledge sources...");
+
       // Check if we've exceeded max polling duration
       if (
         pollingStartTime &&
@@ -388,11 +445,23 @@ export default function ChatbotDetailPage() {
         setPollingStartTime(null);
         return;
       }
-      fetchKnowledgeSources(false);
-    }, 3000);
+      // Fetch both knowledge sources and stats
+      await fetchKnowledgeSources(false);
+    }, 2000); // Poll every 2 seconds for faster updates
 
-    return () => clearInterval(interval);
+    return () => {
+      console.log("🛑 Polling stopped - cleaning up interval");
+      clearInterval(interval);
+    };
   }, [isPolling, pollingStartTime]);
+
+  // Auto-hide toast after 5 seconds
+  useEffect(() => {
+    if (toastMessage) {
+      const timer = setTimeout(() => setToastMessage(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [toastMessage]);
 
   const fetchChatbotDetails = async () => {
     try {
@@ -406,7 +475,7 @@ export default function ChatbotDetailPage() {
       const response = await apiRequestWithAuth<ChatbotDetail>(
         `/api/v1/chatbots/${chatbotId}`,
         token,
-        { method: "GET" }
+        { method: "GET" },
       );
 
       setChatbot(response);
@@ -424,7 +493,7 @@ export default function ChatbotDetailPage() {
   };
 
   const fetchKnowledgeSources = async (
-    showLoading = true
+    showLoading = true,
   ): Promise<KnowledgeSource[] | null> => {
     try {
       if (showLoading) setIsLoadingKnowledge(true);
@@ -434,8 +503,17 @@ export default function ChatbotDetailPage() {
       const response = await apiRequestWithAuth<KnowledgeSource[]>(
         `/api/v1/chatbots/${chatbotId}/knowledge-sources`,
         token,
-        { method: "GET" }
+        { method: "GET" },
       );
+
+      console.log(
+        "📦 Fetched knowledge sources:",
+        response.map((ks) => ({
+          url: ks.source_url,
+          status: ks.status,
+        })),
+      );
+
       setKnowledgeSources(response);
       return response;
     } catch (err) {
@@ -455,7 +533,7 @@ export default function ChatbotDetailPage() {
       const response = await apiRequestWithAuth<AppearanceData>(
         `/api/v1/chatbots/${chatbotId}/appearance`,
         token,
-        { method: "GET" }
+        { method: "GET" },
       );
 
       setAppearance(response);
@@ -469,7 +547,7 @@ export default function ChatbotDetailPage() {
         ) {
           setValue(
             key as keyof AppearanceFormData,
-            response[key as keyof AppearanceData]
+            response[key as keyof AppearanceData],
           );
         }
       });
@@ -500,7 +578,7 @@ export default function ChatbotDetailPage() {
         {
           method: "POST",
           body: JSON.stringify({ base_url: newUrl }),
-        }
+        },
       );
 
       // Optimistically add the new source to the state immediately
@@ -557,7 +635,7 @@ export default function ChatbotDetailPage() {
               Authorization: `Bearer ${token}`,
             },
             body: formData,
-          }
+          },
         );
 
         if (!response.ok) {
@@ -565,7 +643,7 @@ export default function ChatbotDetailPage() {
           throw new Error(
             `Failed to upload ${file.name}: ${
               errData.detail || "Unknown error"
-            }`
+            }`,
           );
         }
       }
@@ -631,7 +709,7 @@ export default function ChatbotDetailPage() {
             Authorization: `Bearer ${token}`,
           },
           body: formData,
-        }
+        },
       );
 
       if (!response.ok) {
@@ -665,7 +743,7 @@ export default function ChatbotDetailPage() {
   const handleDeleteSource = async (sourceId: string) => {
     if (
       !confirm(
-        "Are you sure you want to delete this knowledge source and all its data?"
+        "Are you sure you want to delete this knowledge source and all its data?",
       )
     )
       return;
@@ -677,7 +755,7 @@ export default function ChatbotDetailPage() {
       await apiRequestWithAuth(
         `/api/v1/chatbots/knowledge-sources/${sourceId}`,
         token,
-        { method: "DELETE" }
+        { method: "DELETE" },
       );
 
       await fetchKnowledgeSources();
@@ -701,7 +779,7 @@ export default function ChatbotDetailPage() {
       const updatedSources = await fetchKnowledgeSources();
       if (updatedSources) {
         const crawlSources = updatedSources.filter(
-          (s) => s.source_type === "crawled_url"
+          (s) => s.source_type === "crawled_url",
         );
         const emptyCrawlSources = crawlSources.filter((source) => {
           return !source.pages || source.pages.length === 0;
@@ -714,12 +792,12 @@ export default function ChatbotDetailPage() {
               await apiRequestWithAuth(
                 `/api/v1/chatbots/knowledge-sources/${source.id}`,
                 token,
-                { method: "DELETE" }
+                { method: "DELETE" },
               );
             } catch (err) {
               console.error(
                 `Failed to delete empty crawl source ${source.id}:`,
-                err
+                err,
               );
             }
           }
@@ -775,7 +853,7 @@ export default function ChatbotDetailPage() {
       if (type === "pages" && updatedSources) {
         // Find crawl sources with no pages
         const crawlSources = updatedSources.filter(
-          (s) => s.source_type === "crawled_url"
+          (s) => s.source_type === "crawled_url",
         );
         const emptyCrawlSources = crawlSources.filter((source) => {
           // Check if source has any pages
@@ -789,12 +867,12 @@ export default function ChatbotDetailPage() {
               await apiRequestWithAuth(
                 `/api/v1/chatbots/knowledge-sources/${source.id}`,
                 token,
-                { method: "DELETE" }
+                { method: "DELETE" },
               );
             } catch (err) {
               console.error(
                 `Failed to delete empty crawl source ${source.id}:`,
-                err
+                err,
               );
             }
           }
@@ -846,7 +924,7 @@ export default function ChatbotDetailPage() {
   const handleDeleteChatbot = async () => {
     if (
       !confirm(
-        "Are you sure you want to delete this chatbot? This action cannot be undone."
+        "Are you sure you want to delete this chatbot? This action cannot be undone.",
       )
     )
       return;
@@ -907,7 +985,7 @@ export default function ChatbotDetailPage() {
         {
           method: "PATCH",
           body: JSON.stringify(data),
-        }
+        },
       );
 
       setAppearanceSuccessMessage("Appearance settings saved successfully!");
@@ -929,7 +1007,7 @@ export default function ChatbotDetailPage() {
       setValue(
         "initial_suggestions",
         [...currentSuggestions, newSuggestion.trim()],
-        { shouldDirty: true }
+        { shouldDirty: true },
       );
       setNewSuggestion("");
     }
@@ -940,7 +1018,7 @@ export default function ChatbotDetailPage() {
     setValue(
       "initial_suggestions",
       currentSuggestions.filter((_, i) => i !== index),
-      { shouldDirty: true }
+      { shouldDirty: true },
     );
   };
 
@@ -971,7 +1049,7 @@ export default function ChatbotDetailPage() {
   }
 
   const canEdit = ["owner", "admin", "editor"].includes(
-    chatbot.permission_level
+    chatbot.permission_level,
   );
 
   // Helper function to extract QA pairs from knowledge sources
@@ -985,10 +1063,10 @@ export default function ChatbotDetailPage() {
 
   // Knowledge base filtering
   const crawlSources = knowledgeSources.filter(
-    (s) => s.source_type === "crawled_url"
+    (s) => s.source_type === "crawled_url",
   );
   const fileSources = knowledgeSources.filter(
-    (s) => s.source_type === "uploaded_file"
+    (s) => s.source_type === "uploaded_file",
   );
   const qaSources = knowledgeSources.filter((s) => s.source_type === "qa_pair");
 
@@ -998,7 +1076,7 @@ export default function ChatbotDetailPage() {
       ...p,
       status: s.status,
       source_url: s.source_url,
-    }))
+    })),
   );
 
   // Show crawl sources that are actively crawling or have pages
@@ -1017,6 +1095,36 @@ export default function ChatbotDetailPage() {
 
   return (
     <div className="space-y-6">
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div
+          className={`fixed top-4 right-4 z-50 max-w-md px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 animate-in slide-in-from-top-2 ${
+            toastMessage.type === "error"
+              ? "bg-red-100 border border-red-300 text-red-800"
+              : toastMessage.type === "success"
+                ? "bg-green-100 border border-green-300 text-green-800"
+                : "bg-blue-100 border border-blue-300 text-blue-800"
+          }`}
+        >
+          {toastMessage.type === "error" && (
+            <AlertCircle className="h-5 w-5 flex-shrink-0" />
+          )}
+          {toastMessage.type === "success" && (
+            <CheckCircle2 className="h-5 w-5 flex-shrink-0" />
+          )}
+          {toastMessage.type === "info" && (
+            <RefreshCw className="h-5 w-5 flex-shrink-0" />
+          )}
+          <p className="text-sm font-medium">{toastMessage.message}</p>
+          <button
+            onClick={() => setToastMessage(null)}
+            className="ml-auto p-1 hover:bg-black/10 rounded"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
       {/* Header - Reduced Width */}
       <div className="flex items-center justify-between max-w-4xl">
         <div className="space-y-1">
@@ -1206,7 +1314,7 @@ export default function ChatbotDetailPage() {
                                 ? "bg-green-100 text-green-600"
                                 : isTeamActivity
                                   ? "bg-purple-100 text-purple-600"
-                                  : "bg-gray-100 text-gray-600"
+                                  : "bg-gray-100 text-gray-600",
                           )}
                         >
                           {item.type === "knowledge_source" ? (
@@ -1506,8 +1614,19 @@ export default function ChatbotDetailPage() {
                             setIsCrawlScheduleOpen(false);
                             setSelectedCrawlSource(null);
                           }}
-                          onSync={() => {
-                            /* refresh if needed */
+                          onSync={async () => {
+                            // Show toast that sync has started
+                            setToastMessage({
+                              type: "info",
+                              message:
+                                "Crawl started. This may take a few minutes...",
+                            });
+                            // Enable polling to track crawl progress
+                            setManuallyStartedCrawl(true);
+                            // Fetch immediately to get updated status (crawling)
+                            await fetchKnowledgeSources();
+                            // Also refresh stats
+                            fetchChatbotStats();
                           }}
                         />
                       )}
@@ -1518,14 +1637,14 @@ export default function ChatbotDetailPage() {
                               crawlSourcesWithPages.map((ks) => [
                                 ks.source_url,
                                 ks,
-                              ])
-                            ).values()
+                              ]),
+                            ).values(),
                           ).map((ks) => (
                             <CrawlSourcePanel
                               key={ks.id}
                               source={ks}
                               pages={allCrawledPages.filter(
-                                (p) => p.source_url === ks.source_url
+                                (p) => p.source_url === ks.source_url,
                               )}
                               selectedPages={selectedPages}
                               onSelectionChange={setSelectedPages}
@@ -1570,7 +1689,7 @@ export default function ChatbotDetailPage() {
                               onCheckedChange={(checked: boolean) => {
                                 if (checked)
                                   setSelectedFiles(
-                                    fileSources.map((s) => s.id)
+                                    fileSources.map((s) => s.id),
                                   );
                                 else setSelectedFiles([]);
                               }}
@@ -1616,8 +1735,8 @@ export default function ChatbotDetailPage() {
                                     else
                                       setSelectedFiles(
                                         selectedFiles.filter(
-                                          (id) => id !== source.id
-                                        )
+                                          (id) => id !== source.id,
+                                        ),
                                       );
                                   }}
                                 />
@@ -1638,7 +1757,7 @@ export default function ChatbotDetailPage() {
                                       : ""}{" "}
                                     •{" "}
                                     {new Date(
-                                      source.created_at
+                                      source.created_at,
                                     ).toLocaleDateString()}
                                   </div>
                                 </div>
@@ -1740,8 +1859,8 @@ export default function ChatbotDetailPage() {
                                       else
                                         setSelectedQAs(
                                           selectedQAs.filter(
-                                            (id) => id !== qa.id
-                                          )
+                                            (id) => id !== qa.id,
+                                          ),
                                         );
                                     }}
                                   />
@@ -1853,7 +1972,7 @@ export default function ChatbotDetailPage() {
                             onChange={(e) => {
                               console.log(
                                 "✏️ Header Text onChange:",
-                                e.target.value
+                                e.target.value,
                               );
                               field.onChange(e.target.value);
                             }}
@@ -1877,7 +1996,7 @@ export default function ChatbotDetailPage() {
                           onChange={(e) => {
                             console.log(
                               "🎨 Color picker onChange:",
-                              e.target.value
+                              e.target.value,
                             );
                             setValue("primary_color", e.target.value, {
                               shouldDirty: true,
@@ -1890,7 +2009,7 @@ export default function ChatbotDetailPage() {
                           onChange={(e) => {
                             console.log(
                               "🎨 Color input onChange:",
-                              e.target.value
+                              e.target.value,
                             );
                             setValue("primary_color", e.target.value, {
                               shouldDirty: true,
@@ -1949,23 +2068,23 @@ export default function ChatbotDetailPage() {
                                     Authorization: `Bearer ${token}`,
                                   },
                                   body: formData,
-                                }
+                                },
                               );
                               if (res.ok) {
                                 fetchAppearance();
                                 setAppearanceSuccessMessage(
-                                  "Avatar uploaded successfully!"
+                                  "Avatar uploaded successfully!",
                                 );
                                 setTimeout(
                                   () => setAppearanceSuccessMessage(null),
-                                  3000
+                                  3000,
                                 );
                               } else {
                                 const err = await res
                                   .json()
                                   .catch(() => ({ detail: "Upload failed" }));
                                 setAppearanceError(
-                                  err.detail || "Avatar upload failed"
+                                  err.detail || "Avatar upload failed",
                                 );
                               }
                             } catch (err) {
@@ -1997,7 +2116,7 @@ export default function ChatbotDetailPage() {
                           setValue(
                             "position",
                             value as "bottom-right" | "bottom-left",
-                            { shouldDirty: true }
+                            { shouldDirty: true },
                           )
                         }
                         className="flex gap-6 mt-2"
@@ -2139,7 +2258,7 @@ export default function ChatbotDetailPage() {
                               ×
                             </Button>
                           </div>
-                        )
+                        ),
                       )}
                     </div>
                   </CardContent>

@@ -1,3 +1,14 @@
+export interface ProductInfo {
+  name: string;
+  url: string;
+  price?: string | null;
+  currency?: string | null;
+  image?: string | null;
+  brand?: string | null;
+  rating?: number | null;
+  review_count?: number | null;
+}
+
 export interface Message {
   id: string;
   role: "user" | "assistant";
@@ -6,6 +17,7 @@ export interface Message {
   imagePreview?: string;
   isTyping?: boolean;
   timestamp: Date;
+  products?: ProductInfo[]; // Product carousel data
 }
 
 export interface ChatbotConfig {

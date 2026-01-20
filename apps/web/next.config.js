@@ -3,7 +3,7 @@ const nextConfig = {
   reactStrictMode: true,
 
   // Enable standalone output for Docker production builds
-  output: 'standalone',
+  output: "standalone",
 
   // Disable x-powered-by header for security
   poweredByHeader: false,
@@ -21,6 +21,6 @@ const nextConfig = {
     // your project has type errors.
     // ignoreBuildErrors: true, // Uncomment if you have TypeScript errors
   },
-}
+};
 
-module.exports = nextConfig
+module.exports = nextConfig;

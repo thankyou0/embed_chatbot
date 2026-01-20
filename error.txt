@@ -1,7 +1,28 @@
 anyone can copy widget script and run it 
 
-Issue 1: Team member activity not showing in recent activity
+should avoid mentioning "context" --> The price of the Moissanite Oval Diamond Solitaire Silver Ring is not mentioned in the provided context.
+
+Team member activity not showing in recent activity
 
 offset x & y is not working in embed widget.
 
 embed widget still showing duplicate suggestions
+
+preview widget conversation count should not be counted in stats.
+
+
+After the complemetion of crawling(using sync/schedule), it doesn't automatically change crawling--> completed status. pls do it immediately, right now i've to refresh it to see updated things. 
+
+
+deletion of crawling site's embedding isn't actually deleting that info pls check.
+
+that schedule box should be closed after clicking schedule/sync_now on schedule option of particular crawl url.
+
+still have to refresh the page in order to see from crawling --> completed status(in both normal and sync)
+
+
+https://www.cheaperzonetoys.com --> worked
+https://www.cheaperzonetoys.com/ --> failed
+
+
+after the successfully creating embbedings after crawling. it should update the status of pages from crawling to completed immediately(without need to refresh the page).

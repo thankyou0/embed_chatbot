@@ -2,7 +2,7 @@ import asyncio
 import gc
 from typing import List, Dict, Any
 from uuid import UUID
-from sqlalchemy import select, delete, update
+from sqlalchemy import select, delete, update, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from huggingface_hub import InferenceClient
 from app.models.knowledge import KnowledgeSource, CrawledPage, Embedding, KnowledgeSourceStatus, KnowledgeSourceType, QAPair
@@ -158,8 +158,13 @@ class EmbeddingService:
                     )
                     await db.commit()
 
-                # Fetch all pages
-                stmt_pages = select(CrawledPage).where(CrawledPage.knowledge_source_id == ks.id)
+                # Fetch all active pages (not removed)
+                stmt_pages = select(CrawledPage).where(
+                    and_(
+                        CrawledPage.knowledge_source_id == ks.id,
+                        CrawledPage.is_removed == False
+                    )
+                )
                 res_pages = await db.execute(stmt_pages)
                 pages = res_pages.scalars().all()
 
@@ -169,7 +174,30 @@ class EmbeddingService:
                 qa_pairs = res_qa.scalars().all()
 
                 if not pages and not qa_pairs:
+                    # No content to embed - mark as FAILED
+                    error_msg = "No content found to embed. The crawled pages may be empty or the website may have blocked content extraction."
                     logger.warning(f"No content found to embed for KS: {ks.id}")
+                    
+                    await db.execute(
+                        update(KnowledgeSource)
+                        .where(KnowledgeSource.id == ks.id)
+                        .values(
+                            status=KnowledgeSourceStatus.FAILED,
+                            error_message=error_msg
+                        )
+                    )
+                    await db.commit()
+                    
+                    # Log activity
+                    from app.models.chatbot import ChatbotActivity
+                    activity = ChatbotActivity(
+                        chatbot_id=ks.chatbot_id,
+                        user_id=None,
+                        activity_type="embedding_failed",
+                        description=f"No content found to embed for knowledge source"
+                    )
+                    db.add(activity)
+                    await db.commit()
                     return
 
                 # Delete existing embeddings for this knowledge source if any (re-processing)
@@ -189,12 +217,39 @@ class EmbeddingService:
                     
                     for i, chunk in enumerate(chunks):
                         all_chunks.append(chunk)
-                        all_metadata.append({
+                        
+                        # Determine if this is a product page
+                        # Check both is_product flag AND if product_metadata exists (fallback)
+                        has_product_data = (
+                            (hasattr(page, 'is_product') and page.is_product) or 
+                            (hasattr(page, 'product_metadata') and page.product_metadata)
+                        )
+                        
+                        # Build metadata - include product info if available
+                        chunk_metadata = {
                             "url": page.url,
                             "title": page.title,
                             "chunk_index": i,
-                            "total_chunks": len(chunks)
-                        })
+                            "total_chunks": len(chunks),
+                            "is_product": has_product_data
+                        }
+                        
+                        # Add product metadata for product pages
+                        if has_product_data and hasattr(page, 'product_metadata') and page.product_metadata:
+                            # Include key product fields in embedding metadata
+                            product_meta = page.product_metadata
+                            chunk_metadata["product"] = {
+                                "name": product_meta.get("name"),
+                                "price": product_meta.get("price"),
+                                "currency": product_meta.get("currency"),
+                                "images": product_meta.get("images", [])[:3],  # Limit to 3 images
+                                "availability": product_meta.get("availability"),
+                                "rating": product_meta.get("rating"),
+                                "review_count": product_meta.get("review_count"),
+                                "brand": product_meta.get("brand"),
+                            }
+                        
+                        all_metadata.append(chunk_metadata)
 
                 # Handle Q&A Pairs
                 for qa in qa_pairs:
@@ -249,31 +304,101 @@ class EmbeddingService:
                     
                     logger.info(f"Batch {batch_start // EMBEDDING_BATCH_SIZE + 1}: Stored {total_stored}/{total_chunks} embeddings")
 
-                # Update status to COMPLETED after successful embedding
+                # Update status to COMPLETED after successful embedding and clear any previous error
                 await db.execute(
                     update(KnowledgeSource)
                     .where(KnowledgeSource.id == ks.id)
-                    .values(status=KnowledgeSourceStatus.COMPLETED)
+                    .values(
+                        status=KnowledgeSourceStatus.COMPLETED,
+                        error_message=None  # Clear any previous error message
+                    )
                 )
+                # Commit immediately so frontend polling sees the updated status without manual refresh
                 await db.commit()
                 
                 logger.success(f"Successfully processed and stored {total_stored} embeddings for KS: {ks.id}")
 
             except Exception as e:
-                logger.error(f"Error in embedding pipeline for KS {knowledge_source_id}: {str(e)}")
+                error_msg = str(e)
+                logger.error(f"Error in embedding pipeline for KS {knowledge_source_id}: {error_msg}")
                 await db.rollback()
                 
-                # Update status to FAILED when embeddings fail
+                # Update status to FAILED with error message
                 try:
+                    # Get the knowledge source to get chatbot_id
+                    stmt = select(KnowledgeSource).where(KnowledgeSource.id == knowledge_source_id)
+                    result = await db.execute(stmt)
+                    ks_for_error = result.scalar_one_or_none()
+                    
                     await db.execute(
                         update(KnowledgeSource)
                         .where(KnowledgeSource.id == knowledge_source_id)
                         .values(
-                            status=KnowledgeSourceStatus.FAILED
+                            status=KnowledgeSourceStatus.FAILED,
+                            error_message=f"Embedding generation failed: {error_msg}"
                         )
                     )
                     await db.commit()
+                    
+                    # Log activity for the error
+                    if ks_for_error:
+                        from app.models.chatbot import ChatbotActivity
+                        short_error = error_msg[:200] + "..." if len(error_msg) > 200 else error_msg
+                        activity = ChatbotActivity(
+                            chatbot_id=ks_for_error.chatbot_id,
+                            user_id=None,  # System action
+                            activity_type="embedding_failed",
+                            description=f"Embedding generation failed: {short_error}"
+                        )
+                        db.add(activity)
+                        await db.commit()
+                    
                     logger.error(f"Updated knowledge source {knowledge_source_id} status to FAILED due to embedding error")
                 except Exception as update_error:
                     logger.error(f"Failed to update knowledge source status: {update_error}")
                     await db.rollback()
+
+    @staticmethod
+    async def cleanup_removed_pages_embeddings(knowledge_source_id: UUID):
+        """
+        Clean up embeddings for pages that have been marked as removed.
+        This should be called after crawling when pages are marked as removed.
+        """
+        session_factory = get_session_factory()
+        async with session_factory() as db:
+            try:
+                # Get all removed pages for this knowledge source
+                stmt = select(CrawledPage.url).where(
+                    and_(
+                        CrawledPage.knowledge_source_id == knowledge_source_id,
+                        CrawledPage.is_removed == True
+                    )
+                )
+                result = await db.execute(stmt)
+                removed_urls = [row[0] for row in result.fetchall()]
+                
+                if not removed_urls:
+                    logger.info(f"No removed pages to clean up embeddings for KS: {knowledge_source_id}")
+                    return
+
+                # Delete embeddings for removed pages
+                # Use JSON contains query to find embeddings with matching URLs
+                deleted_count = 0
+                for url in removed_urls:
+                    delete_stmt = delete(Embedding).where(
+                        and_(
+                            Embedding.knowledge_source_id == knowledge_source_id,
+                            Embedding.metadata_json['url'].astext == url
+                        )
+                    )
+                    result = await db.execute(delete_stmt)
+                    deleted_count += result.rowcount
+
+                await db.commit()
+                logger.info(f"Cleaned up {deleted_count} embeddings for {len(removed_urls)} removed pages from KS: {knowledge_source_id}")
+
+            except Exception as e:
+                logger.error(f"Error cleaning up embeddings for removed pages: {e}")
+                await db.rollback()
+                    
+                
