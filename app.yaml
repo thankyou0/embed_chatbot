@@ -43,7 +43,7 @@ services:
         value: "0.0.0.0"
       - key: CORS_ORIGINS
         scope: RUN_TIME
-        value: '["http://localhost:3000","http://localhost:3001"]'
+        value: '["${_APP_URL}", "http://localhost:3000", "http://localhost:3001"]'
 
   # -----------------------------------------
   # Frontend Web Dashboard (Next.js)
