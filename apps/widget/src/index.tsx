@@ -1,39 +1,54 @@
 import { render } from 'preact'
-import { ChatbotWidget } from './components/ChatbotWidget'
-import './styles.css'
+import { ChatbotWidget, type ChatbotConfig } from '@chatbot/chatbot-widget'
 
-export interface ChatbotConfig {
-  apiUrl?: string
-  chatbotId?: string
-  tenantId?: string // Deprecated, use chatbotId
-  theme?: {
-    primaryColor?: string
-    position?: 'bottom-right' | 'bottom-left'
+
+// Styles are imported via the shared component's CSS
+
+// Store widget root for updates
+const widgetRoots = new Map<HTMLElement, any>();
+
+export function initChatbot(config: Partial<ChatbotConfig> = {}, containerElement?: HTMLElement) {
+  // Validate required chatbotId
+  if (!config.chatbotId) {
+    console.error('ChatbotWidget: chatbotId is required');
+    return;
   }
-}
 
-export function initChatbot(config: ChatbotConfig = {}) {
-  const container = document.createElement('div')
-  container.id = 'chatbot-widget-container'
-  document.body.appendChild(container)
+  let container = containerElement || document.getElementById('chatbot-widget-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'chatbot-widget-container';
+    document.body.appendChild(container);
+  }
 
-  render(<ChatbotWidget config={config} />, container)
-}
-
-// Auto-initialize if script has data attributes
-if (typeof window !== 'undefined') {
-  const script = document.currentScript as HTMLScriptElement
-  if (script?.dataset.autoInit === 'true') {
-    const config: ChatbotConfig = {
-      apiUrl: script.dataset.apiUrl,
-      chatbotId: script.dataset.chatbotId || script.dataset.tenantId,
-    }
-    initChatbot(config)
+  // Check if widget already exists in this container
+  const existingRoot = widgetRoots.get(container);
+  if (existingRoot) {
+    // Update existing widget with new config (Preact will handle prop updates)
+    render(<ChatbotWidget config={config as ChatbotConfig} />, container, existingRoot);
+  } else {
+    // Create new widget
+    const root = render(<ChatbotWidget config={config as ChatbotConfig} />, container);
+    widgetRoots.set(container, root);
   }
 }
 
 // Export for manual initialization
 if (typeof window !== 'undefined') {
-  ;(window as any).ChatbotWidget = { init: initChatbot }
+  ;(window as any).ChatbotWidget = { 
+    init: (config: Partial<ChatbotConfig> = {}, containerElement?: HTMLElement) => {
+      initChatbot(config, containerElement);
+    },
+    // Helper to destroy widget instance
+    destroy: (containerId?: string) => {
+      const container = containerId 
+        ? document.getElementById(containerId)
+        : document.getElementById('chatbot-widget-container');
+      if (container) {
+        container.innerHTML = '';
+        widgetRoots.delete(container);
+      }
+    }
+  }
 }
 

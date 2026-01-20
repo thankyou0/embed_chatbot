@@ -1,63 +1,63 @@
-'use client'
+"use client";
 
-import { useState, useEffect } from 'react'
-import { X, Clock, Calendar, Loader2, History } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Label } from '@/components/ui/label'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { Badge } from '@/components/ui/badge'
-import { apiRequestWithAuth } from '@/lib/api'
-import { getAccessToken } from '@/lib/auth'
+import { useState, useEffect } from "react";
+import { X, Clock, Calendar, Loader2, History } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Badge } from "@/components/ui/badge";
+import { apiRequestWithAuth } from "@/lib/api";
+import { getAccessToken } from "@/lib/auth";
 
 interface CrawlSchedule {
-  id: string
-  knowledge_source_id: string
-  schedule_type: 'manual' | 'daily' | 'weekly' | 'monthly'
-  day_of_week: number | null
-  preferred_hour: number
-  is_active: boolean
-  last_crawl_at: string | null
-  next_crawl_at: string | null
-  created_at: string
-  updated_at: string
+  id: string;
+  knowledge_source_id: string;
+  schedule_type: "manual" | "daily" | "weekly" | "monthly";
+  day_of_week: number | null;
+  preferred_hour: number;
+  is_active: boolean;
+  last_crawl_at: string | null;
+  next_crawl_at: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 interface CrawlHistory {
-  id: string
-  knowledge_source_id: string
-  started_at: string
-  completed_at: string | null
-  status: 'success' | 'partial' | 'failed'
-  pages_checked: number
-  pages_added: number
-  pages_updated: number
-  pages_removed: number
-  error_message: string | null
+  id: string;
+  knowledge_source_id: string;
+  started_at: string;
+  completed_at: string | null;
+  status: "success" | "partial" | "failed";
+  pages_checked: number;
+  pages_added: number;
+  pages_updated: number;
+  pages_removed: number;
+  error_message: string | null;
 }
 
 interface Props {
-  knowledgeSourceId: string
-  sourceUrl: string
-  pagesCount: number
-  lastSynced: string | null
-  onClose: () => void
-  onSync: () => void
+  knowledgeSourceId: string;
+  sourceUrl: string;
+  pagesCount: number;
+  lastSynced: string | null;
+  onClose: () => void;
+  onSync: () => void;
 }
 
 const DAYS_OF_WEEK = [
-  { value: 0, label: 'Monday' },
-  { value: 1, label: 'Tuesday' },
-  { value: 2, label: 'Wednesday' },
-  { value: 3, label: 'Thursday' },
-  { value: 4, label: 'Friday' },
-  { value: 5, label: 'Saturday' },
-  { value: 6, label: 'Sunday' },
-]
+  { value: 0, label: "Monday" },
+  { value: 1, label: "Tuesday" },
+  { value: 2, label: "Wednesday" },
+  { value: 3, label: "Thursday" },
+  { value: 4, label: "Friday" },
+  { value: 5, label: "Saturday" },
+  { value: 6, label: "Sunday" },
+];
 
 const HOURS = Array.from({ length: 24 }, (_, i) => ({
   value: i,
-  label: `${i.toString().padStart(2, '0')}:00 UTC`
-}))
+  label: `${i.toString().padStart(2, "0")}:00 UTC`,
+}));
 
 export function CrawlScheduleModal({
   knowledgeSourceId,
@@ -65,144 +65,153 @@ export function CrawlScheduleModal({
   pagesCount,
   lastSynced,
   onClose,
-  onSync
+  onSync,
 }: Props) {
-  const [schedule, setSchedule] = useState<CrawlSchedule | null>(null)
-  const [history, setHistory] = useState<CrawlHistory[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [isSaving, setIsSaving] = useState(false)
-  const [isSyncing, setIsSyncing] = useState(false)
-  const [showHistory, setShowHistory] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [schedule, setSchedule] = useState<CrawlSchedule | null>(null);
+  const [history, setHistory] = useState<CrawlHistory[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Form state
-  const [scheduleType, setScheduleType] = useState<'manual' | 'daily' | 'weekly' | 'monthly'>('manual')
-  const [dayOfWeek, setDayOfWeek] = useState(0)
-  const [preferredHour, setPreferredHour] = useState(2)
-  const [isActive, setIsActive] = useState(true)
+  const [scheduleType, setScheduleType] = useState<
+    "manual" | "daily" | "weekly" | "monthly"
+  >("manual");
+  const [dayOfWeek, setDayOfWeek] = useState(0);
+  const [preferredHour, setPreferredHour] = useState(2);
+  const [isActive, setIsActive] = useState(true);
 
   useEffect(() => {
-    loadSchedule()
-    loadHistory()
-  }, [knowledgeSourceId])
+    loadSchedule();
+    loadHistory();
+  }, [knowledgeSourceId]);
 
   const loadSchedule = async () => {
     try {
-      const token = getAccessToken()
-      if (!token) return
+      const token = getAccessToken();
+      if (!token) return;
 
       const data = await apiRequestWithAuth<CrawlSchedule>(
         `/api/v1/chatbots/knowledge-sources/${knowledgeSourceId}/schedule`,
         token,
-        { method: 'GET' }
-      )
+        { method: "GET" },
+      );
 
-      setSchedule(data)
-      setScheduleType(data.schedule_type)
-      setDayOfWeek(data.day_of_week || 0)
-      setPreferredHour(data.preferred_hour)
-      setIsActive(data.is_active)
+      setSchedule(data);
+      setScheduleType(data.schedule_type);
+      setDayOfWeek(data.day_of_week || 0);
+      setPreferredHour(data.preferred_hour);
+      setIsActive(data.is_active);
     } catch (err: any) {
-      console.error('Failed to load schedule:', err)
+      console.error("Failed to load schedule:", err);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   const loadHistory = async () => {
     try {
-      const token = getAccessToken()
-      if (!token) return
+      const token = getAccessToken();
+      if (!token) return;
 
       const data = await apiRequestWithAuth<CrawlHistory[]>(
         `/api/v1/chatbots/knowledge-sources/${knowledgeSourceId}/crawl-history?limit=10`,
         token,
-        { method: 'GET' }
-      )
+        { method: "GET" },
+      );
 
-      setHistory(data)
+      setHistory(data);
     } catch (err: any) {
-      console.error('Failed to load history:', err)
+      console.error("Failed to load history:", err);
     }
-  }
+  };
 
   const handleSave = async () => {
-    setIsSaving(true)
-    setError(null)
+    setIsSaving(true);
+    setError(null);
 
     try {
-      const token = getAccessToken()
-      if (!token) return
+      const token = getAccessToken();
+      if (!token) return;
 
       const payload = {
         schedule_type: scheduleType,
-        day_of_week: scheduleType === 'weekly' ? dayOfWeek : null,
+        day_of_week: scheduleType === "weekly" ? dayOfWeek : null,
         preferred_hour: preferredHour,
-        is_active: isActive
-      }
+        is_active: isActive,
+      };
 
       const data = await apiRequestWithAuth<CrawlSchedule>(
         `/api/v1/chatbots/knowledge-sources/${knowledgeSourceId}/schedule`,
         token,
         {
-          method: 'POST',
-          body: JSON.stringify(payload)
-        }
-      )
+          method: "POST",
+          body: JSON.stringify(payload),
+        },
+      );
 
-      setSchedule(data)
-      alert('Schedule saved successfully!')
+      setSchedule(data);
+      alert("Schedule saved successfully!");
+      // Close modal after successful save
+      onClose();
     } catch (err: any) {
-      setError(err.message || 'Failed to save schedule')
+      setError(err.message || "Failed to save schedule");
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
-  }
+  };
 
   const handleSyncNow = async () => {
-    setIsSyncing(true)
-    setError(null)
+    setIsSyncing(true);
+    setError(null);
 
     try {
-      const token = getAccessToken()
-      if (!token) return
+      const token = getAccessToken();
+      if (!token) return;
 
       await apiRequestWithAuth(
         `/api/v1/chatbots/knowledge-sources/${knowledgeSourceId}/crawl-now`,
         token,
-        { method: 'POST' }
-      )
+        { method: "POST" },
+      );
 
-      alert('Sync started! This may take a few minutes.')
-      onSync()
+      // Call onSync IMMEDIATELY so frontend fetches the updated status (now shows 'crawling')
+      // This provides instant visual feedback without requiring a manual refresh
+      onSync();
+
+      // Close modal after starting sync
+      onClose();
+
       // Reload history after a delay
-      setTimeout(() => loadHistory(), 2000)
+      setTimeout(() => loadHistory(), 2000);
     } catch (err: any) {
-      setError(err.message || 'Failed to start sync')
+      setError(err.message || "Failed to start sync");
     } finally {
-      setIsSyncing(false)
+      setIsSyncing(false);
     }
-  }
+  };
 
   const formatDate = (dateStr: string | null) => {
-    if (!dateStr) return 'Never'
-    const date = new Date(dateStr)
-    return date.toLocaleString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
-  }
+    if (!dateStr) return "Never";
+    const date = new Date(dateStr);
+    return date.toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
 
   const formatDuration = (startStr: string, endStr: string | null) => {
-    if (!endStr) return 'In progress...'
-    const start = new Date(startStr).getTime()
-    const end = new Date(endStr).getTime()
-    const seconds = Math.floor((end - start) / 1000)
-    return `${seconds}s`
-  }
+    if (!endStr) return "In progress...";
+    const start = new Date(startStr).getTime();
+    const end = new Date(endStr).getTime();
+    const seconds = Math.floor((end - start) / 1000);
+    return `${seconds}s`;
+  };
 
   if (isLoading) {
     return (
@@ -213,7 +222,7 @@ export function CrawlScheduleModal({
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -223,7 +232,9 @@ export function CrawlScheduleModal({
         <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
           <div>
             <h2 className="text-lg font-semibold">Sync Settings</h2>
-            <p className="text-sm text-muted-foreground truncate">{sourceUrl}</p>
+            <p className="text-sm text-muted-foreground truncate">
+              {sourceUrl}
+            </p>
           </div>
           <Button variant="ghost" size="sm" onClick={onClose}>
             <X className="h-4 w-4" />
@@ -235,7 +246,9 @@ export function CrawlScheduleModal({
           {/* Status */}
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">{pagesCount} pages</span>
-            <span className="text-muted-foreground">Last synced: {formatDate(lastSynced)}</span>
+            <span className="text-muted-foreground">
+              Last synced: {formatDate(lastSynced)}
+            </span>
           </div>
 
           {error && (
@@ -247,55 +260,70 @@ export function CrawlScheduleModal({
           {/* Schedule Settings */}
           <div className="space-y-4">
             <Label className="text-base font-semibold">Sync Frequency</Label>
-            
-            <RadioGroup value={scheduleType} onValueChange={(v: any) => setScheduleType(v)}>
+
+            <RadioGroup
+              value={scheduleType}
+              onValueChange={(v: any) => setScheduleType(v)}
+            >
               <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-muted/5">
                 <RadioGroupItem value="manual" id="manual" />
-                <Label htmlFor="manual" className="flex-1 cursor-pointer">Manual only</Label>
+                <Label htmlFor="manual" className="flex-1 cursor-pointer">
+                  Manual only
+                </Label>
               </div>
-              
+
               <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-muted/5">
                 <RadioGroupItem value="daily" id="daily" />
-                <Label htmlFor="daily" className="flex-1 cursor-pointer">Daily</Label>
+                <Label htmlFor="daily" className="flex-1 cursor-pointer">
+                  Daily
+                </Label>
               </div>
-              
+
               <div className="space-y-2">
                 <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-muted/5">
                   <RadioGroupItem value="weekly" id="weekly" />
-                  <Label htmlFor="weekly" className="flex-1 cursor-pointer">Weekly</Label>
+                  <Label htmlFor="weekly" className="flex-1 cursor-pointer">
+                    Weekly
+                  </Label>
                 </div>
-                {scheduleType === 'weekly' && (
+                {scheduleType === "weekly" && (
                   <div className="ml-8 flex items-center gap-2 flex-wrap">
                     <span className="text-sm text-muted-foreground">Every</span>
-                    <select 
+                    <select
                       value={dayOfWeek}
                       onChange={(e) => setDayOfWeek(Number(e.target.value))}
                       className="border rounded px-2 py-1 text-sm"
                     >
-                      {DAYS_OF_WEEK.map(day => (
-                        <option key={day.value} value={day.value}>{day.label}</option>
+                      {DAYS_OF_WEEK.map((day) => (
+                        <option key={day.value} value={day.value}>
+                          {day.label}
+                        </option>
                       ))}
                     </select>
                   </div>
                 )}
               </div>
-              
+
               <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-muted/5">
                 <RadioGroupItem value="monthly" id="monthly" />
-                <Label htmlFor="monthly" className="flex-1 cursor-pointer">Monthly</Label>
+                <Label htmlFor="monthly" className="flex-1 cursor-pointer">
+                  Monthly
+                </Label>
               </div>
             </RadioGroup>
 
-            {scheduleType !== 'manual' && (
+            {scheduleType !== "manual" && (
               <div className="ml-8 flex items-center gap-2">
                 <span className="text-sm text-muted-foreground">at</span>
-                <select 
+                <select
                   value={preferredHour}
                   onChange={(e) => setPreferredHour(Number(e.target.value))}
                   className="border rounded px-2 py-1 text-sm"
                 >
-                  {HOURS.map(hour => (
-                    <option key={hour.value} value={hour.value}>{hour.label}</option>
+                  {HOURS.map((hour) => (
+                    <option key={hour.value} value={hour.value}>
+                      {hour.label}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -303,7 +331,7 @@ export function CrawlScheduleModal({
           </div>
 
           {/* Next Sync */}
-          {schedule?.next_crawl_at && scheduleType !== 'manual' && (
+          {schedule?.next_crawl_at && scheduleType !== "manual" && (
             <div className="bg-blue-50 border border-blue-200 px-4 py-3 rounded-md">
               <div className="flex items-center gap-2 text-sm text-blue-900">
                 <Clock className="h-4 w-4" />
@@ -321,22 +349,29 @@ export function CrawlScheduleModal({
                   Saving...
                 </>
               ) : (
-                'Save Schedule'
+                "Save Schedule"
               )}
             </Button>
-            <Button variant="outline" onClick={handleSyncNow} disabled={isSyncing}>
+            <Button
+              variant="outline"
+              onClick={handleSyncNow}
+              disabled={isSyncing}
+            >
               {isSyncing ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   Syncing...
                 </>
               ) : (
-                'Sync Now'
+                "Sync Now"
               )}
             </Button>
-            <Button variant="ghost" onClick={() => setShowHistory(!showHistory)}>
+            <Button
+              variant="ghost"
+              onClick={() => setShowHistory(!showHistory)}
+            >
               <History className="h-4 w-4 mr-2" />
-              {showHistory ? 'Hide' : 'View'} History
+              {showHistory ? "Hide" : "View"} History
             </Button>
           </div>
 
@@ -349,15 +384,31 @@ export function CrawlScheduleModal({
                   {history.map((h) => (
                     <div key={h.id} className="border rounded-lg p-3 text-sm">
                       <div className="flex items-center justify-between mb-2">
-                        <span className="font-medium">{formatDate(h.started_at)}</span>
-                        <Badge variant={h.status === 'success' ? 'success' : h.status === 'failed' ? 'destructive' : 'secondary'}>
-                          {h.status === 'success' ? '✓ Success' : h.status === 'failed' ? '✗ Failed' : '⚠ Partial'}
+                        <span className="font-medium">
+                          {formatDate(h.started_at)}
+                        </span>
+                        <Badge
+                          variant={
+                            h.status === "success"
+                              ? "success"
+                              : h.status === "failed"
+                                ? "destructive"
+                                : "secondary"
+                          }
+                        >
+                          {h.status === "success"
+                            ? "✓ Success"
+                            : h.status === "failed"
+                              ? "✗ Failed"
+                              : "⚠ Partial"}
                         </Badge>
                       </div>
                       <div className="grid grid-cols-5 gap-2 text-xs text-muted-foreground">
                         <div>
                           <div className="font-medium">Duration</div>
-                          <div>{formatDuration(h.started_at, h.completed_at)}</div>
+                          <div>
+                            {formatDuration(h.started_at, h.completed_at)}
+                          </div>
                         </div>
                         <div>
                           <div className="font-medium">Checked</div>
@@ -394,6 +445,5 @@ export function CrawlScheduleModal({
         </div>
       </div>
     </div>
-  )
+  );
 }
-

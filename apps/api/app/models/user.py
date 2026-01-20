@@ -16,6 +16,7 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
     email = Column(String(255), nullable=False, unique=True, index=True)
+    username = Column(String(255), nullable=False, unique=True, index=True)
     password_hash = Column(String(255), nullable=False)
     name = Column(String(255), nullable=True)
     role = Column(Enum(UserRole, values_callable=lambda x: [e.value for e in x]), default=UserRole.USER, nullable=False)
@@ -32,4 +33,5 @@ class User(Base):
     created_chatbots = relationship("Chatbot", back_populates="creator", foreign_keys="Chatbot.created_by")
     chatbot_permissions = relationship("ChatbotPermission", back_populates="user", foreign_keys="ChatbotPermission.user_id")
     inviter = relationship("User", remote_side=[id], foreign_keys=[invited_by])
+    password_reset_tokens = relationship("PasswordResetToken", back_populates="user", cascade="all, delete-orphan")
 

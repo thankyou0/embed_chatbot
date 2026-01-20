@@ -12,6 +12,10 @@ from app.schemas.auth import (
     RefreshResponse,
     ChangePasswordRequest,
     ChangePasswordResponse,
+    ForgotPasswordRequest,
+    ForgotPasswordResponse,
+    ResetPasswordRequest,
+    ResetPasswordResponse,
     MeResponse,
 )
 from app.services.auth_service import AuthService
@@ -87,4 +91,32 @@ async def get_me(
         user=UserResponse.model_validate(current_user),
         tenant=TenantResponse.model_validate(current_tenant),
     )
+
+
+@router.post("/forgot-password", response_model=ForgotPasswordResponse)
+async def forgot_password(
+    request: ForgotPasswordRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Send password reset email to user if email exists
+    
+    Always returns success message for security reasons,
+    regardless of whether the email exists or not.
+    """
+    result = await AuthService.forgot_password(db, request)
+    return ForgotPasswordResponse(**result)
+
+
+@router.post("/reset-password", response_model=ResetPasswordResponse)
+async def reset_password(
+    request: ResetPasswordRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Reset password using reset token
+    
+    The token must be valid, unused, and not expired.
+    After successful reset, all other unused tokens for the user are invalidated.
+    """
+    result = await AuthService.reset_password(db, request)
+    return ResetPasswordResponse(**result)
 

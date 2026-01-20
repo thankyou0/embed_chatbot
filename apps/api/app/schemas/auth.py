@@ -7,6 +7,7 @@ from app.schemas.tenant import TenantResponse
 class SignupRequest(BaseModel):
     tenant_name: str
     email: EmailStr
+    username: str
     password: str
     name: Optional[str] = None
 
@@ -53,6 +54,30 @@ class LoginResponse(BaseModel):
 
 class RefreshResponse(BaseModel):
     access_token: str
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ForgotPasswordResponse(BaseModel):
+    message: str
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+    
+    @field_validator('new_password')
+    @classmethod
+    def validate_password(cls, v):
+        if len(v) < 8:
+            raise ValueError('Password must be at least 8 characters')
+        return v
+
+
+class ResetPasswordResponse(BaseModel):
+    message: str
 
 
 class ChangePasswordResponse(BaseModel):

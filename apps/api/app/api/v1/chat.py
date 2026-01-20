@@ -39,7 +39,8 @@ async def send_message(
     db: AsyncSession = Depends(get_db),
     message: Optional[str] = Form(None),
     session_id: Optional[str] = Form(None),
-    image: Optional[UploadFile] = File(None)
+    image: Optional[UploadFile] = File(None),
+    is_preview: bool = Form(False)
 ):
     """
     Public endpoint for chatbot messages with optional image upload.
@@ -48,6 +49,7 @@ async def send_message(
     - message: The user's text message (required)
     - session_id: Optional session ID for conversation continuity
     - image: Optional image file for visual search
+    - is_preview: Whether this is a preview chat (default: false)
     
     No authentication required.
     Rate limited to 30 requests/minute per IP.
@@ -79,7 +81,8 @@ async def send_message(
             chatbot_id=chatbot_id,
             message=message,
             session_id=session_id,
-            image_bytes=image_bytes
+            image_bytes=image_bytes,
+            is_preview=is_preview
         )
         return response
     except Exception as e:

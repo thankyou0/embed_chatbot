@@ -12,7 +12,7 @@ class KnowledgeSourceBase(BaseModel):
 
 class KnowledgeSourceCreate(BaseModel):
     base_url: str
-    max_pages: Optional[int] = 500
+    max_pages: Optional[int] = 100
 
 
 class UploadedFileResponse(BaseModel):
@@ -34,6 +34,7 @@ class KnowledgeSourceResponse(BaseModel):
     source_url: Optional[str] = None
     status: KnowledgeSourceStatus
     pages_found: int
+    error_message: Optional[str] = None  # Error message when status is FAILED
     created_at: datetime
     updated_at: datetime
     files: Optional[List[UploadedFileResponse]] = []

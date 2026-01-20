@@ -1,6 +1,10 @@
-# Dependencies
-node_modules/
+# dependencies
+/node_modules
 dist/
+/.pnp
+.pnp.js
+/.pnpm-store
+.pnpm-store
 
 # Logs
 *.log

@@ -8,19 +8,19 @@
   </head>
   <body>
     <div id="app"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <script type="module" src="/src/index.tsx"></script>
     <script>
       // Example usage for local development
       window.onload = () => {
         if (window.ChatbotWidget) {
           window.ChatbotWidget.init({
-            chatbotId: "your-chatbot-id", // Replace with a test chatbot ID
-            position: "bottom-right",
+            chatbotId: "325606cb-3e80-4815-8190-20afe12537e0", // Replace with a test chatbot ID
+            position: "bottom-left",
             offsetX: 20,
             offsetY: 20,
             primaryColor: "#1a73e8",
             headerText: "Hello Chatbot",
-            welcomeMessage: "Hi there! How can I help you?",
+            welcomeMessage: "Hi there!",
             initialSuggestions: ["What are your features?", "How much does it cost?"],
             avatarUrl: "https://i.pravatar.cc/300"
           });

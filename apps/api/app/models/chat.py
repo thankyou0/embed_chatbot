@@ -1,6 +1,6 @@
 import enum
 import uuid
-from sqlalchemy import Column, String, DateTime, ForeignKey, Text, func, TypeDecorator
+from sqlalchemy import Column, String, DateTime, ForeignKey, Text, func, TypeDecorator, Boolean
 from sqlalchemy.dialects.postgresql import UUID, ENUM as PG_ENUM, JSONB
 from sqlalchemy.orm import relationship
 from app.core.database import Base
@@ -37,6 +37,7 @@ class ChatSession(Base):
     started_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     last_message_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
     conversation_summary = Column(Text, nullable=True)
+    is_preview = Column(Boolean, default=False, nullable=False)
 
     # Relationships
     chatbot = relationship("Chatbot")

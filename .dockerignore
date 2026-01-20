@@ -18,11 +18,13 @@ Thumbs.db
 
 # Node.js
 node_modules
+**/node_modules
 npm-debug.log
 yarn-error.log
 .pnpm-debug.log
 .pnpm-store
 **/.pnpm-store
+.pnpm-home
 
 # Next.js
 .next
@@ -37,6 +39,7 @@ __pycache__
 env
 venv
 .venv
+.venv312
 ENV
 *.egg-info
 dist
@@ -45,6 +48,11 @@ build
 .coverage
 htmlcov
 .mypy_cache
+
+# Test directories
+test/node_modules
+test/.next
+test/dist
 
 # Environment files (will be passed via docker-compose)
 .env
@@ -68,9 +76,11 @@ uploads/*
 !uploads/.gitkeep
 
 # Docker
-Dockerfile*
 docker-compose*.yml
 .docker
+
+# Test
+test/
 
 # Claude
 .claude

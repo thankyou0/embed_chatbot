@@ -47,6 +47,11 @@ export function Sidebar() {
   const pathname = usePathname()
   const { user, tenant, logout, isAdmin } = useAuth()
 
+  // Extract chatbot ID from pathname if we're on a chatbot-specific page
+  // Path format: /dashboard/chatbots/[chatbotId]/...
+  const chatbotIdMatch = pathname.match(/\/dashboard\/chatbots\/([^\/]+)/)
+  const currentChatbotId = chatbotIdMatch ? chatbotIdMatch[1] : null
+
   return (
     <>
       {/* Mobile menu button */}
@@ -74,10 +79,17 @@ export function Sidebar() {
           <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
             {navigation.map((item) => {
               const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))
+              
+              // Dynamically update analytics link if chatbot is selected
+              let href = item.href
+              if (item.name === 'Analytics' && currentChatbotId && currentChatbotId !== 'new') {
+                href = `${item.href}?chatbot_id=${currentChatbotId}`
+              }
+
               return (
                 <Link
                   key={item.name}
-                  href={item.href}
+                  href={href}
                   onClick={() => setMobileMenuOpen(false)}
                   className={cn(
                     'flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors',
@@ -135,9 +147,9 @@ export function Sidebar() {
                           <UserIcon className="h-4 w-4 text-primary-foreground" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">{user.email}</p>
-                          <p className="text-xs text-muted-foreground capitalize truncate">
-                            {user.role}
+                          <p className="text-sm font-medium truncate">@{user.username}</p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {user.email}
                           </p>
                         </div>
                       </div>

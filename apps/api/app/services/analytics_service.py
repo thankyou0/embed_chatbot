@@ -3,17 +3,24 @@ import asyncio
 from datetime import datetime, timedelta
 from typing import Optional, List
 from uuid import UUID
-from sqlalchemy import select, func, and_, or_, cast, Float
+from sqlalchemy import select, func, and_, or_, cast, Float, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.dialects.postgresql import JSONB
 
 from app.models.chat import ChatSession, ChatMessage, MessageRole
+from app.models.chatbot import Chatbot
 from app.models.user import User
+from app.core.exceptions import (
+    UnauthorizedError,
+    NotFoundError,
+    ForbiddenError,
+)
 from app.schemas.analytics import (
     AnalyticsOverviewResponse,
     UnansweredQueriesResponse,
     UnansweredQuery,
-    UnansweredQuerySample
+    UnansweredQuerySample,
+    ResolveQueriesRequest
 )
 from app.services.chatbot_service import ChatbotService
 from app.core.logging import get_logger
@@ -48,14 +55,21 @@ class AnalyticsService:
         
         period_start = AnalyticsService._get_period_start(period)
         
-        # Build base query for sessions
+        # Build base query for sessions (exclude previews)
         query = select(ChatSession).where(
-            ChatSession.started_at >= period_start
+            and_(
+                ChatSession.started_at >= period_start,
+                ChatSession.is_preview == False
+            )
         )
         
         if chatbot_id:
             # Verify access to specific chatbot
             await ChatbotService.get_chatbot(db, tenant_id, chatbot_id, user)
+            
+            if not await ChatbotService.has_permission(db, chatbot_id, user, "can_view_analytics"):
+                raise ForbiddenError("Insufficient permissions to view analytics")
+                
             query = query.where(ChatSession.chatbot_id == chatbot_id)
         else:
             # Get all chatbot IDs user has access to
@@ -165,6 +179,9 @@ class AnalyticsService:
         # Verify access
         await ChatbotService.get_chatbot(db, tenant_id, chatbot_id, user)
         
+        if not await ChatbotService.has_permission(db, chatbot_id, user, "can_view_analytics"):
+            raise ForbiddenError("Insufficient permissions to view analytics")
+        
         period_start = AnalyticsService._get_period_start(period)
         
         # Get all sessions for this chatbot in the period
@@ -205,6 +222,10 @@ class AnalyticsService:
             )
             
             if bot_response and not bot_response.metadata_json.get("was_answered", False):
+                # Skip if this query has been marked as resolved
+                if bot_response.metadata_json.get("resolved", False):
+                    continue
+                    
                 confidence = bot_response.metadata_json.get("retrieval_confidence", 0.0)
                 unanswered_messages.append({
                     "message": user_msg,
@@ -261,4 +282,98 @@ class AnalyticsService:
             queries=queries[:limit],
             total_unanswered=len(unanswered_messages)
         )
+    
+    @staticmethod
+    async def resolve_queries(
+        db: AsyncSession,
+        tenant_id: int,
+        chatbot_id: UUID,
+        user: User,
+        query_texts: List[str]
+    ) -> None:
+        """Mark queries as resolved for a chatbot"""
+        # Verify access
+        # Verify access
+        chatbot = await ChatbotService.get_chatbot(db, tenant_id, chatbot_id, user)
+        
+        if not await ChatbotService.has_permission(db, chatbot_id, user, "can_resolve_queries"):
+            raise ForbiddenError("Insufficient permissions to resolve queries")
+        
+        # For now, we'll store resolved queries in a simple way
+        # In a production system, you'd want a proper resolved_queries table
+        # For now, we'll update the messages' metadata to mark them as resolved
+        # by updating the assistant messages' metadata
+        
+        # Get all sessions for this chatbot
+        sessions_query = select(ChatSession).where(
+            ChatSession.chatbot_id == chatbot_id
+        )
+        sessions_result = await db.execute(sessions_query)
+        sessions = sessions_result.scalars().all()
+        session_ids = [s.id for s in sessions]
+        
+        if not session_ids:
+            return
+        
+        # Normalize query texts for comparison (lowercase)
+        normalized_queries = [q.strip().lower() for q in query_texts]
+        
+        # Find all user messages matching these queries
+        messages_query = select(ChatMessage).where(
+            and_(
+                ChatMessage.session_id.in_(session_ids),
+                ChatMessage.role == MessageRole.USER
+            )
+        )
+        messages_result = await db.execute(messages_query)
+        all_user_messages = messages_result.scalars().all()
+        
+        # Find matching messages and mark their corresponding assistant responses as resolved
+        matching_message_ids = []
+        for msg in all_user_messages:
+            if msg.content.strip().lower() in normalized_queries:
+                matching_message_ids.append(msg.id)
+        
+        if not matching_message_ids:
+            await db.commit()
+            return
+        
+        # Update corresponding assistant messages to mark them as resolved
+        # Find assistant messages that follow these user messages
+        for user_msg_id in matching_message_ids:
+            # Get the user message
+            user_msg_stmt = select(ChatMessage).where(ChatMessage.id == user_msg_id)
+            user_msg_result = await db.execute(user_msg_stmt)
+            user_msg = user_msg_result.scalar_one_or_none()
+            
+            if not user_msg:
+                continue
+            
+            # Find the next assistant message for this session
+            assistant_msg_stmt = select(ChatMessage).where(
+                and_(
+                    ChatMessage.session_id == user_msg.session_id,
+                    ChatMessage.role == MessageRole.ASSISTANT,
+                    ChatMessage.created_at > user_msg.created_at
+                )
+            ).order_by(ChatMessage.created_at).limit(1)
+            
+            assistant_result = await db.execute(assistant_msg_stmt)
+            assistant_msg = assistant_result.scalar_one_or_none()
+            
+            if assistant_msg:
+                # Update metadata to mark as resolved
+                metadata = assistant_msg.metadata_json or {}
+                metadata["resolved"] = True
+                metadata["resolved_at"] = datetime.utcnow().isoformat()
+                metadata["resolved_by"] = str(user.id)
+                
+                await db.execute(
+                    update(ChatMessage)
+                    .where(ChatMessage.id == assistant_msg.id)
+                    .values(metadata_json=metadata)
+                )
+        
+        await db.commit()
+        logger.info(f"Resolved {len(matching_message_ids)} queries for chatbot {chatbot_id}")
 

@@ -2,6 +2,8 @@
 node_modules/
 .pnp
 .pnp.js
+.pnpm-store/
+.pnpm-store
 
 # Testing
 coverage/
@@ -66,4 +68,3 @@ dmypy.json
 .turbo/
 .vercel
 
-.pnpm-store/

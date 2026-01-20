@@ -80,6 +80,7 @@ class PermissionResponse(BaseModel):
     created_at: datetime
     # Include user info for display
     user_email: Optional[str] = None
+    user_username: Optional[str] = None
     user_name: Optional[str] = None
 
     class Config:
@@ -132,11 +133,20 @@ class RecentActivity(BaseModel):
     description: str
     created_at: datetime
 
+class KnowledgeSourceBreakdown(BaseModel):
+    total_crawled_urls: int
+    total_uploaded_files: int
+    total_qa_pairs: int
+    total_crawled_pages: int
+    total_file_size: int  # in bytes
+    total_qa_count: int
+
 class ChatbotStatsResponse(BaseModel):
     total_conversations: int
     total_knowledge_sources: int
     active_knowledge_sources: int
     total_kb_size: int
+    knowledge_breakdown: KnowledgeSourceBreakdown
     recent_activity: List[RecentActivity]
 
 # Analytics moved to app.schemas.analytics

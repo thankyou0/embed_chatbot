@@ -34,12 +34,14 @@ interface Permission {
   can_view_analytics: boolean
   granted_by: number
   user_email: string
+  user_username: string
   user_name: string | null
 }
 
 interface OrganizationMember {
   id: number
   email: string
+  username: string
   name: string | null
   role: 'admin' | 'user'
 }
@@ -279,11 +281,11 @@ export default function ChatbotMembersPage() {
             <CardContent className="p-4 flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div className="h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 font-semibold">
-                  {(perm.user_name || perm.user_email)[0].toUpperCase()}
+                  {(perm.user_username || perm.user_email)[0].toUpperCase()}
                 </div>
                 <div>
                   <div className="font-medium flex items-center gap-2">
-                    {perm.user_name || 'Unknown User'}
+                    {perm.user_name || `@${perm.user_username}`}
                     {perm.permission_level === 'owner' && (
                       <Badge variant="secondary" className="text-xs">Owner</Badge>
                     )}
