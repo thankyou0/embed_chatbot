@@ -596,18 +596,20 @@ async def get_unanswered_queries(
     chatbot_id: UUID,
     period: str = "30d",
     limit: int = 20,
+    query_type: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
     current_tenant: Tenant = Depends(get_current_tenant),
 ):
-    """Get unanswered queries for a chatbot"""
+    """Get unanswered queries for a chatbot. query_type: 'missing_info' or 'reported'"""
     return await AnalyticsService.get_unanswered_queries(
         db=db,
         tenant_id=current_tenant.id,
         chatbot_id=chatbot_id,
         user=current_user,
         period=period,
-        limit=limit
+        limit=limit,
+        query_type=query_type
     )
 
 

@@ -45,3 +45,9 @@ class ChatMessageResponse(BaseModel):
     image_analysis: Optional[ImageAnalysisResult] = None
     products: List[ProductInfo] = []  # Product carousel data
 
+
+class ReportMessageRequest(BaseModel):
+    """Request model for reporting an unsatisfactory answer."""
+    session_id: str = Field(..., description="Session ID of the chat")
+    message_content: str = Field(..., min_length=1, description="Content of the user message that got unsatisfactory response")
+

@@ -3,10 +3,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import UUID
 from typing import Optional
 from app.core.database import get_db
-from app.schemas.chat import ChatMessageRequest, ChatMessageResponse
+from app.schemas.chat import ChatMessageRequest, ChatMessageResponse, ReportMessageRequest
 from app.schemas.appearance import WidgetConfigResponse
 from app.services.chat_service import ChatService
 from app.services.chatbot_service import ChatbotService
+from app.services.analytics_service import AnalyticsService
 import time
 from collections import defaultdict
 
@@ -107,4 +108,34 @@ async def get_widget_config(
         return config
     except Exception as e:
         raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.post("/{chatbot_id}/report", status_code=204)
+async def report_message(
+    chatbot_id: UUID,
+    request: ReportMessageRequest,
+    req: Request,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Public endpoint for reporting unsatisfactory bot responses.
+    
+    Allows users to flag answers they're not satisfied with.
+    These will appear in analytics under 'Reported' queries.
+    
+    No authentication required.
+    Rate limited to 30 requests/minute per IP.
+    """
+    # Rate limiting
+    check_rate_limit(req)
+    
+    try:
+        await AnalyticsService.report_message(
+            db=db,
+            chatbot_id=chatbot_id,
+            session_id=request.session_id,
+            message_content=request.message_content
+        )
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 

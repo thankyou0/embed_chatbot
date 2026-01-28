@@ -3,6 +3,51 @@ import preact from "@preact/preset-vite";
 import { readFileSync } from "fs";
 import { join } from "path";
 
+// Plugin to inject CSS into JS bundle
+const injectCss = () => {
+  return {
+    name: "inject-css",
+    apply: "build",
+    enforce: "post",
+    generateBundle(options, bundle) {
+      // Find the CSS file
+      const cssFileName = Object.keys(bundle).find((fileName) =>
+        fileName.endsWith(".css"),
+      );
+
+      if (!cssFileName) return;
+
+      const cssAsset = bundle[cssFileName];
+      if (cssAsset.type !== "asset") return;
+
+      const cssCode = cssAsset.source;
+
+      // Inject CSS into each JS bundle
+      for (const fileName of Object.keys(bundle)) {
+        if (fileName.endsWith(".js")) {
+          const jsChunk = bundle[fileName];
+          if (jsChunk.type !== "chunk") continue;
+
+          // Prepend CSS injection code
+          const cssInjectionCode = `
+(function() {
+  if (typeof document !== 'undefined') {
+    var style = document.createElement('style');
+    style.textContent = ${JSON.stringify(cssCode)};
+    document.head.appendChild(style);
+  }
+})();
+`;
+          jsChunk.code = cssInjectionCode + jsChunk.code;
+        }
+      }
+
+      // Remove CSS file from bundle
+      delete bundle[cssFileName];
+    },
+  };
+};
+
 // Plugin to serve built widget files in dev mode
 const serveBuiltFiles = () => {
   return {
@@ -30,7 +75,7 @@ const serveBuiltFiles = () => {
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [preact(), serveBuiltFiles()],
+  plugins: [preact(), serveBuiltFiles(), injectCss()],
   resolve: {
     alias: {
       react: "preact/compat",

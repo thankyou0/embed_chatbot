@@ -21,8 +21,4 @@ that schedule box should be closed after clicking schedule/sync_now on schedule 
 still have to refresh the page in order to see from crawling --> completed status(in both normal and sync)
 
 
-https://www.cheaperzonetoys.com --> worked
-https://www.cheaperzonetoys.com/ --> failed
-
-
 after the successfully creating embbedings after crawling. it should update the status of pages from crawling to completed immediately(without need to refresh the page).

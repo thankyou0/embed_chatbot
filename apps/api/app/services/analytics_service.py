@@ -1,4 +1,29 @@
-"""Analytics Service for chatbot metrics"""
+"""Analytics Service for chatbot metrics
+
+Unanswered Query Classification:
+================================
+
+The classification happens at RESPONSE TIME in the chat service, using LLM intelligence.
+The LLM adds tags to its response:
+
+1. [[IRRELEVANT]] - Query is OUT OF SCOPE (celebrities, general trivia, unrelated topics)
+   - Examples: "who is elon musk?", "what's the weather?", "tell me about Mit Vaghani"
+   - These are NOT knowledge gaps - the chatbot was never meant to answer these
+   - Stored in metadata as: is_irrelevant = True, was_answered = True
+   
+2. [[MISSING_INFO]] - Query is RELEVANT but couldn't be answered (TRUE KNOWLEDGE GAP)
+   - Examples: "what's your refund policy?", "do you ship to Canada?"
+   - These ARE knowledge gaps - should be added to knowledge base
+   - Stored in metadata as: is_missing_info = True, was_answered = False
+
+3. No tag - Query was successfully answered OR was a greeting/pleasantry
+   - Stored in metadata as: was_answered = True
+
+Analytics Logic:
+- Unanswered Queries = ONLY those with is_missing_info = True
+- This uses LLM intelligence to classify, not pattern matching
+- Greetings and irrelevant queries are automatically excluded
+"""
 import asyncio
 from datetime import datetime, timedelta
 from typing import Optional, List
@@ -29,6 +54,15 @@ logger = get_logger(__name__)
 
 
 class AnalyticsService:
+    """
+    Analytics service that uses LLM-classified metadata from chat responses.
+    
+    The classification is done at response time in chat_service.py where the LLM tags:
+    - [[IRRELEVANT]] for out-of-scope queries → is_irrelevant=True, was_answered=True
+    - [[MISSING_INFO]] for knowledge gaps → is_missing_info=True, was_answered=False
+    
+    Unanswered queries = ONLY those with is_missing_info=True (true knowledge gaps)
+    """
     
     @staticmethod
     def _get_period_start(period: str) -> datetime:
@@ -133,25 +167,24 @@ class AnalyticsService:
         
         deflection_rate = (deflected_sessions / total_sessions * 100) if total_sessions > 0 else 0.0
         
-        # Calculate unanswered rate
-        # Count user messages where the bot response has was_answered=false
-        user_messages = [m for m in all_messages if m.role == MessageRole.USER]
-        unanswered_count = 0
+        # Calculate unanswered rate using LLM-classified metadata
+        # Only count queries where is_missing_info=True (true knowledge gaps)
+        # Exclude: greetings (handled by LLM), irrelevant queries (is_irrelevant=True)
+        bot_messages = [m for m in all_messages if m.role == MessageRole.ASSISTANT]
         
-        for user_msg in user_messages:
-            # Find the next bot message after this user message
-            bot_response = next(
-                (m for m in all_messages 
-                 if m.session_id == user_msg.session_id 
-                 and m.role == MessageRole.ASSISTANT 
-                 and m.created_at > user_msg.created_at),
-                None
-            )
-            
-            if bot_response and not bot_response.metadata_json.get("was_answered", False):
-                unanswered_count += 1
+        # Total meaningful queries = all responses except irrelevant ones
+        total_meaningful = sum(
+            1 for m in bot_messages 
+            if not m.metadata_json.get("is_irrelevant", False)
+        )
         
-        unanswered_rate = (unanswered_count / len(user_messages) * 100) if user_messages else 0.0
+        # Unanswered = only those with is_missing_info=True
+        unanswered_count = sum(
+            1 for m in bot_messages 
+            if m.metadata_json.get("is_missing_info", False)
+        )
+        
+        unanswered_rate = (unanswered_count / total_meaningful * 100) if total_meaningful > 0 else 0.0
         
         # Calculate average messages per session
         avg_messages = total_messages / total_sessions if total_sessions > 0 else 0.0
@@ -164,7 +197,7 @@ class AnalyticsService:
             unanswered_rate=round(unanswered_rate, 1),
             period=period
         )
-    
+
     @staticmethod
     async def get_unanswered_queries(
         db: AsyncSession,
@@ -172,9 +205,17 @@ class AnalyticsService:
         chatbot_id: UUID,
         user: User,
         period: str = "30d",
-        limit: int = 20
+        limit: int = 20,
+        query_type: Optional[str] = None  # 'missing_info' or 'reported'
     ) -> UnansweredQueriesResponse:
-        """Get unanswered queries for a chatbot"""
+        """
+        Get unanswered queries for a chatbot.
+        
+        query_type:
+        - 'missing_info': Bot couldn't answer (LLM-classified is_missing_info=True)
+        - 'reported': User-reported unsatisfactory answers (user_reported=True)
+        - None: All unanswered queries (both types)
+        """
         
         # Verify access
         await ChatbotService.get_chatbot(db, tenant_id, chatbot_id, user)
@@ -207,12 +248,16 @@ class AnalyticsService:
         messages_result = await db.execute(messages_query)
         all_messages = messages_result.scalars().all()
         
-        # Find unanswered user queries
+        # Find TRUE knowledge gap queries (is_missing_info=True)
+        # This excludes:
+        # - Greetings (LLM handles these, no tags)
+        # - Out-of-scope queries (is_irrelevant=True)
+        # - Successfully answered queries (was_answered=True, no is_missing_info)
         unanswered_messages = []
         user_messages = [m for m in all_messages if m.role == MessageRole.USER]
         
         for user_msg in user_messages:
-            # Find the next bot message
+            # Find the corresponding bot response
             bot_response = next(
                 (m for m in all_messages 
                  if m.session_id == user_msg.session_id 
@@ -221,16 +266,36 @@ class AnalyticsService:
                 None
             )
             
-            if bot_response and not bot_response.metadata_json.get("was_answered", False):
-                # Skip if this query has been marked as resolved
-                if bot_response.metadata_json.get("resolved", False):
+            if not bot_response:
+                continue
+            
+            metadata = bot_response.metadata_json or {}
+            
+            # Skip if this query has been manually marked as resolved
+            if metadata.get("resolved", False):
+                continue
+            
+            # Filter based on query_type parameter
+            is_missing_info = metadata.get("is_missing_info", False)
+            is_reported = metadata.get("user_reported", False)
+            
+            # Apply filter based on query_type
+            if query_type == "missing_info":
+                if not is_missing_info:
                     continue
-                    
-                confidence = bot_response.metadata_json.get("retrieval_confidence", 0.0)
-                unanswered_messages.append({
-                    "message": user_msg,
-                    "confidence": confidence
-                })
+            elif query_type == "reported":
+                if not is_reported:
+                    continue
+            else:
+                # If no type specified, include both
+                if not (is_missing_info or is_reported):
+                    continue
+            
+            confidence = metadata.get("retrieval_confidence", 0.0)
+            unanswered_messages.append({
+                "message": user_msg,
+                "confidence": confidence
+            })
         
         # Group by exact query text (simple grouping, no clustering yet)
         query_groups = {}
@@ -376,4 +441,119 @@ class AnalyticsService:
         
         await db.commit()
         logger.info(f"Resolved {len(matching_message_ids)} queries for chatbot {chatbot_id}")
+    
+    @staticmethod
+    async def report_message(
+        db: AsyncSession,
+        chatbot_id: UUID,
+        session_id: str,
+        message_content: str
+    ) -> None:
+        """Mark a message as reported by user (unsatisfactory answer)"""
+        
+        # Find the session
+        session_stmt = select(ChatSession).where(
+            and_(
+                ChatSession.chatbot_id == chatbot_id,
+                ChatSession.id == UUID(session_id)
+            )
+        )
+        session_result = await db.execute(session_stmt)
+        session = session_result.scalar_one_or_none()
+        
+        if not session:
+            raise ValueError("Session not found")
+        
+        # Find the user message with this content (try exact match first, then partial)
+        # Exact match
+        user_msg_stmt = select(ChatMessage).where(
+            and_(
+                ChatMessage.session_id == session.id,
+                ChatMessage.role == MessageRole.USER,
+                ChatMessage.content == message_content
+            )
+        ).order_by(ChatMessage.created_at.desc()).limit(1)
+        
+        user_msg_result = await db.execute(user_msg_stmt)
+        user_msg = user_msg_result.scalar_one_or_none()
+        
+        # If exact match not found, try trimmed match
+        if not user_msg:
+            user_msg_stmt = select(ChatMessage).where(
+                and_(
+                    ChatMessage.session_id == session.id,
+                    ChatMessage.role == MessageRole.USER
+                )
+            ).order_by(ChatMessage.created_at.desc())
+            
+            user_msg_result = await db.execute(user_msg_stmt)
+            all_user_msgs = user_msg_result.scalars().all()
+            
+            # Find by trimmed content match
+            trimmed_content = message_content.strip()
+            for msg in all_user_msgs:
+                if msg.content.strip() == trimmed_content:
+                    user_msg = msg
+                    break
+        
+        if not user_msg:
+            # If still not found, just get the last user message in this session
+            user_msg_stmt = select(ChatMessage).where(
+                and_(
+                    ChatMessage.session_id == session.id,
+                    ChatMessage.role == MessageRole.USER
+                )
+            ).order_by(ChatMessage.created_at.desc()).limit(1)
+            
+            user_msg_result = await db.execute(user_msg_stmt)
+            user_msg = user_msg_result.scalar_one_or_none()
+            
+            if not user_msg:
+                raise ValueError("No user messages found in session")
+        
+        # Find the corresponding assistant response
+        assistant_stmt = select(ChatMessage).where(
+            and_(
+                ChatMessage.session_id == session.id,
+                ChatMessage.role == MessageRole.ASSISTANT,
+                ChatMessage.created_at > user_msg.created_at
+            )
+        ).order_by(ChatMessage.created_at).limit(1)
+        
+        assistant_result = await db.execute(assistant_stmt)
+        assistant_msg = assistant_result.scalar_one_or_none()
+        
+        if not assistant_msg:
+            # Try to get the last assistant message if ordering issue
+            assistant_stmt = select(ChatMessage).where(
+                and_(
+                    ChatMessage.session_id == session.id,
+                    ChatMessage.role == MessageRole.ASSISTANT
+                )
+            ).order_by(ChatMessage.created_at.desc()).limit(1)
+            
+            assistant_result = await db.execute(assistant_stmt)
+            assistant_msg = assistant_result.scalar_one_or_none()
+            
+            if not assistant_msg:
+                raise ValueError("No assistant messages found in session")
+        
+        # Update the assistant message metadata to mark as reported
+        metadata = assistant_msg.metadata_json or {}
+        
+        # Don't overwrite if already reported
+        if not metadata.get("user_reported"):
+            metadata["user_reported"] = True
+            metadata["reported_at"] = datetime.utcnow().isoformat()
+            
+            await db.execute(
+                update(ChatMessage)
+                .where(ChatMessage.id == assistant_msg.id)
+                .values(metadata_json=metadata)
+            )
+            
+            await db.commit()
+            logger.info(f"Message reported for session {session_id}")
+        else:
+            logger.info(f"Message already reported for session {session_id}")
 

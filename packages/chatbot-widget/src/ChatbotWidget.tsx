@@ -174,6 +174,10 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [widgetConfig, setWidgetConfig] = useState<any>(null);
   const [_error, setError] = useState<string | null>(null);
+  const [reportedMessages, setReportedMessages] = useState<Set<string>>(
+    new Set(),
+  );
+  const [toast, setToast] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -543,6 +547,41 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
     sendMessage(suggestion);
   };
 
+  const handleReportAnswer = async (userMessage: string, messageId: string) => {
+    // Allow reporting in preview mode (just show toast, skip API call)
+    if (!chatbotId || !sessionId || isPreview) {
+      // In preview mode, just show toast and mark as reported
+      setReportedMessages((prev) => new Set(prev).add(messageId));
+      setToast("Thank you for your feedback!");
+      setTimeout(() => setToast(null), 3000);
+      return;
+    }
+
+    try {
+      await fetch(`${apiUrl}/api/v1/chat/${chatbotId}/report`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          session_id: sessionId,
+          message_content: userMessage,
+        }),
+      });
+
+      // Mark this message as reported
+      setReportedMessages((prev) => new Set(prev).add(messageId));
+
+      // Show toast notification
+      setToast("Thank you for your feedback!");
+      setTimeout(() => setToast(null), 3000);
+    } catch (err) {
+      console.error("Failed to report message:", err);
+      setToast("Failed to report. Please try again.");
+      setTimeout(() => setToast(null), 3000);
+    }
+  };
+
   const handleClose = () => {
     setIsOpen(false);
     setTimeout(() => {
@@ -708,12 +747,16 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
                           : {}
                       }
                     >
-                      <p className="chatbot-message-text">
-                        {msg.content}
-                        {msg.isTyping && (
-                          <span className="chatbot-typing-cursor">|</span>
-                        )}
-                      </p>
+                      <div
+                        className="chatbot-message-text"
+                        dangerouslySetInnerHTML={{
+                          __html:
+                            msg.content +
+                            (msg.isTyping
+                              ? '<span class="chatbot-typing-cursor">|</span>'
+                              : ""),
+                        }}
+                      />
                     </div>
                   </div>
                 </div>
@@ -745,6 +788,43 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
                           </button>
                         ),
                       )}
+                    </div>
+                  )}
+
+                {/* Report button - show for assistant messages (except welcome) */}
+                {msg.role === "assistant" &&
+                  !msg.isTyping &&
+                  messages.indexOf(msg) > 0 &&
+                  !reportedMessages.has(msg.id) && (
+                    <div className="chatbot-report-container">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          // Find the previous user message
+                          const msgIndex = messages.indexOf(msg);
+                          for (let i = msgIndex - 1; i >= 0; i--) {
+                            if (messages[i].role === "user") {
+                              handleReportAnswer(messages[i].content, msg.id);
+                              break;
+                            }
+                          }
+                        }}
+                        className="chatbot-report-button"
+                        title="Report this answer"
+                        disabled={!chatbotId || !sessionId}
+                      >
+                        <svg
+                          width="14"
+                          height="14"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                        >
+                          <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17" />
+                        </svg>
+                        <span>Not helpful</span>
+                      </button>
                     </div>
                   )}
               </div>
@@ -875,6 +955,9 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
               <p className="chatbot-branding">Powered by ChatBot</p>
             )}
           </div>
+
+          {/* Toast Notification */}
+          {toast && <div className="chatbot-toast">{toast}</div>}
         </div>
       ) : (
         /* Minimized Button / Bubble */

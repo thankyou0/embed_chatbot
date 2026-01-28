@@ -194,42 +194,29 @@ export function CrawlSourcePanel({
                   <div
                     key={page.id}
                     className={cn(
-                      "flex items-center justify-between p-3 hover:bg-muted/5 transition-colors",
+                      "flex items-center gap-3 overflow-hidden p-3 hover:bg-muted/5 transition-colors",
                       selectedPages.includes(page.id) && "bg-blue-50/50",
                     )}
                   >
-                    <div className="flex items-center gap-3 overflow-hidden">
-                      <Checkbox
-                        checked={selectedPages.includes(page.id)}
-                        onCheckedChange={(checked) => {
-                          if (checked)
-                            onSelectionChange([...selectedPages, page.id]);
-                          else
-                            onSelectionChange(
-                              selectedPages.filter((id) => id !== page.id),
-                            );
-                        }}
-                      />
-                      <div className="overflow-hidden min-w-0">
-                        <div className="text-sm truncate font-medium">
-                          {page.title || page.url}
-                        </div>
-                        <div className="text-xs text-muted-foreground truncate">
-                          {page.url}
-                        </div>
+                    <Checkbox
+                      checked={selectedPages.includes(page.id)}
+                      onCheckedChange={(checked) => {
+                        if (checked)
+                          onSelectionChange([...selectedPages, page.id]);
+                        else
+                          onSelectionChange(
+                            selectedPages.filter((id) => id !== page.id),
+                          );
+                      }}
+                    />
+                    <div className="overflow-hidden min-w-0">
+                      <div className="text-sm truncate font-medium">
+                        {page.title || page.url}
+                      </div>
+                      <div className="text-xs text-muted-foreground truncate">
+                        {page.url}
                       </div>
                     </div>
-                    <Badge
-                      variant="outline"
-                      className={cn(
-                        "text-[10px] capitalize ml-2",
-                        page.status === "completed"
-                          ? "text-green-600 border-green-200 bg-green-50"
-                          : "text-amber-600 border-amber-200 bg-amber-50",
-                      )}
-                    >
-                      {page.status}
-                    </Badge>
                   </div>
                 ))}
               </div>

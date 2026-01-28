@@ -744,21 +744,36 @@ class ChatService:
             "--- GUIDELINES ---\n"
             "1. **Context-Only Principle**: Answer questions **exclusively** using the information in the 'Background Context' below. "
             "Do not use outside knowledge or make assumptions. If the answer is not in the context, strictly state that you don't have that information.\n"
-            "2. **Greetings & Pleasantries**: If the user sends a greeting (e.g., 'Hi', 'Hello') or polite expression ('Thanks', 'Good job'), "
-            "reply naturally and politely. You do NOT need context for this.\n"
-            "3. **Irrelevant Queries**: If the user asks about topics completely unrelated to the business/context (e.g., political figures, celebrities, general trivia), "
-            "reply nicely that you can only answer questions related to {chatbot.name}, and append the tag `[[IRRELEVANT]]` to the very end of your response.\n"
-            "4. **Missing Information**: If the question IS relevant to the business but the specific answer is not in the context, "
-            "apologize and state you don't have that information, and append the tag `[[MISSING_INFO]]` to the very end of your response.\n"
-            "5. **Response Format**: Keep answers concise, professional and formatted in Markdown.\n"
-            "6. **Price Filters**: If a price filter is applied, STRICTLY only mention products that fall within the specified price range. Do not recommend products outside the user's budget.\n"
-            "7. **Color/Attribute Filters**: If a color or attribute filter is applied, STRICTLY only mention products that match the specified color/attribute.\n"
+            "2. **Greetings & Pleasantries**: If the user sends a greeting (e.g., 'Hi', 'Hello', 'Hey', 'Hii', 'Hiii') or polite expression ('Thanks', 'Good job', 'Thank you'), "
+            "reply naturally and politely. DO NOT add any tags like [[MISSING_INFO]] or [[IRRELEVANT]] for greetings. Greetings are NORMAL interactions that don't require knowledge base context.\n"
+            "3. **Irrelevant Queries**: If the user asks about topics completely unrelated to the business/context (e.g., political figures, celebrities, general trivia, weather), "
+            f"reply nicely that you can only answer questions related to {chatbot.name}, and append the tag `[[IRRELEVANT]]` to the very end of your response.\n"
+            "4. **Missing Information**: Use [[MISSING_INFO]] ONLY if ALL these conditions are met: "
+            "(a) The query is about a business-specific topic (products, services, policies, pricing, features, etc.), "
+            "(b) You cannot find the answer in the provided context, "
+            "(c) You must respond with a message saying you don't have that information. "
+            "DO NOT use [[MISSING_INFO]] for: greetings, contact information, general business info, or when you CAN answer from context.\n"
+            "5. **Response Format**: \n"
+            "   - Use HTML formatting: <strong>bold</strong>, <em>italic</em>, <br> for line breaks\n"
+            "   - For lists: use <ul><li>item</li></ul> or <ol><li>item</li></ol>\n"
+            "   - For headings: use <strong> tags to emphasize important text\n"
+            "   - Use <strong> for emphasis and important information\n"
+            "   - Use <em> for subtle emphasis or technical terms\n"
+            "   - Keep answers concise and professional\n"
+            "   - DO NOT use markdown symbols like ##, *, **, ***, - for formatting\n"
+            "   - DO NOT use <u> or underline tags\n"
+            "6. **Product Listings**: When products will be displayed (product carousel will show automatically), keep your text response MINIMAL:\n"
+            "   - Use a short intro like 'Here are our products:' or 'Available products:'\n"
+            "   - DO NOT list product details (name, price, etc.) as they appear in the product carousel\n"
+            "   - Keep response to 1-2 sentences maximum\n"
+            "7. **Price Filters**: If a price filter is applied, STRICTLY only mention products that fall within the specified price range. Do not recommend products outside the user's budget.\n"
+            "8. **Color/Attribute Filters**: If a color or attribute filter is applied, STRICTLY only mention products that match the specified color/attribute.\n"
             "\n"
             f"Background Context: {summary}{image_context}{price_context}{attribute_context}\n"
             f"{context_text}\n"
             "\n"
             "--- STRICT RESPONSE FORMAT ---\n"
-            "1. Your Answer\n"
+            "1. Your Answer (use HTML formatting as specified)\n"
             "2. (Optional) `[[IRRELEVANT]]` or `[[MISSING_INFO]]` tag if applicable. Do NOT output both.\n"
             "3. `---SUGGESTIONS---`\n"
             "4. JSON list of exactly 2 follow-up questions from the USER'S perspective (e.g. \"How do I...?\").\n"
@@ -830,6 +845,25 @@ class ChatService:
                 # Check for control tags
                 is_irrelevant = "[[IRRELEVANT]]" in full_content
                 is_missing_info = "[[MISSING_INFO]]" in full_content
+                
+                # Post-processing validation to catch false positives
+                if is_missing_info:
+                    # Check if this is actually a greeting or contact query that was answered
+                    user_lower = user_message.lower().strip()
+                    response_lower = full_content.lower()
+                    
+                    # Common greeting patterns
+                    greeting_patterns = ['hi', 'hello', 'hey', 'good morning', 'good afternoon', 'good evening']
+                    is_greeting = any(user_lower.startswith(g) for g in greeting_patterns)
+                    
+                    # Contact-related patterns with answers
+                    contact_patterns = ['contact', 'reach', 'phone', 'email', 'address', 'location']
+                    has_contact_query = any(pattern in user_lower for pattern in contact_patterns)
+                    has_contact_info = any(pattern in response_lower for pattern in ['email', 'phone', 'contact', 'address', '@', 'call'])
+                    
+                    # If it's a greeting or contact query with actual answer, remove missing_info tag
+                    if is_greeting or (has_contact_query and has_contact_info):
+                        is_missing_info = False
                 
                 # Clean content
                 full_content = full_content.replace("[[IRRELEVANT]]", "").replace("[[MISSING_INFO]]", "")

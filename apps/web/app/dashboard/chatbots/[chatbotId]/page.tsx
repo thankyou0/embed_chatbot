@@ -1169,7 +1169,7 @@ export default function ChatbotDetailPage() {
           </TabsTrigger>
           <TabsTrigger value="knowledge" className="flex items-center gap-2">
             <Database className="h-4 w-4" />
-            <span className="hidden sm:inline">Knowledge Base</span>
+            <span className="hidden sm:inline">Add Knowledge</span>
           </TabsTrigger>
           <TabsTrigger value="appearance" className="flex items-center gap-2">
             <Palette className="h-4 w-4" />
@@ -1353,7 +1353,7 @@ export default function ChatbotDetailPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
-                <CardTitle>Knowledge Base</CardTitle>
+                <CardTitle>Add Knowledge</CardTitle>
                 <CardDescription>
                   Manage the data sources your chatbot learns from
                 </CardDescription>
@@ -1411,6 +1411,14 @@ export default function ChatbotDetailPage() {
 
                   {knowledgeType === "url" ? (
                     <form onSubmit={handleCrawl} className="space-y-4">
+                      <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <p className="text-sm text-blue-800">
+                          <strong>💡 Tip:</strong> Add your website URL that
+                          contains information you want your bot to learn from.
+                          The bot will crawl and index the content from the
+                          pages it finds.
+                        </p>
+                      </div>
                       <div className="flex gap-2">
                         <div className="flex-1 space-y-1">
                           <Label htmlFor="url">Website URL</Label>
@@ -1448,6 +1456,14 @@ export default function ChatbotDetailPage() {
                     </form>
                   ) : knowledgeType === "file" ? (
                     <form onSubmit={handleFileUpload} className="space-y-4">
+                      <div className="mb-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <p className="text-sm text-green-800">
+                          <strong>💡 Tip:</strong> Upload policy documents,
+                          product guides, presentations (PPT), PDFs, or any
+                          files related to your product, firm, or website that
+                          you want the bot to reference.
+                        </p>
+                      </div>
                       <div className="space-y-2">
                         <Label htmlFor="file">
                           Upload Files (PDF, DOCX, TXT, MD)
@@ -1490,6 +1506,14 @@ export default function ChatbotDetailPage() {
                     </form>
                   ) : (
                     <div className="space-y-6">
+                      <div className="mb-3 p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                        <p className="text-sm text-purple-800">
+                          <strong>💡 Tip:</strong> Add frequently asked
+                          questions (FAQs) from your site or any specific
+                          questions you want your bot to answer consistently.
+                          This ensures accurate responses for common queries.
+                        </p>
+                      </div>
                       <form onSubmit={handleQASubmit} className="space-y-4">
                         <div className="grid gap-4">
                           <div className="space-y-1">
@@ -1538,6 +1562,27 @@ export default function ChatbotDetailPage() {
                         <Label className="text-xs font-semibold uppercase text-muted-foreground">
                           Or Bulk Upload (XLSX)
                         </Label>
+                        <div className="mt-2 mb-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                          <p className="text-sm text-amber-800 mb-2">
+                            <strong>📊 Excel Format:</strong> Your XLSX file
+                            should contain two columns:
+                          </p>
+                          <ul className="text-xs text-amber-700 ml-4 space-y-1 list-disc">
+                            <li>
+                              <strong>Column A:</strong> "question" - The
+                              question text
+                            </li>
+                            <li>
+                              <strong>Column B:</strong> "answer" - The
+                              corresponding answer
+                            </li>
+                            <li>
+                              First row should be the header row with column
+                              names
+                            </li>
+                            <li>Each subsequent row represents one Q&A pair</li>
+                          </ul>
+                        </div>
                         <form
                           onSubmit={handleQAXlsxUpload}
                           className="mt-2 flex gap-2"

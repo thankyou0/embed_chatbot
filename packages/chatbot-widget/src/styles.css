@@ -315,6 +315,37 @@
   margin: 0;
 }
 
+/* HTML formatting styles */
+.chatbot-message-text strong {
+  font-weight: 600;
+}
+
+.chatbot-message-text em {
+  font-style: italic;
+}
+
+.chatbot-message-text u {
+  text-decoration: underline;
+}
+
+.chatbot-message-text ul,
+.chatbot-message-text ol {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+.chatbot-message-text li {
+  margin: 4px 0;
+}
+
+.chatbot-message-text p {
+  margin: 4px 0;
+}
+
+.chatbot-message-text br {
+  line-height: 1.625;
+}
+
 .chatbot-typing-cursor {
   display: inline-block;
   width: 2px; /* w-1 = 2px */
@@ -433,6 +464,73 @@
 .chatbot-suggestion-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* Report Button */
+.chatbot-report-container {
+  display: flex;
+  margin-left: 40px; /* Align with message content */
+  margin-top: 4px;
+}
+
+.chatbot-report-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: transparent;
+  border: none;
+  color: #9ca3af; /* text-gray-400 */
+  font-size: 11px;
+  cursor: pointer;
+  outline: none;
+  transition: color 0.2s;
+  border-radius: 4px;
+}
+
+.chatbot-report-button:hover:not(:disabled) {
+  color: #6b7280; /* text-gray-500 */
+  background-color: #f9fafb; /* bg-gray-50 */
+}
+
+.chatbot-report-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.chatbot-report-button svg {
+  flex-shrink: 0;
+}
+
+/* Toast Notification */
+.chatbot-toast {
+  position: absolute;
+  bottom: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #1f2937; /* bg-gray-800 */
+  color: white;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  z-index: 1000;
+  animation: slideUp 0.3s ease-out;
+  max-width: 280px;
+  text-align: center;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
 }
 
 /* Input Area */
