@@ -22,3 +22,22 @@ still have to refresh the page in order to see from crawling --> completed statu
 
 
 after the successfully creating embbedings after crawling. it should update the status of pages from crawling to completed immediately(without need to refresh the page).
+
+
+
+
+
+(function () {
+  const script = document.createElement("script");
+  script.src = "https://ecom-chatbot-widget-3fhmc.ondigitalocean.app/widget.umd.js";
+  script.async = true;
+
+  script.onload = function () {
+    window.ChatbotWidget.init({
+      chatbotId: "f689f835-d686-404a-8943-ca6878304c2f",
+      apiUrl: "https://ecom-chatbot-api-8bwdf.ondigitalocean.app"
+    });
+  };
+
+  document.head.appendChild(script);
+})();

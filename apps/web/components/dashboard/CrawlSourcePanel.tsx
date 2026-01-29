@@ -119,7 +119,7 @@ export function CrawlSourcePanel({
               <ChevronDown className="h-4 w-4" />
             )}
           </Button>
-          <div className="font-medium truncate flex items-center gap-2">
+          <div className="font-medium truncate flex items-center gap-2" title={source.source_url || ""}>
             <Globe
               className={cn(
                 "h-4 w-4",
@@ -232,7 +232,7 @@ export function CrawlSourcePanel({
                       }}
                     />
                     <div className="overflow-hidden min-w-0">
-                      <div className="text-sm truncate font-medium flex items-center gap-2">
+                      <div className="text-sm truncate font-medium flex items-center gap-2" title={page.title || page.url}>
                         <span>{page.title || page.url}</span>
                         {page.is_product && (
                           <Badge
@@ -244,7 +244,7 @@ export function CrawlSourcePanel({
                           </Badge>
                         )}
                       </div>
-                      <div className="text-xs text-muted-foreground truncate">
+                      <div className="text-xs text-muted-foreground truncate" title={page.url}>
                         {page.url}
                       </div>
                     </div>

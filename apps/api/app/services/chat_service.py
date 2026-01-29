@@ -849,7 +849,7 @@ class ChatService:
                 # Post-processing validation to catch false positives
                 if is_missing_info:
                     # Check if this is actually a greeting or contact query that was answered
-                    user_lower = user_message.lower().strip()
+                    user_lower = text_content.lower().strip()
                     response_lower = full_content.lower()
                     
                     # Common greeting patterns
