@@ -46,6 +46,30 @@ services:
       - key: CORS_ORIGINS
         scope: RUN_TIME
         value: '["${_APP_URL}", "http://localhost:3000", "http://localhost:3001"]'
+      - key: GROQ_API_KEY
+        scope: RUN_TIME
+        type: SECRET
+      - key: HF_API_KEY
+        scope: RUN_TIME
+        type: SECRET
+      - key: S3_ACCESS_KEY_ID
+        scope: RUN_TIME
+        type: SECRET
+      - key: S3_SECRET_ACCESS_KEY
+        scope: RUN_TIME
+        type: SECRET
+      - key: S3_ENDPOINT_URL
+        scope: RUN_TIME
+        type: SECRET
+      - key: S3_REGION
+        scope: RUN_TIME
+        type: SECRET
+      - key: S3_BUCKET_NAME
+        scope: RUN_TIME
+        type: SECRET
+      - key: S3_PUBLIC_URL
+        scope: RUN_TIME
+        type: SECRET
 
   # -----------------------------------------
   # Frontend Web Dashboard (Next.js)
