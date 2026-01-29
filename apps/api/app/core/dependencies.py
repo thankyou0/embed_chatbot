@@ -3,6 +3,7 @@ from fastapi import Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.orm import joinedload
 
 from app.core.database import get_db
 from app.core.security import decode_token
@@ -38,8 +39,10 @@ async def get_current_user(
     except (ValueError, TypeError):
         raise UnauthorizedError("Invalid token payload")
     
-    # Fetch user from database
-    result = await db.execute(select(User).where(User.id == user_id))
+    # Fetch user from database with tenant joined to avoid extra query
+    result = await db.execute(
+        select(User).where(User.id == user_id).options(joinedload(User.tenant))
+    )
     user = result.scalar_one_or_none()
     
     if user is None:
@@ -50,11 +53,10 @@ async def get_current_user(
 
 async def get_current_tenant(
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
 ) -> Tenant:
     """Dependency to get the current user's tenant"""
-    result = await db.execute(select(Tenant).where(Tenant.id == current_user.tenant_id))
-    tenant = result.scalar_one_or_none()
+    # Tenant is already loaded by get_current_user dependency via joinedload
+    tenant = current_user.tenant
     
     if tenant is None:
         raise NotFoundError("Tenant not found")

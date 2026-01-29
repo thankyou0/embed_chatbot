@@ -87,13 +87,25 @@ export default function AnalyticsPage() {
   const [selectedQueries, setSelectedQueries] = useState<string[]>([]);
   const [isResolving, setIsResolving] = useState(false);
 
+  // Cache for analytics data to avoid redundant API calls
+  const [analyticsCache, setAnalyticsCache] = useState<
+    Record<
+      string,
+      {
+        overview: AnalyticsOverview;
+        unanswered: UnansweredQueriesResponse | null;
+        reported: UnansweredQueriesResponse | null;
+      }
+    >
+  >({});
+
   useEffect(() => {
     fetchChatbots();
   }, []);
 
   useEffect(() => {
     fetchAnalytics();
-  }, [selectedChatbot, period, queryTab]);
+  }, [selectedChatbot, period]);
 
   const fetchChatbots = async () => {
     try {
@@ -111,47 +123,76 @@ export default function AnalyticsPage() {
     }
   };
 
-  const fetchAnalytics = async () => {
+  const fetchAnalytics = async (forceRefresh = false) => {
+    const cacheKey = `${selectedChatbot}-${period}`;
+
+    // If we have cached data and NOT a force refresh, use it immediately
+    if (!forceRefresh && analyticsCache[cacheKey]) {
+      const cached = analyticsCache[cacheKey];
+      setAnalytics(cached.overview);
+      setUnansweredQueries(cached.unanswered);
+      setReportedQueries(cached.reported);
+      return;
+    }
+
     try {
       setIsLoading(true);
       const token = getAccessToken();
       if (!token) return;
 
-      let url = `/api/v1/chatbots/analytics/overview?period=${period}`;
+      let overviewUrl = `/api/v1/chatbots/analytics/overview?period=${period}`;
       if (selectedChatbot !== "all") {
-        url += `&chatbot_id=${selectedChatbot}`;
+        overviewUrl += `&chatbot_id=${selectedChatbot}`;
       }
 
-      const response = await apiRequestWithAuth<AnalyticsOverview>(url, token, {
-        method: "GET",
-      });
-      setAnalytics(response);
+      const overviewPromise = apiRequestWithAuth<AnalyticsOverview>(
+        overviewUrl,
+        token,
+        {
+          method: "GET",
+        },
+      );
+
+      let fetchedAnalytics: AnalyticsOverview;
+      let fetchedUnanswered: UnansweredQueriesResponse | null = null;
+      let fetchedReported: UnansweredQueriesResponse | null = null;
 
       // Fetch unanswered queries if a specific chatbot is selected
       if (selectedChatbot !== "all") {
-        // Fetch missing_info queries
         const missingInfoUrl = `/api/v1/chatbots/${selectedChatbot}/analytics/unanswered?period=${period}&limit=20&query_type=missing_info`;
-        const missingInfoResponse =
-          await apiRequestWithAuth<UnansweredQueriesResponse>(
-            missingInfoUrl,
-            token,
-            { method: "GET" },
-          );
-        setUnansweredQueries(missingInfoResponse);
-
-        // Fetch reported queries
         const reportedUrl = `/api/v1/chatbots/${selectedChatbot}/analytics/unanswered?period=${period}&limit=20&query_type=reported`;
-        const reportedResponse =
-          await apiRequestWithAuth<UnansweredQueriesResponse>(
-            reportedUrl,
-            token,
-            { method: "GET" },
-          );
-        setReportedQueries(reportedResponse);
+
+        const [overview, missingInfo, reported] = await Promise.all([
+          overviewPromise,
+          apiRequestWithAuth<UnansweredQueriesResponse>(missingInfoUrl, token, {
+            method: "GET",
+          }),
+          apiRequestWithAuth<UnansweredQueriesResponse>(reportedUrl, token, {
+            method: "GET",
+          }),
+        ]);
+
+        fetchedAnalytics = overview;
+        fetchedUnanswered = missingInfo;
+        fetchedReported = reported;
       } else {
-        setUnansweredQueries(null);
-        setReportedQueries(null);
+        fetchedAnalytics = await overviewPromise;
       }
+
+      // Update states
+      setAnalytics(fetchedAnalytics);
+      setUnansweredQueries(fetchedUnanswered);
+      setReportedQueries(fetchedReported);
+
+      // Update cache
+      setAnalyticsCache((prev) => ({
+        ...prev,
+        [cacheKey]: {
+          overview: fetchedAnalytics,
+          unanswered: fetchedUnanswered,
+          reported: fetchedReported,
+        },
+      }));
     } catch (err) {
       console.error("Failed to fetch analytics:", err);
     } finally {
@@ -273,7 +314,7 @@ export default function AnalyticsPage() {
             variant="outline"
             size="icon"
             className="h-10 w-10"
-            onClick={fetchAnalytics}
+            onClick={() => fetchAnalytics(true)}
             disabled={isLoading}
           >
             <RefreshCcw
@@ -292,7 +333,7 @@ export default function AnalyticsPage() {
         </TabsList>
       </Tabs>
 
-      {isLoading ? (
+      {isLoading && !analytics ? (
         <div className="flex items-center justify-center py-24">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>

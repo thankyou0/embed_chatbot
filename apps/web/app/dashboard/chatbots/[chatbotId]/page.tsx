@@ -186,6 +186,9 @@ export default function ChatbotDetailPage() {
   const [stats, setStats] = useState<ChatbotStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingKnowledge, setIsLoadingKnowledge] = useState(false);
+  const [hasLoadedStats, setHasLoadedStats] = useState(false);
+  const [hasLoadedKnowledge, setHasLoadedKnowledge] = useState(false);
+  const [hasLoadedAppearance, setHasLoadedAppearance] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("overview");
   const [knowledgeTab, setKnowledgeTab] = useState("crawl");
@@ -338,10 +341,20 @@ export default function ChatbotDetailPage() {
   const primaryColor = watchedPrimaryColor ?? watch("primary_color");
 
   useEffect(() => {
-    fetchChatbotDetails();
-    fetchKnowledgeSources();
-    fetchAppearance();
-    fetchChatbotStats();
+    const initializePage = async () => {
+      // 1. High Priority: Get basic info, stats, and appearance (for widget preview)
+      await fetchChatbotDetails();
+      fetchChatbotStats();
+      fetchAppearance();
+
+      // 2. Medium Priority: Prefetch knowledge base in background
+      // This is usually the largest payload, so we delay it slightly
+      setTimeout(() => {
+        if (!hasLoadedKnowledge) fetchKnowledgeSources();
+      }, 1000);
+    };
+
+    initializePage();
   }, [chatbotId]);
 
   const fetchChatbotStats = async () => {
@@ -355,6 +368,7 @@ export default function ChatbotDetailPage() {
         { method: "GET" },
       );
       setStats(response);
+      setHasLoadedStats(true);
     } catch (err) {
       console.error("Failed to fetch stats:", err);
     }
@@ -515,6 +529,7 @@ export default function ChatbotDetailPage() {
       );
 
       setKnowledgeSources(response);
+      setHasLoadedKnowledge(true);
       return response;
     } catch (err) {
       console.error("Failed to fetch knowledge sources:", err);
@@ -537,6 +552,7 @@ export default function ChatbotDetailPage() {
       );
 
       setAppearance(response);
+      setHasLoadedAppearance(true);
       // Set form values
       Object.keys(response).forEach((key) => {
         if (
@@ -1161,7 +1177,18 @@ export default function ChatbotDetailPage() {
       </div>
 
       {/* Tab Navigation - Full Width Content */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <Tabs
+        value={activeTab}
+        onValueChange={(value) => {
+          setActiveTab(value);
+          // Handle on-demand loading if background prefetch hasn't finished
+          if (value === "knowledge" && !hasLoadedKnowledge)
+            fetchKnowledgeSources();
+          if (value === "appearance" && !hasLoadedAppearance) fetchAppearance();
+          if (value === "overview" && !hasLoadedStats) fetchChatbotStats();
+        }}
+        className="w-full"
+      >
         <TabsList className="grid w-full grid-cols-5 lg:w-auto">
           <TabsTrigger value="overview" className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4" />
@@ -1173,7 +1200,7 @@ export default function ChatbotDetailPage() {
           </TabsTrigger>
           <TabsTrigger value="appearance" className="flex items-center gap-2">
             <Palette className="h-4 w-4" />
-            <span className="hidden sm:inline">Design & Test</span>
+            <span className="hidden sm:inline">Appearance</span>
           </TabsTrigger>
           <TabsTrigger value="install" className="flex items-center gap-2">
             <Code className="h-4 w-4" />

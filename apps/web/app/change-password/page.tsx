@@ -1,71 +1,78 @@
-'use client'
+"use client";
 
-import React, { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { useAuth } from '@/contexts/AuthContext'
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function ChangePasswordPage() {
-  const [currentPassword, setCurrentPassword] = useState('')
-  const [newPassword, setNewPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
-  const router = useRouter()
-  const { user, loading: authLoading, changePassword, mustChangePassword } = useAuth()
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
+  const {
+    user,
+    loading: authLoading,
+    changePassword,
+    mustChangePassword,
+  } = useAuth();
 
   // Redirect to login if not authenticated
   useEffect(() => {
     if (!authLoading && !user) {
-      router.push('/login')
+      router.push("/login");
     }
-  }, [authLoading, user, router])
+  }, [authLoading, user, router]);
 
-  // Redirect to dashboard if user doesn't need to change password
+  // Redirect to chatbots if user doesn't need to change password
   useEffect(() => {
     if (!authLoading && user && !mustChangePassword) {
-      router.push('/dashboard')
+      router.push("/dashboard/chatbots");
     }
-  }, [authLoading, user, mustChangePassword, router])
+  }, [authLoading, user, mustChangePassword, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
+    e.preventDefault();
+    setError("");
 
     // Validation
     if (newPassword.length < 8) {
-      setError('New password must be at least 8 characters')
-      return
+      setError("New password must be at least 8 characters");
+      return;
     }
 
     if (newPassword !== confirmPassword) {
-      setError('Passwords do not match')
-      return
+      setError("Passwords do not match");
+      return;
     }
 
     if (currentPassword === newPassword) {
-      setError('New password must be different from current password')
-      return
+      setError("New password must be different from current password");
+      return;
     }
 
-    setLoading(true)
+    setLoading(true);
     try {
       await changePassword({
         current_password: currentPassword,
         new_password: newPassword,
-      })
+      });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to change password')
+      setError(
+        err instanceof Error ? err.message : "Failed to change password",
+      );
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
         <div className="text-white">Loading...</div>
       </div>
-    )
+    );
   }
 
   return (
@@ -89,9 +96,12 @@ export default function ChangePasswordPage() {
                 />
               </svg>
             </div>
-            <h1 className="text-2xl font-bold text-white mb-2">Change Your Password</h1>
+            <h1 className="text-2xl font-bold text-white mb-2">
+              Change Your Password
+            </h1>
             <p className="text-slate-400">
-              Your temporary password needs to be changed before you can continue.
+              Your temporary password needs to be changed before you can
+              continue.
             </p>
           </div>
 
@@ -191,7 +201,7 @@ export default function ChangePasswordPage() {
                   Changing Password...
                 </span>
               ) : (
-                'Change Password'
+                "Change Password"
               )}
             </button>
           </form>
@@ -212,8 +222,9 @@ export default function ChangePasswordPage() {
               </svg>
               <div className="text-sm text-slate-400">
                 <p>
-                  You were given a temporary password by your administrator. For security reasons,
-                  you must change it before accessing the dashboard.
+                  You were given a temporary password by your administrator. For
+                  security reasons, you must change it before accessing the
+                  dashboard.
                 </p>
               </div>
             </div>
@@ -221,6 +232,5 @@ export default function ChangePasswordPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }
-
