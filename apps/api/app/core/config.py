@@ -93,7 +93,15 @@ class Settings(BaseSettings):
     EMAIL_FROM_NAME: str = "Chatbot Platform"
     FRONTEND_URL: str = "http://localhost:3000"
     PASSWORD_RESET_TOKEN_EXPIRE_HOURS: int = 1
-    
+
+    # S3 Compatible Storage (Supabase, DigitalOcean, etc.)
+    S3_ACCESS_KEY_ID: Optional[str] = None
+    S3_SECRET_ACCESS_KEY: Optional[str] = None
+    S3_ENDPOINT_URL: Optional[str] = None  # e.g., https://[id].supabase.co/storage/v1/s3
+    S3_REGION: str = "us-east-1"           # Supabase uses us-east-1 for S3 compatibility
+    S3_BUCKET_NAME: str = "chatbot-uploads"
+    S3_PUBLIC_URL: Optional[str] = None    # e.g., https://[id].supabase.co/storage/v1/object/public/[bucket]
+
     @property
     def huggingface_api_key(self) -> Optional[str]:
         """Get HuggingFace API key, checking HF_API_KEY first, then HUGGINGFACE_API_KEY."""

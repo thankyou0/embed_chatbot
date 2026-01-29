@@ -15,6 +15,7 @@ class KnowledgeSourceType(str, enum.Enum):
 
 class KnowledgeSourceStatus(str, enum.Enum):
     PENDING = "pending"
+    PROCESSING = "processing"
     CRAWLING = "crawling"
     COMPLETED = "completed"
     FAILED = "failed"
@@ -57,7 +58,7 @@ class KnowledgeSourceStatusDB(TypeDecorator):
     cache_ok = True
     
     def __init__(self):
-        super().__init__("pending", "crawling", "completed", "failed", name="knowledgesourcestatus", create_type=False)
+        super().__init__("pending", "processing", "crawling", "completed", "failed", name="knowledgesourcestatus", create_type=False)
     
     def process_bind_param(self, value, dialect):
         if value is None: return None
@@ -86,7 +87,9 @@ class KnowledgeSource(Base):
     chatbot = relationship("Chatbot", back_populates="knowledge_sources")
     pages = relationship("CrawledPage", back_populates="knowledge_source", cascade="all, delete-orphan")
     files = relationship("UploadedFile", back_populates="knowledge_source", cascade="all, delete-orphan")
-    qa_pairs = relationship("QAPair", back_populates="knowledge_source", cascade="all, delete-orphan")
+    qa_pairs = relationship("QAPair", back_populates="knowledge_source", cascade="all, delete-orphan", order_by="asc(QAPair.created_at), asc(QAPair.id)")
+    crawl_history = relationship("CrawlHistory", back_populates="knowledge_source", cascade="all, delete-orphan")
+    crawl_schedule = relationship("CrawlSchedule", back_populates="knowledge_source", cascade="all, delete-orphan", uselist=False)
 
 
 class CrawledPage(Base):
@@ -117,6 +120,7 @@ class UploadedFile(Base):
     file_path = Column(String(1024), nullable=False)
     file_size = Column(Integer, nullable=False)
     mime_type = Column(String(100), nullable=False)
+    content_hash = Column(String(64), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     # Relationships
@@ -206,7 +210,7 @@ class CrawlSchedule(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
     # Relationships
-    knowledge_source = relationship("KnowledgeSource", backref="schedule")
+    knowledge_source = relationship("KnowledgeSource", back_populates="crawl_schedule")
 
 
 class CrawlHistory(Base):
@@ -224,5 +228,5 @@ class CrawlHistory(Base):
     error_message = Column(Text, nullable=True)
 
     # Relationships
-    knowledge_source = relationship("KnowledgeSource", backref="crawl_history")
+    knowledge_source = relationship("KnowledgeSource", back_populates="crawl_history")
 

@@ -5,11 +5,12 @@ import {
   ChevronDown,
   ChevronUp,
   Trash2,
-  Globe,
+  FileQuestion,
   Loader2,
   AlertCircle,
-  Clock,
-  Tag,
+  HelpCircle,
+  MessageCircle,
+  Edit2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -17,12 +18,11 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 
-interface CrawledPage {
+interface QAPair {
   id: string;
-  url: string;
-  title: string | null;
-  status: string;
-  is_product?: boolean;
+  question: string;
+  answer: string;
+  created_at?: string;
 }
 
 interface KnowledgeSource {
@@ -32,49 +32,54 @@ interface KnowledgeSource {
   pages_found: number;
   error_message?: string | null;
   updated_at?: string;
+  qa_pairs?: QAPair[];
 }
 
-interface CrawlSourcePanelProps {
+interface QABundlePanelProps {
   source: KnowledgeSource;
-  pages: CrawledPage[];
-  selectedPages: string[];
+  qaPairs: QAPair[];
+  selectedPairs: string[];
   onSelectionChange: (ids: string[]) => void;
-  onSchedule: () => void;
-  onDeleteSelected: () => void;
-  isBulkDeleting: boolean;
+  onDeleteSource: () => void;
+  onDeleteSelectedPairs: () => void;
+  isDeleting: boolean;
+  onEditPair: (qa: QAPair) => void;
+  onDeletePair: (id: string) => void;
 }
 
-export function CrawlSourcePanel({
+export function QABundlePanel({
   source,
-  pages,
-  selectedPages,
+  qaPairs,
+  selectedPairs,
   onSelectionChange,
-  onSchedule,
-  onDeleteSelected,
-  isBulkDeleting,
-}: CrawlSourcePanelProps) {
+  onDeleteSource,
+  onDeleteSelectedPairs,
+  isDeleting,
+  onEditPair,
+  onDeletePair,
+}: QABundlePanelProps) {
   const [isOpen, setIsOpen] = useState(false);
 
-  // Pages belonging to this panel
-  const panelPageIds = pages.map((p) => p.id);
+  // QA pairs belonging to this panel
+  const panelPairIds = qaPairs.map((p) => p.id);
 
-  // Check if all pages in this panel are selected
+  // Check if all pairs in this panel are selected
   const allSelected =
-    panelPageIds.length > 0 &&
-    panelPageIds.every((id) => selectedPages.includes(id));
+    panelPairIds.length > 0 &&
+    panelPairIds.every((id) => selectedPairs.includes(id));
 
-  // Check if some pages are selected
-  const someSelected = panelPageIds.some((id) => selectedPages.includes(id));
+  // Check if some pairs are selected
+  const someSelected = panelPairIds.some((id) => selectedPairs.includes(id));
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      // Add all panel pages to selection (avoiding duplicates)
-      const toAdd = panelPageIds.filter((id) => !selectedPages.includes(id));
-      onSelectionChange([...selectedPages, ...toAdd]);
+      // Add all panel pairs to selection (avoiding duplicates)
+      const toAdd = panelPairIds.filter((id) => !selectedPairs.includes(id));
+      onSelectionChange([...selectedPairs, ...toAdd]);
     } else {
-      // Remove all panel pages from selection
+      // Remove all panel pairs from selection
       onSelectionChange(
-        selectedPages.filter((id) => !panelPageIds.includes(id)),
+        selectedPairs.filter((id) => !panelPairIds.includes(id)),
       );
     }
   };
@@ -97,7 +102,7 @@ export function CrawlSourcePanel({
   return (
     <Card
       className={cn(
-        "overflow-hidden border-l-4",
+        "overflow-hidden border-l-4 mb-4",
         source.status === "failed"
           ? "border-l-red-500"
           : source.status === "completed"
@@ -120,7 +125,7 @@ export function CrawlSourcePanel({
             )}
           </Button>
           <div className="font-medium truncate flex items-center gap-2">
-            <Globe
+            <FileQuestion
               className={cn(
                 "h-4 w-4",
                 source.status === "failed"
@@ -136,8 +141,7 @@ export function CrawlSourcePanel({
             variant={getStatusBadgeVariant(source.status)}
             className="capitalize"
           >
-            {(source.status === "processing" ||
-              source.status === "crawling") && (
+            {(source.status === "processing" || source.status === "crawling") && (
               <Loader2 className="h-3 w-3 mr-1 animate-spin" />
             )}
             {source.status === "failed" && (
@@ -146,26 +150,11 @@ export function CrawlSourcePanel({
             {source.status}
           </Badge>
           <Badge variant="outline" className="text-xs">
-            {pages.length} Pages
+            {qaPairs.length} Pairs
           </Badge>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          {source.updated_at && (
-            <div className="hidden md:flex items-center gap-1.5 text-xs text-muted-foreground mr-2">
-              <Clock className="h-3 w-3" />
-              <span>
-                Last synced {new Date(source.updated_at).toLocaleDateString()}
-              </span>
-            </div>
-          )}
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={onSchedule}
-            className="h-8 text-xs"
-          >
-            Schedule Crawl
-          </Button>
+          {/* Removed all buttons from header as requested */}
         </div>
       </CardHeader>
 
@@ -199,8 +188,8 @@ export function CrawlSourcePanel({
               <Button
                 variant="destructive"
                 size="sm"
-                onClick={onDeleteSelected}
-                disabled={isBulkDeleting}
+                onClick={onDeleteSelectedPairs}
+                disabled={isDeleting}
                 className="h-7 text-xs"
               >
                 <Trash2 className="h-3.5 w-3.5 mr-1.5" />
@@ -210,43 +199,57 @@ export function CrawlSourcePanel({
           </div>
 
           <div className="max-h-[400px] overflow-y-auto">
-            {pages.length > 0 ? (
+            {qaPairs.length > 0 ? (
               <div className="divide-y">
-                {pages.map((page) => (
+                {qaPairs.map((qa) => (
                   <div
-                    key={page.id}
+                    key={qa.id}
                     className={cn(
-                      "flex items-center gap-3 overflow-hidden p-3 hover:bg-muted/5 transition-colors",
-                      selectedPages.includes(page.id) && "bg-blue-50/50",
+                      "flex items-start gap-3 p-3 hover:bg-muted/5 transition-colors",
+                      selectedPairs.includes(qa.id) && "bg-blue-50/50",
                     )}
                   >
                     <Checkbox
-                      checked={selectedPages.includes(page.id)}
+                      className="mt-1"
+                      checked={selectedPairs.includes(qa.id)}
                       onCheckedChange={(checked) => {
                         if (checked)
-                          onSelectionChange([...selectedPages, page.id]);
+                          onSelectionChange([...selectedPairs, qa.id]);
                         else
                           onSelectionChange(
-                            selectedPages.filter((id) => id !== page.id),
+                            selectedPairs.filter((id) => id !== qa.id),
                           );
                       }}
                     />
-                    <div className="overflow-hidden min-w-0">
-                      <div className="text-sm truncate font-medium flex items-center gap-2">
-                        <span>{page.title || page.url}</span>
-                        {page.is_product && (
-                          <Badge
-                            variant="outline"
-                            className="h-4 px-1 text-[10px] bg-blue-50 text-blue-700 border-blue-200 flex items-center"
-                          >
-                            <Tag className="h-2.5 w-2.5 mr-0.5" />
-                            Product
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="text-xs text-muted-foreground truncate">
-                        {page.url}
-                      </div>
+                    <div className="grid gap-1.5 flex-1 min-w-0">
+                        <div className="flex items-start gap-2">
+                            <HelpCircle className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                            <p className="text-sm font-medium leading-tight">{qa.question}</p>
+                        </div>
+                        <div className="flex items-start gap-2">
+                            <MessageCircle className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
+                            <p className="text-sm text-muted-foreground leading-relaxed">{qa.answer}</p>
+                        </div>
+                    </div>
+                    <div className="flex gap-1 shrink-0">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-primary"
+                        onClick={() => onEditPair(qa)}
+                        title="Edit QA pair"
+                      >
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                        onClick={() => onDeletePair(qa.id)}
+                        title="Delete QA pair"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
                 ))}
@@ -254,7 +257,7 @@ export function CrawlSourcePanel({
             ) : (
               <div className="p-8 text-center text-muted-foreground text-sm flex flex-col items-center gap-2">
                 <Loader2 className="h-8 w-8 animate-spin opacity-20" />
-                <p>Waiting for pages...</p>
+                <p>Waiting for QA pairs...</p>
               </div>
             )}
           </div>

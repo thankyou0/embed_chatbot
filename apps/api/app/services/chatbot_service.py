@@ -67,6 +67,7 @@ import aiofiles
 from pathlib import Path
 import pandas as pd
 import io
+import hashlib
 
 logger = get_logger(__name__)
 
@@ -947,7 +948,7 @@ class ChatbotService:
                 update(KnowledgeSource)
                 .where(KnowledgeSource.id == existing_ks.id)
                 .values(
-                    status=KnowledgeSourceStatus.CRAWLING,
+                    status=KnowledgeSourceStatus.PROCESSING,
                     error_message=None  # Clear any previous error
                 )
             )
@@ -1072,12 +1073,30 @@ class ChatbotService:
         if ext not in allowed_extensions:
             raise BadRequestError(f"Unsupported file type: {ext}. Allowed: {', '.join(allowed_extensions)}")
 
-        # 3. Save file locally
-        upload_dir = os.path.join("uploads", str(tenant_id), str(chatbot_id))
+        # 3. Pre-validate: Can we extract text from this file?
         content = await file.read()
+        
+        # Calculate content hash for deduplication
+        content_hash = hashlib.sha256(content).hexdigest()
+        
+        # Check for duplicate file for this chatbot
+        stmt = select(UploadedFile).join(KnowledgeSource).where(
+            KnowledgeSource.chatbot_id == chatbot_id,
+            UploadedFile.content_hash == content_hash
+        )
+        existing_file = (await db.execute(stmt)).scalar_one_or_none()
+        if existing_file:
+            raise BadRequestError(f"A file with the same content has already been uploaded as '{existing_file.filename}'.")
+
+        extracted_text = await FileService.extract_text(content, file.content_type)
+        if not extracted_text:
+            raise BadRequestError(f"Cannot extract text from {file.filename}. The file might be corrupted, encrypted, or empty.")
+
+        # 4. Save file only if extraction succeeded
+        upload_dir = os.path.join("uploads", str(tenant_id), str(chatbot_id))
         file_path = await FileService.save_file(content, upload_dir, file.filename)
 
-        # 4. Create KnowledgeSource
+        # 5. Create KnowledgeSource
         ks = KnowledgeSource(
             chatbot_id=chatbot_id,
             source_type=KnowledgeSourceType.UPLOADED_FILE,
@@ -1093,7 +1112,8 @@ class ChatbotService:
             filename=file.filename,
             file_path=file_path,
             file_size=len(content),
-            mime_type=file.content_type
+            mime_type=file.content_type,
+            content_hash=content_hash
         )
         db.add(uploaded_file)
 
@@ -1121,7 +1141,8 @@ class ChatbotService:
             ChatbotService._process_uploaded_file,
             ks.id,
             file_path,
-            file.content_type
+            file.content_type,
+            extracted_text  # Pass the already extracted text
         )
 
         return FileUploadResponse(
@@ -1131,7 +1152,7 @@ class ChatbotService:
         )
 
     @staticmethod
-    async def _process_uploaded_file(ks_id: UUID, file_path: str, mime_type: str):
+    async def _process_uploaded_file(ks_id: UUID, file_path: str, mime_type: str, text: Optional[str] = None):
         """Background task to extract text from file and generate embeddings"""
         session_factory = get_session_factory()
         async with session_factory() as db:
@@ -1140,12 +1161,14 @@ class ChatbotService:
                 await db.execute(
                     update(KnowledgeSource)
                     .where(KnowledgeSource.id == ks_id)
-                    .values(status=KnowledgeSourceStatus.CRAWLING)
+                    .values(status=KnowledgeSourceStatus.PROCESSING)
                 )
                 await db.commit()
 
-                # Extract text
-                text = FileService.extract_text(file_path, mime_type)
+                # Extract text if not provided
+                if not text:
+                    text = await FileService.extract_text(file_path, mime_type)
+                
                 if not text:
                     raise Exception("Failed to extract text from file")
 
@@ -1178,10 +1201,20 @@ class ChatbotService:
 
             except Exception as e:
                 logger.error(f"Error processing uploaded file {ks_id}: {str(e)}")
+                # Delete the uploaded file from storage if processing fails
+                try:
+                    await FileService.delete_file(file_path)
+                    logger.info(f"Deleted failed upload from storage: {file_path}")
+                except Exception as cleanup_error:
+                    logger.error(f"Failed to cleanup file after error: {cleanup_error}")
+
                 await db.execute(
                     update(KnowledgeSource)
                     .where(KnowledgeSource.id == ks_id)
-                    .values(status=KnowledgeSourceStatus.FAILED)
+                    .values(
+                        status=KnowledgeSourceStatus.FAILED,
+                        error_message=f"Processing failed: {str(e)}"
+                    )
                 )
                 await db.commit()
 
@@ -1206,13 +1239,12 @@ class ChatbotService:
         if not await ChatbotService.has_permission(db, ks.chatbot_id, user, "can_manage_knowledge"):
             raise ForbiddenError("Insufficient permissions to delete knowledge")
 
-        # 3. If it's a file, delete the actual file from disk
+        # 3. If it's a file, delete the actual file from storage (S3/Supabase or local)
         for file_record in ks.files:
             try:
-                if os.path.exists(file_record.file_path):
-                    os.remove(file_record.file_path)
+                await FileService.delete_file(file_record.file_path)
             except Exception as e:
-                logger.error(f"Failed to delete file from disk: {file_record.file_path} - {e}")
+                logger.error(f"Failed to delete file {file_record.file_path}: {e}")
 
         # 4. Explicitly delete all embeddings for this knowledge source
         # (CASCADE should handle this, but being explicit ensures it works)
@@ -1222,20 +1254,30 @@ class ChatbotService:
         await db.execute(delete(CrawlHistory).where(CrawlHistory.knowledge_source_id == ks_id))
         await db.execute(delete(CrawlSchedule).where(CrawlSchedule.knowledge_source_id == ks_id))
         
-        # Import the models we need for deletion
+        # Count items for logging
         from app.models.knowledge import CrawledPage, UploadedFile, QAPair
-        
+        pages_count = (await db.execute(select(func.count()).where(CrawledPage.knowledge_source_id == ks_id))).scalar() or 0
+        files_count = (await db.execute(select(func.count()).where(UploadedFile.knowledge_source_id == ks_id))).scalar() or 0
+        qa_count = (await db.execute(select(func.count()).where(QAPair.knowledge_source_id == ks_id))).scalar() or 0
+
         # Delete all crawled pages, uploaded files, and QA pairs
         await db.execute(delete(CrawledPage).where(CrawledPage.knowledge_source_id == ks_id))
         await db.execute(delete(UploadedFile).where(UploadedFile.knowledge_source_id == ks_id))
         await db.execute(delete(QAPair).where(QAPair.knowledge_source_id == ks_id))
         
         # 6. Log activity before deleting
+        item_desc = []
+        if pages_count: item_desc.append(f"{pages_count} pages")
+        if files_count: item_desc.append(f"{files_count} files")
+        if qa_count: item_desc.append(f"{qa_count} Q&A pairs")
+        
+        details = f" ({', '.join(item_desc)})" if item_desc else ""
+        
         activity = ChatbotActivity(
             chatbot_id=ks.chatbot_id,
             user_id=user.id,
             activity_type="knowledge_source_deleted",
-            description=f"Knowledge source deleted: {ks.source_url or str(ks_id)[:8]}... by {user.name or user.email}"
+            description=f"Knowledge source deleted: {ks.source_url or str(ks_id)[:8]}{details} by {user.name or user.email}"
         )
         db.add(activity)
         
@@ -1500,10 +1542,23 @@ class ChatbotService:
             db.add(ks)
             await db.flush()
 
+        # Check for duplicate QA pair
+        q_text = request.question.strip()
+        a_text = request.answer.strip()
+        
+        stmt = select(QAPair).join(KnowledgeSource).where(
+            KnowledgeSource.chatbot_id == chatbot_id,
+            QAPair.question == q_text,
+            QAPair.answer == a_text
+        )
+        existing_qa = (await db.execute(stmt)).scalar_one_or_none()
+        if existing_qa:
+            raise BadRequestError("This Q&A pair already exists for this chatbot.")
+
         qa = QAPair(
             knowledge_source_id=ks.id,
-            question=request.question,
-            answer=request.answer
+            question=q_text,
+            answer=a_text
         )
         db.add(qa)
 
@@ -1519,8 +1574,8 @@ class ChatbotService:
         await db.commit()
         await db.refresh(qa)
 
-        # Trigger re-embedding for the whole source (simplest for now)
-        background_tasks.add_task(EmbeddingService.process_knowledge_source, ks.id)
+        # Trigger re-embedding for just this pair (faster, avoids global processing state)
+        background_tasks.add_task(EmbeddingService.process_single_qa_pair, qa.id)
 
         return QAPairResponse.model_validate(qa)
 
@@ -1572,25 +1627,73 @@ class ChatbotService:
         except Exception as e:
             raise BadRequestError(f"Failed to parse Excel: {str(e)}")
 
+        if df.empty:
+            raise BadRequestError("No valid Q&A pairs found in the file.")
+
+        # Capture first question for naming
+        first_question = ""
+        # Reset iterator
+        df_iter = df.iterrows()
+        for _, row in df_iter:
+            q = str(row['question']).strip()
+            if q:
+                first_question = q
+                break
+        
+        bundle_name = f"QA Bundle: {first_question[:30]}..." if first_question else f"QA Bundle: {file.filename}"
+
         ks = KnowledgeSource(
             chatbot_id=chatbot_id,
             source_type=KnowledgeSourceType.QA_PAIR,
-            source_url=file.filename,
-            status=KnowledgeSourceStatus.CRAWLING
+            source_url=bundle_name,
+            status=KnowledgeSourceStatus.PROCESSING
         )
         db.add(ks)
         await db.flush()
 
+        # Get existing QA pairs for this chatbot to prevent duplicates
+        stmt = select(QAPair.question, QAPair.answer).join(KnowledgeSource).where(
+            KnowledgeSource.chatbot_id == chatbot_id
+        )
+        res = await db.execute(stmt)
+        existing_pairs = {(row[0].strip(), row[1].strip()) for row in res.all()}
+
         count = 0
+        skipped = 0
+        seen_in_batch = set()
+
         for _, row in df.iterrows():
             q = str(row['question']).strip()
             a = str(row['answer']).strip()
             if q and a:
+                if (q, a) in existing_pairs or (q, a) in seen_in_batch:
+                    skipped += 1
+                    continue
+                
                 qa = QAPair(knowledge_source_id=ks.id, question=q, answer=a)
                 db.add(qa)
+                seen_in_batch.add((q, a))
                 count += 1
 
+        if count == 0:
+            # If no new pairs were added, we should probably delete the KS we just created
+            await db.delete(ks)
+            await db.commit()
+            if skipped > 0:
+                raise BadRequestError(f"All {skipped} Q&A pairs in the file already exist.")
+            raise BadRequestError("All Q&A pairs in the file are empty.")
+
         ks.pages_found = count
+        
+        # Log descriptive activity
+        activity = ChatbotActivity(
+            chatbot_id=chatbot_id,
+            user_id=user.id,
+            activity_type="knowledge_source",
+            description=f"Added {count} Q&A pairs from {file.filename}. First: {first_question[:50]}..."
+        )
+        db.add(activity)
+        
         await db.commit()
         
         # Fetch with loaded relationships to avoid MissingGreenlet during validation
@@ -1616,7 +1719,7 @@ class ChatbotService:
         """List all QA pairs for a chatbot across all QA sources"""
         await ChatbotService.get_chatbot(db, tenant_id, chatbot_id, user)
         
-        stmt = select(QAPair).join(KnowledgeSource).where(KnowledgeSource.chatbot_id == chatbot_id)
+        stmt = select(QAPair).join(KnowledgeSource).where(KnowledgeSource.chatbot_id == chatbot_id).order_by(QAPair.created_at.asc(), QAPair.id.asc())
         result = await db.execute(stmt)
         return [QAPairResponse.model_validate(qa) for qa in result.scalars().all()]
 
@@ -1645,8 +1748,8 @@ class ChatbotService:
         await db.commit()
         await db.refresh(qa)
         
-        # Re-embed source
-        background_tasks.add_task(EmbeddingService.process_knowledge_source, qa.knowledge_source_id)
+        # Re-embed only this pair (faster, avoids global processing state)
+        background_tasks.add_task(EmbeddingService.process_single_qa_pair, qa.id)
         return QAPairResponse.model_validate(qa)
 
     @staticmethod
@@ -2007,16 +2110,16 @@ class ChatbotService:
             raise BadRequestError("Manual crawl is only available for crawled URLs")
         
         # Check if already crawling
-        if ks.status == KnowledgeSourceStatus.CRAWLING:
+        if ks.status == KnowledgeSourceStatus.PROCESSING:
             raise BadRequestError("Crawl already in progress")
         
-        # IMPORTANT: Update status to CRAWLING immediately so frontend sees it without refresh
+        # IMPORTANT: Update status to PROCESSING immediately so frontend sees it without refresh
         from sqlalchemy import update as sql_update
         await db.execute(
             sql_update(KnowledgeSource)
             .where(KnowledgeSource.id == knowledge_source_id)
             .values(
-                status=KnowledgeSourceStatus.CRAWLING,
+                status=KnowledgeSourceStatus.PROCESSING,
                 error_message=None  # Clear any previous error
             )
         )

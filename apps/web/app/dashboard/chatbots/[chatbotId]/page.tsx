@@ -69,6 +69,7 @@ import { cn } from "@/lib/utils";
 import { ChatbotWidgetPreview } from "@/components/chatbot/WidgetPreview";
 import { ChatbotTeamSettings } from "@/components/dashboard/ChatbotTeamSettings";
 import { CrawlSourcePanel } from "@/components/dashboard/CrawlSourcePanel";
+import { QABundlePanel } from "@/components/dashboard/QABundlePanel";
 import { ChevronDown, ChevronUp, MoreHorizontal } from "lucide-react";
 
 interface ChatbotDetail {
@@ -88,7 +89,7 @@ interface KnowledgeSource {
   chatbot_id: string;
   source_type: "crawled_url" | "uploaded_file" | "qa_pair";
   source_url: string | null;
-  status: "pending" | "crawling" | "completed" | "failed";
+  status: "pending" | "processing" | "crawling" | "completed" | "failed";
   pages_found: number;
   error_message: string | null; // Error message when status is failed
   created_at: string;
@@ -108,6 +109,7 @@ interface CrawledPage {
   knowledge_source_id: string;
   url: string;
   title: string | null;
+  is_product?: boolean;
   created_at: string;
 }
 
@@ -250,6 +252,8 @@ export default function ChatbotDetailPage() {
     message: string;
   } | null>(null);
   const previousKnowledgeSourcesRef = useRef<KnowledgeSource[]>([]);
+  const lastFetchTimeRef = useRef<number>(0);
+  const autoDeletedSourcesRef = useRef<Set<string>>(new Set());
 
   // Appearance form setup
   const {
@@ -362,10 +366,14 @@ export default function ChatbotDetailPage() {
       const token = getAccessToken();
       if (!token) return;
 
+      const timestamp = new Date().getTime();
       const response = await apiRequestWithAuth<ChatbotStats>(
-        `/api/v1/chatbots/${chatbotId}/stats`,
+        `/api/v1/chatbots/${chatbotId}/stats?t=${timestamp}`,
         token,
-        { method: "GET" },
+        {
+          method: "GET",
+          cache: "no-store" as RequestCache,
+        },
       );
       setStats(response);
       setHasLoadedStats(true);
@@ -374,21 +382,12 @@ export default function ChatbotDetailPage() {
     }
   };
 
-  // Polling for crawling sources - ONLY when we manually start a crawl and it's still in progress
+  // Polling for crawling sources - runs whenever we detect active processing
   useEffect(() => {
-    // Only poll if we manually started a crawl in this session
-    if (!manuallyStartedCrawl) {
-      if (isPolling) {
-        setIsPolling(false);
-        setPollingStartTime(null);
-      }
-      return;
-    }
-
-    // Check for crawling/pending status (case-insensitive)
+    // Check for crawling/pending/processing status (case-insensitive)
     const hasCrawlingSources = knowledgeSources.some((s) => {
       const status = s.status?.toLowerCase();
-      return status === "crawling" || status === "pending";
+      return status === "processing" || status === "pending" || status === "crawling";
     });
 
     // Detect status changes and show toast notifications
@@ -403,37 +402,83 @@ export default function ChatbotDetailPage() {
             `✅ Status changed for ${current.source_url}: ${previous.status} → ${current.status}`,
           );
 
+          const getSourceDisplayName = (source: KnowledgeSource) => {
+            if (source.source_type === "crawled_url") return source.source_url;
+            if (
+              source.source_type === "uploaded_file" &&
+              source.files &&
+              source.files.length > 0
+            ) {
+              return source.files[0].filename;
+            }
+            if (source.source_type === "qa_pair") return "Q&A pairs";
+            return "Knowledge source";
+          };
+
+          const getActionVerb = (source: KnowledgeSource) => {
+            if (source.source_type === "crawled_url") return "Crawl";
+            if (source.source_type === "uploaded_file") return "Processing";
+            if (source.source_type === "qa_pair") return "Q&A processing";
+            return "Processing";
+          };
+
+          const displayName = getSourceDisplayName(current);
+          const verb = getActionVerb(current);
+
           if (current.status === "completed") {
             setToastMessage({
               type: "success",
-              message: `Crawl completed for ${current.source_url}`,
+              message: `${verb} completed for ${displayName}`,
             });
           } else if (current.status === "failed") {
             setToastMessage({
               type: "error",
               message:
-                current.error_message ||
-                `Crawl failed for ${current.source_url}`,
+                current.error_message || `${verb} failed for ${displayName}`,
             });
           }
           // Refresh stats when any status changes
           fetchChatbotStats();
         }
       });
+      // 2. Handle auto-cleanup for failed empty crawl sources
+      knowledgeSources.forEach((s) => {
+        if (
+          s.source_type === "crawled_url" &&
+          s.status === "failed" &&
+          (s.pages_found === 0 || !s.pages || s.pages.length === 0) &&
+          !autoDeletedSourcesRef.current.has(s.id)
+        ) {
+          console.log(`🧹 Auto-cleaning failed empty source: ${s.id}`);
+          autoDeletedSourcesRef.current.add(s.id);
+
+          setToastMessage({
+            type: "error",
+            message: s.error_message || `Crawl failed for ${s.source_url}`,
+          });
+
+          // Trigger silent deletion
+          handleDeleteSource(s.id, undefined, true);
+        }
+      });
     }
     previousKnowledgeSourcesRef.current = knowledgeSources;
 
-    // Stop polling if all crawls are complete
-    if (!hasCrawlingSources) {
-      console.log("✅ All crawls complete, stopping polling");
+    // Stop polling if all crawls/processing are complete
+    if (!hasCrawlingSources && isPolling) {
+      console.log("✅ All process items complete, stopping polling and performing final sync");
       setIsPolling(false);
       setPollingStartTime(null);
       setManuallyStartedCrawl(false);
+      
+      // Perform one final sync to ensure everything is up to date
+      fetchKnowledgeSources(false);
+      fetchChatbotStats();
       return;
     }
 
-    // Start polling if we have active crawls
-    if (!isPolling) {
+    // Start polling if we have active crawls and aren't polling yet
+    if (!isPolling && hasCrawlingSources) {
       console.log("🚀 Starting polling - active crawls detected");
       setIsPolling(true);
       setPollingStartTime(Date.now());
@@ -447,7 +492,11 @@ export default function ChatbotDetailPage() {
     console.log("🔄 Polling started - checking every 2 seconds");
 
     const interval = setInterval(async () => {
-      console.log("📡 Polling tick - fetching knowledge sources...");
+      console.log("📡 Polling tick - fetching latest sources and stats...");
+
+      // Update both sources and stats for immediate feedback
+      await fetchKnowledgeSources(false);
+      await fetchChatbotStats();
 
       // Check if we've exceeded max polling duration
       if (
@@ -459,8 +508,6 @@ export default function ChatbotDetailPage() {
         setPollingStartTime(null);
         return;
       }
-      // Fetch both knowledge sources and stats
-      await fetchKnowledgeSources(false);
     }, 2000); // Poll every 2 seconds for faster updates
 
     return () => {
@@ -514,11 +561,27 @@ export default function ChatbotDetailPage() {
       const token = getAccessToken();
       if (!token) return null;
 
+      // Add a timestamp to bust any potential caches during polling
+      const timestamp = new Date().getTime();
+      
+      // Update last fetch time reference to prevent race conditions from slow responses
+      const requestTimestamp = timestamp;
+      lastFetchTimeRef.current = Math.max(lastFetchTimeRef.current, requestTimestamp);
+
       const response = await apiRequestWithAuth<KnowledgeSource[]>(
-        `/api/v1/chatbots/${chatbotId}/knowledge-sources`,
+        `/api/v1/chatbots/${chatbotId}/knowledge-sources?t=${timestamp}`,
         token,
-        { method: "GET" },
+        {
+          method: "GET",
+          cache: "no-store" as RequestCache,
+        },
       );
+
+      // Only process if this is the newest request
+      if (requestTimestamp < lastFetchTimeRef.current) {
+        console.log("⏭ Skipping stale knowledge source response");
+        return null;
+      }
 
       console.log(
         "📦 Fetched knowledge sources:",
@@ -611,13 +674,16 @@ export default function ChatbotDetailPage() {
 
       setNewUrl("");
       setIsAddKnowledgeOpen(false);
-      // Enable polling only when we manually start a crawl
-      setManuallyStartedCrawl(true);
 
       // Refresh to get the latest data (including pages as they're crawled)
       await fetchKnowledgeSources();
       // Refresh stats after adding knowledge source
-      fetchChatbotStats();
+      await fetchChatbotStats();
+
+      // Enable polling BEFORE fetching to ensure the polling effect recognizes active sources
+      setManuallyStartedCrawl(true);
+      setIsPolling(true);
+      setPollingStartTime(Date.now());
     } catch (err: any) {
       alert(err.message || "Failed to start crawl");
     } finally {
@@ -656,19 +722,24 @@ export default function ChatbotDetailPage() {
 
         if (!response.ok) {
           const errData = await response.json();
+          const errorMessage = errData.detail || "Unknown error";
           throw new Error(
-            `Failed to upload ${file.name}: ${
-              errData.detail || "Unknown error"
-            }`,
+            `Failed to upload ${file.name}: ${errorMessage}`
           );
         }
       }
 
       setUploadFiles(null);
       setIsAddKnowledgeOpen(false);
-      await fetchKnowledgeSources();
-      // Refresh stats after uploading files
-      fetchChatbotStats();
+
+      // Update both sources and stats for immediate feedback
+      await fetchKnowledgeSources(false);
+      await fetchChatbotStats();
+
+      // Enable polling BEFORE fetching to ensure the polling effect recognizes active sources
+      setManuallyStartedCrawl(true);
+      setIsPolling(true);
+      setPollingStartTime(Date.now());
     } catch (err: any) {
       alert(err.message || "Failed to upload files");
     } finally {
@@ -699,8 +770,16 @@ export default function ChatbotDetailPage() {
       await fetchKnowledgeSources();
       // Refresh stats after adding QA
       fetchChatbotStats();
+      
+      setToastMessage({
+        type: "success",
+        message: editingQA ? "QA pair updated" : "QA pair added successfully",
+      });
     } catch (err: any) {
-      alert(err.message || "Failed to save QA pair");
+      setToastMessage({
+        type: "error",
+        message: err.message || "Failed to save QA pair",
+      });
     }
   };
 
@@ -734,7 +813,14 @@ export default function ChatbotDetailPage() {
       }
 
       setQaXlsx(null);
-      fetchKnowledgeSources();
+
+      await fetchKnowledgeSources();
+      await fetchChatbotStats();
+
+      // Enable polling for QA upload processing
+      setManuallyStartedCrawl(true);
+      setIsPolling(true);
+      setPollingStartTime(Date.now());
     } catch (err: any) {
       alert(err.message || "Failed to upload XLSX");
     }
@@ -756,13 +842,15 @@ export default function ChatbotDetailPage() {
     }
   };
 
-  const handleDeleteSource = async (sourceId: string) => {
-    if (
-      !confirm(
-        "Are you sure you want to delete this knowledge source and all its data?",
-      )
-    )
-      return;
+  const handleDeleteSource = async (
+    sourceId: string,
+    customMessage?: string,
+    silent: boolean = false,
+  ) => {
+    const message =
+      customMessage ||
+      "Are you sure you want to delete this knowledge source and all its data?";
+    if (!silent && !confirm(message)) return;
 
     try {
       const token = getAccessToken();
@@ -1095,19 +1183,8 @@ export default function ChatbotDetailPage() {
     })),
   );
 
-  // Show crawl sources that are actively crawling or have pages
-  // This ensures newly added crawl URLs appear immediately even with 0 pages
-  const crawlSourcesWithPages = crawlSources.filter((s) => {
-    const pages = s.pages || [];
-    const status = s.status?.toLowerCase();
-    // Show if: has pages, OR is pending/crawling (active), OR has pages_found > 0
-    return (
-      pages.length > 0 ||
-      s.pages_found > 0 ||
-      status === "pending" ||
-      status === "crawling"
-    );
-  });
+  // Show all crawl sources for total visibility (even failed or newly added)
+  const crawlSourcesWithPages = crawlSources;
 
   return (
     <div className="space-y-6">
@@ -1876,126 +1953,279 @@ export default function ChatbotDetailPage() {
                     </TabsContent>
 
                     {/* Q&A Tab Content */}
+                    {/* Q&A Tab Content */}
                     <TabsContent value="qa" className="space-y-4">
-                      {qaPairs.length > 0 && (
-                        <div className="flex items-center justify-between bg-muted/20 p-2 rounded-md mb-2">
-                          <div className="flex items-center gap-2">
-                            <Checkbox
-                              checked={
-                                selectedQAs.length === qaPairs.length &&
-                                qaPairs.length > 0
-                              }
-                              onCheckedChange={(checked: boolean) => {
-                                if (checked)
-                                  setSelectedQAs(qaPairs.map((q) => q.id));
-                                else setSelectedQAs([]);
-                              }}
-                            />
-                            <span className="text-sm font-medium">
-                              Select All
-                            </span>
-                          </div>
-                          {selectedQAs.length > 0 && (
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => handleBulkDelete("qa")}
-                              disabled={isBulkDeleting}
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Delete {selectedQAs.length}
-                            </Button>
-                          )}
-                        </div>
-                      )}
+                      {(() => {
+                        const qaSources = knowledgeSources.filter(
+                          (s) =>
+                            s.source_type === "qa_pair" &&
+                            s.source_url !== "manual" &&
+                            s.files?.length === 0, // Ensure it's not just a file upload but a logical bundle
+                        );
 
-                      {qaPairs.length > 0 ? (
-                        <div className="space-y-3">
-                          {qaPairs.map((qa) => (
-                            <div
-                              key={qa.id}
-                              className={`p-4 border rounded-lg bg-card shadow-sm hover:shadow-md transition-all ${
-                                selectedQAs.includes(qa.id)
-                                  ? "bg-blue-50/30 border-blue-200"
-                                  : ""
-                              }`}
-                            >
-                              <div className="flex justify-between items-start gap-4">
-                                <div className="flex items-start gap-3 flex-1">
-                                  <Checkbox
-                                    className="mt-1"
-                                    checked={selectedQAs.includes(qa.id)}
-                                    onCheckedChange={(checked: boolean) => {
-                                      if (checked)
-                                        setSelectedQAs([...selectedQAs, qa.id]);
-                                      else
-                                        setSelectedQAs(
-                                          selectedQAs.filter(
-                                            (id) => id !== qa.id,
-                                          ),
-                                        );
-                                    }}
-                                  />
-                                  <div className="flex-1 min-w-0">
-                                    <div className="font-semibold text-sm mb-1">
-                                      Q: {qa.question}
+                        // Standalone QAs (manual source) + unassigned ones?
+                        // Actually, list_qa_pairs returns ALL pairs.
+                        // We need to filter pairs that belong to "manual" source for the standalone list
+                        // But wait, the previous code showed ALL pairs.
+                        // If we show bundles, we should NOT show their pairs in the main list.
+                        // So we need to separate them.
+
+                        const bundleIds = qaSources.map((s) => s.id);
+                        const standaloneQAs = qaPairs.filter(
+                          (qa) =>
+                            !knowledgeSources.some(
+                              (ks) =>
+                                ks.id === (qa as any).knowledge_source_id && // Assuming we can get KS ID from QA pair
+                                bundleIds.includes(ks.id),
+                            ),
+                        );
+
+                        // The current QA query doesn't return knowledge_source_id on the QA object in the interface
+                        // We might need to rely on the knowledgeSources structure if it includes qa_pairs
+                        // Let's check the interface... KnowledgeSource has qa_pairs? Yes: qa_pairs?: QAPair[];
+
+                        // Better approach:
+                        // Iterate through knowledgeSources to render bundles.
+                        // Also show a section for "Manual Q&A" if the "manual" source exists.
+
+                        const manualSource = knowledgeSources.find(
+                          (s) =>
+                            s.source_type === "qa_pair" &&
+                            s.source_url === "manual",
+                        );
+                        
+                        // Fallback: if we can't find manual source but we have pairs that don't belong to known bundles
+                        // For now, let's treat `qaPairs` as the source of truth for ALL, but we want to visually group.
+                        // If `qaPairs` contains everything, we need to filter out those we display in panels.
+                        
+                        // Actually, usage of KnowledgeSourceResponse in backend for upload_qa_xlsx returns a KS with pre-loaded qa_pairs.
+                        // But `fetchKnowledgeSources` might not load all qa_pairs for every source to avoid payload size?
+                        // Let's assume for now we use the `knowledgeSources` array which hopefully includes `qa_pairs` if updated properly.
+                        // The `upload_qa_xlsx` returns the KS with pairs. `list_knowledge_sources` normally doesn't include potentially huge lists of pairs?
+                        // Wait, `ChatbotService.list_knowledge_sources` just returns KnowledgeSource objects.
+                        // The frontend 'qaPairs' state comes from `fetchQAPairs`.
+                        
+                        // We need to match pairs to sources.
+                        // The QAPair interface in frontend doesn't have knowledge_source_id.
+                        // Let's assume we render:
+                        // 1. QA Bundles (from knowledgeSources) -> BUT we need the pairs for them.
+                        // If the QA pair list API doesn't return source_id, we can't separate them easily on frontend without changing API.
+                        // Looking at backend `list_qa_pairs`: it returns `QAPairResponse` which DOES have `knowledge_source_id`.
+                        // The frontend `QAPair` interface just missed it. Let's update the interface first.
+                        
+                        return (
+                          <>
+                            {/* Render Bundles */}
+                            {qaSources.map((source) => {
+                              // Find pairs for this source
+                              const sourcePairs = qaPairs
+                                .filter((qa: any) => qa.knowledge_source_id === source.id)
+                                .sort((a, b) => {
+                                  const timeA = new Date(a.created_at || 0).getTime();
+                                  const timeB = new Date(b.created_at || 0).getTime();
+                                  if (timeA !== timeB) return timeA - timeB;
+                                  return a.id.localeCompare(b.id);
+                                });
+
+                              return (
+                                <QABundlePanel
+                                  key={source.id}
+                                  source={source as any}
+                                  qaPairs={sourcePairs}
+                                  selectedPairs={selectedQAs}
+                                  onSelectionChange={setSelectedQAs}
+                                  onDeleteSource={() =>
+                                    handleDeleteSource(
+                                      source.id,
+                                      `Are you sure you want to delete this bundle? It contains ${sourcePairs.length} Q&A pairs. Bundle: ${source.source_url}`,
+                                    )
+                                  }
+                                  onDeleteSelectedPairs={() =>
+                                    handleBulkDelete("qa")
+                                  }
+                                  isDeleting={isBulkDeleting}
+                                  onEditPair={(qa) => {
+                                    setEditingQA(qa as any);
+                                    setNewQA({
+                                      question: qa.question,
+                                      answer: qa.answer,
+                                    });
+                                    setKnowledgeType("qa");
+                                    setIsAddKnowledgeOpen(true);
+                                    window.scrollTo({
+                                      top: 0,
+                                      behavior: "smooth",
+                                    });
+                                  }}
+                                  onDeletePair={handleDeleteQA}
+                                />
+                              );
+                            })}
+
+                            <div className="my-4 border-t" />
+
+                            <div className="space-y-4">
+                              <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                                Manual Q&A Pairs
+                              </h3>
+                              
+                              {/* Filter standalone pairs */}
+                              {(() => {
+                                const standalone = qaPairs
+                                  .filter((qa: any) => {
+                                    // Include if it belongs to "manual" source OR if we can't find its source in the bundles list
+                                    return !bundleIds.includes(qa.knowledge_source_id);
+                                  })
+                                  .sort((a, b) => {
+                                    const timeA = new Date(a.created_at || 0).getTime();
+                                    const timeB = new Date(b.created_at || 0).getTime();
+                                    if (timeA !== timeB) return timeA - timeB;
+                                    return a.id.localeCompare(b.id);
+                                  });
+
+                                if (standalone.length === 0 && qaSources.length === 0) {
+                                   return (
+                                    <div className="text-center py-12 border-2 border-dashed rounded-xl">
+                                      <MessageSquare className="h-12 w-12 mx-auto text-gray-300 mb-3" />
+                                      <p className="text-gray-500">No Q&A pairs added</p>
+                                      <Button
+                                        variant="link"
+                                        onClick={() => {
+                                          setKnowledgeType("qa");
+                                          setIsAddKnowledgeOpen(true);
+                                        }}
+                                      >
+                                        Add Q&A manually
+                                      </Button>
                                     </div>
-                                    <div className="text-sm text-muted-foreground bg-muted/30 p-2 rounded border-l-2 border-blue-500 line-clamp-2">
-                                      A: {qa.answer}
+                                  );
+                                }
+
+                                if (standalone.length === 0) return <p className="text-sm text-muted-foreground italic">No manual Q&A pairs.</p>;
+
+                                return (
+                                  <>
+                                    {standalone.length > 0 && (
+                                      <div className="flex items-center justify-between bg-muted/20 p-2 rounded-md mb-2">
+                                        <div className="flex items-center gap-2">
+                                          <Checkbox
+                                            checked={
+                                              standalone.length > 0 &&
+                                              standalone.every(q => selectedQAs.includes(q.id))
+                                            }
+                                            onCheckedChange={(checked: boolean) => {
+                                              if (checked) {
+                                                // Add all standalone IDs
+                                                const newSelected = [...selectedQAs, ...standalone.map(q => q.id).filter(id => !selectedQAs.includes(id))];
+                                                setSelectedQAs(newSelected);
+                                              } else {
+                                                // Remove all standalone IDs
+                                                const standaloneIds = standalone.map(q => q.id);
+                                                setSelectedQAs(selectedQAs.filter(id => !standaloneIds.includes(id)));
+                                              }
+                                            }}
+                                          />
+                                          <span className="text-sm font-medium">
+                                            Select All ({standalone.length})
+                                          </span>
+                                        </div>
+                                        {selectedQAs.filter(id => standalone.find(q => q.id === id)).length > 0 && (
+                                          <Button
+                                            variant="destructive"
+                                            size="sm"
+                                            onClick={() => handleBulkDelete("qa")}
+                                            disabled={isBulkDeleting}
+                                          >
+                                            <Trash2 className="h-4 w-4 mr-2" />
+                                            Delete Selected
+                                          </Button>
+                                        )}
+                                      </div>
+                                    )}
+
+                                    <div className="space-y-3">
+                                      {standalone.map((qa) => (
+                                        <div
+                                          key={qa.id}
+                                          className={`p-4 border rounded-lg bg-card shadow-sm hover:shadow-md transition-all ${
+                                            selectedQAs.includes(qa.id)
+                                              ? "bg-blue-50/30 border-blue-200"
+                                              : ""
+                                          }`}
+                                        >
+                                          <div className="flex justify-between items-start gap-4">
+                                            <div className="flex items-start gap-3 flex-1">
+                                              <Checkbox
+                                                className="mt-1"
+                                                checked={selectedQAs.includes(qa.id)}
+                                                onCheckedChange={(checked: boolean) => {
+                                                  if (checked)
+                                                    setSelectedQAs([
+                                                      ...selectedQAs,
+                                                      qa.id,
+                                                    ]);
+                                                  else
+                                                    setSelectedQAs(
+                                                      selectedQAs.filter(
+                                                        (id) => id !== qa.id,
+                                                      ),
+                                                    );
+                                                }}
+                                              />
+                                              <div className="flex-1 min-w-0">
+                                                <div className="font-semibold text-sm mb-1">
+                                                  Q: {qa.question}
+                                                </div>
+                                                <div className="text-sm text-muted-foreground bg-muted/30 p-2 rounded border-l-2 border-blue-500 line-clamp-2">
+                                                  A: {qa.answer}
+                                                </div>
+                                              </div>
+                                            </div>
+                                            <div className="flex gap-1 shrink-0">
+                                              <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-8 w-8"
+                                                onClick={() => {
+                                                  setEditingQA(qa);
+                                                  setNewQA({
+                                                    question: qa.question,
+                                                    answer: qa.answer,
+                                                  });
+                                                  setKnowledgeType("qa");
+                                                  setIsAddKnowledgeOpen(true);
+                                                  window.scrollTo({
+                                                    top: 0,
+                                                    behavior: "smooth",
+                                                  });
+                                                }}
+                                                title="Edit QA pair"
+                                              >
+                                                <Edit2 className="h-4 w-4" />
+                                              </Button>
+                                              <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                onClick={() =>
+                                                  handleDeleteQA(qa.id)
+                                                }
+                                                title="Delete QA pair"
+                                              >
+                                                <Trash2 className="h-4 w-4" />
+                                              </Button>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      ))}
                                     </div>
-                                  </div>
-                                </div>
-                                <div className="flex gap-1 shrink-0">
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8"
-                                    onClick={() => {
-                                      setEditingQA(qa);
-                                      setNewQA({
-                                        question: qa.question,
-                                        answer: qa.answer,
-                                      });
-                                      setKnowledgeType("qa");
-                                      setIsAddKnowledgeOpen(true);
-                                      window.scrollTo({
-                                        top: 0,
-                                        behavior: "smooth",
-                                      });
-                                    }}
-                                    title="Edit QA pair"
-                                  >
-                                    <Edit2 className="h-4 w-4" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                    onClick={() => handleDeleteQA(qa.id)}
-                                    title="Delete QA pair"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              </div>
+                                  </>
+                                );
+                              })()}
                             </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="text-center py-12 border-2 border-dashed rounded-xl">
-                          <MessageSquare className="h-12 w-12 mx-auto text-gray-300 mb-3" />
-                          <p className="text-gray-500">No Q&A pairs added</p>
-                          <Button
-                            variant="link"
-                            onClick={() => {
-                              setKnowledgeType("qa");
-                              setIsAddKnowledgeOpen(true);
-                            }}
-                          >
-                            Add Q&A manually
-                          </Button>
-                        </div>
-                      )}
+                          </>
+                        );
+                      })()}
                     </TabsContent>
                   </>
                 )}

@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 import httpx
 import trafilatura
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, and_, func
+from sqlalchemy import select, update, delete, and_, func
 from app.models.knowledge import (
     KnowledgeSource, CrawledPage, KnowledgeSourceStatus, KnowledgeSourceType,
     CrawlHistory, CrawlStatus, CrawlSchedule
@@ -266,15 +266,39 @@ class CrawlerService:
                 for row in all_ks_result.scalars().all():
                     chatbot_existing_urls.add(row)
 
+                # Pre-validate the URL to provide specific feedback to the user
+                try:
+                    headers = {"User-Agent": "EcomChatbotCrawler/1.0 (Knowledge Base Bot)"}
+                    async with httpx.AsyncClient(timeout=10.0, follow_redirects=True, headers=headers) as client:
+                        response = await client.get(base_url)
+                        if response.status_code == 404:
+                            raise ValueError(f"The URL could not be found (404). Please check for typos in the address.")
+                        elif response.status_code == 403:
+                            raise ValueError(f"Access to this site is forbidden (403). The website may be using bot protection or a firewall to block automated crawlers.")
+                        elif response.status_code >= 400:
+                            raise ValueError(f"The website returned an error (Status {response.status_code}). The site might be temporarily down or blocking our request.")
+                        
+                        ctype = response.headers.get("content-type", "").lower()
+                        if "text/html" not in ctype:
+                             # Provide specific message for non-HTML files
+                             file_type = ctype.split(';')[0].split('/')[-1].upper() if '/' in ctype else "binary"
+                             raise ValueError(f"The URL points to a {file_type} file, not a webpage. We can only crawl HTML websites.")
+                             
+                except httpx.ConnectError:
+                    raise ValueError(f"Could not connect to the domain. Please check if the URL is correct or if the site is online.")
+                except httpx.TimeoutException:
+                     raise ValueError(f"The website took too long to respond. It might be under heavy load or intentionally blocking our access.")
+                except Exception as e:
+                    if isinstance(e, ValueError): raise e
+                    logger.warning(f"URL pre-check encountered an issue but proceeding: {e}")
+
                 # Start crawling
                 crawler = WebsiteCrawler(base_url, max_pages)
                 
                 # Check robots.txt BEFORE starting the crawl loop
                 if not await crawler.can_fetch(base_url):
-                    # Robots.txt disallows crawling - fail immediately
-                    error_msg = f"Crawling disallowed by robots.txt for {base_url}"
-                    logger.error(error_msg)
-                    raise PermissionError(error_msg)
+                    # robots.txt disallows crawling - provide specific friendly message
+                    raise PermissionError(f"This website explicitly blocks automated crawling in its 'robots.txt' file. We must respect their policy and cannot process this URL.")
                 
                 crawled_urls = set()
                 pages_added = 0
@@ -400,10 +424,25 @@ class CrawlerService:
                 # Check if we actually crawled any pages (first crawl)
                 if not is_recrawl and len(crawled_urls) == 0:
                     # No pages were found - this is a failure for initial crawl
-                    error_msg = f"No pages could be crawled from {base_url}. The website may be blocking our crawler or have no accessible content."
+                    error_msg = f"No accessible pages were found at this address. The site might be a 'Single Page App' (SPA) or require login/JavaScript, which our simple crawler cannot currently process."
                     logger.error(error_msg)
                     
-                    # Update status to FAILED
+                    # Log activity
+                    from app.models.chatbot import ChatbotActivity
+                    ks_stmt = select(KnowledgeSource).where(KnowledgeSource.id == knowledge_source_id)
+                    ks_res = await db.execute(ks_stmt)
+                    ks_obj = ks_res.scalar_one_or_none()
+                    if ks_obj:
+                        activity = ChatbotActivity(
+                            chatbot_id=ks_obj.chatbot_id,
+                            user_id=None,
+                            activity_type="crawl_failed",
+                            description=f"Crawl failed for {base_url}: No pages found"
+                        )
+                        db.add(activity)
+                        await db.commit()
+
+                    # Update status to FAILED so frontend can see the error before we delete it
                     await db.execute(
                         update(KnowledgeSource)
                         .where(KnowledgeSource.id == knowledge_source_id)
@@ -412,35 +451,7 @@ class CrawlerService:
                             error_message=error_msg
                         )
                     )
-                    
-                    # Update crawl history
-                    if crawl_history:
-                        await db.execute(
-                            update(CrawlHistory)
-                            .where(CrawlHistory.id == crawl_history.id)
-                            .values(
-                                completed_at=datetime.now(timezone.utc),
-                                status=CrawlStatus.FAILED,
-                                error_message=error_msg
-                            )
-                        )
-                    
                     await db.commit()
-                    
-                    # Log activity for the error
-                    from app.models.chatbot import ChatbotActivity
-                    ks_stmt = select(KnowledgeSource).where(KnowledgeSource.id == knowledge_source_id)
-                    ks_result = await db.execute(ks_stmt)
-                    ks = ks_result.scalar_one_or_none()
-                    if ks:
-                        activity = ChatbotActivity(
-                            chatbot_id=ks.chatbot_id,
-                            user_id=None,
-                            activity_type="crawl_failed",
-                            description=f"Crawl failed for {base_url}: No accessible pages found"
-                        )
-                        db.add(activity)
-                        await db.commit()
                     return
 
                 # Trigger embedding process for new/updated pages
@@ -467,10 +478,11 @@ class CrawlerService:
                             .where(KnowledgeSource.id == knowledge_source_id)
                             .values(
                                 status=KnowledgeSourceStatus.COMPLETED,
-                                error_message=None  # Clear any previous error
+                                error_message=None
                             )
                         )
                         await db.commit()
+                        logger.info(f"No content changes detected for KS {knowledge_source_id}, marked as COMPLETED")
 
             except Exception as e:
                 error_msg = str(e)
@@ -494,6 +506,32 @@ class CrawlerService:
                 
                 # Update knowledge source status with error message
                 try:
+                    # Check if we should delete this source (initial crawl that failed with 0 content)
+                    is_empty_initial = not is_recrawl
+                    if not is_recrawl:
+                        # Double check for ANY pages in database
+                        page_count_stmt = select(func.count(CrawledPage.id)).where(CrawledPage.knowledge_source_id == knowledge_source_id)
+                        pc_result = await db.execute(page_count_stmt)
+                        if pc_result.scalar() > 0:
+                            is_empty_initial = False
+
+                    # Log failure activity first
+                    from app.models.chatbot import ChatbotActivity
+                    ks_stmt = select(KnowledgeSource).where(KnowledgeSource.id == knowledge_source_id)
+                    ks_res = await db.execute(ks_stmt)
+                    ks_obj = ks_res.scalar_one_or_none()
+                    
+                    if ks_obj:
+                        activity = ChatbotActivity(
+                            chatbot_id=ks_obj.chatbot_id,
+                            user_id=None,
+                            activity_type="crawl_failed",
+                            description=f"Crawl failed for {base_url}: {error_msg[:150]}..."
+                        )
+                        db.add(activity)
+                        await db.commit()
+                    
+                    # If not deleted (recrawl or has some pages), update status to FAILED
                     await db.execute(
                         update(KnowledgeSource)
                         .where(KnowledgeSource.id == knowledge_source_id)
@@ -504,23 +542,8 @@ class CrawlerService:
                     )
                     await db.commit()
                     
-                    # Log activity for the error
-                    from app.models.chatbot import ChatbotActivity
-                    ks_stmt = select(KnowledgeSource).where(KnowledgeSource.id == knowledge_source_id)
-                    ks_result = await db.execute(ks_stmt)
-                    ks = ks_result.scalar_one_or_none()
-                    if ks:
-                        # Truncate error message for activity description
-                        short_error = error_msg[:200] + "..." if len(error_msg) > 200 else error_msg
-                        activity = ChatbotActivity(
-                            chatbot_id=ks.chatbot_id,
-                            user_id=None,  # System action
-                            activity_type="crawl_failed",
-                            description=f"Crawl failed for {base_url}: {short_error}"
-                        )
-                        db.add(activity)
-                        await db.commit()
-                except:
-                    pass
+                except Exception as update_error:
+                    logger.error(f"Failed to handle crawl error: {update_error}")
+                    await db.rollback()
 
 

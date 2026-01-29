@@ -2,7 +2,7 @@ import asyncio
 import gc
 from typing import List, Dict, Any
 from uuid import UUID
-from sqlalchemy import select, delete, update, and_
+from sqlalchemy import select, delete, update, and_, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from huggingface_hub import InferenceClient
 from app.models.knowledge import KnowledgeSource, CrawledPage, Embedding, KnowledgeSourceStatus, KnowledgeSourceType, QAPair
@@ -148,13 +148,11 @@ class EmbeddingService:
                 logger.info(f"Starting embedding pipeline for KS: {ks.id} (Type: {ks.source_type})")
                 
                 # Update status to indicate we're processing embeddings
-                # Keep current status if it's CRAWLING, otherwise set to CRAWLING
-                # (We'll update to COMPLETED or FAILED at the end)
-                if ks.status != KnowledgeSourceStatus.CRAWLING:
+                if ks.status != KnowledgeSourceStatus.PROCESSING:
                     await db.execute(
                         update(KnowledgeSource)
-                        .where(KnowledgeSource.id == ks.id)
-                        .values(status=KnowledgeSourceStatus.CRAWLING)
+                        .where(KnowledgeSource.id == knowledge_source_id)
+                        .values(status=KnowledgeSourceStatus.PROCESSING)
                     )
                     await db.commit()
 
@@ -261,7 +259,13 @@ class EmbeddingService:
                     })
 
                 if not all_chunks:
-                    logger.warning(f"No content chunks generated for KS: {ks.id}")
+                    logger.warning(f"No content chunks generated for KS: {knowledge_source_id}")
+                    await db.execute(
+                        update(KnowledgeSource)
+                        .where(KnowledgeSource.id == knowledge_source_id)
+                        .values(status=KnowledgeSourceStatus.COMPLETED)
+                    )
+                    await db.commit()
                     return
 
                 # 3. Generate embeddings in batches using HuggingFace API
@@ -307,7 +311,7 @@ class EmbeddingService:
                 # Update status to COMPLETED after successful embedding and clear any previous error
                 await db.execute(
                     update(KnowledgeSource)
-                    .where(KnowledgeSource.id == ks.id)
+                    .where(KnowledgeSource.id == knowledge_source_id)
                     .values(
                         status=KnowledgeSourceStatus.COMPLETED,
                         error_message=None  # Clear any previous error message
@@ -357,6 +361,64 @@ class EmbeddingService:
                 except Exception as update_error:
                     logger.error(f"Failed to update knowledge source status: {update_error}")
                     await db.rollback()
+                
+                # Re-raise the exception so the caller (like _process_uploaded_file) knows it failed
+                raise e
+
+    @staticmethod
+    async def process_single_qa_pair(qa_id: UUID):
+        """
+        Re-embed a single QA pair efficiently without affecting KnowledgeSource status.
+        Ensures the UI doesn't flicker to 'Processing' for a simple update.
+        """
+        session_factory = get_session_factory()
+        async with session_factory() as db:
+            try:
+                # 1. Fetch QA pair
+                stmt = select(QAPair).where(QAPair.id == qa_id)
+                result = await db.execute(stmt)
+                qa = result.scalar_one_or_none()
+                if not qa:
+                    logger.error(f"QA pair {qa_id} not found for re-embedding")
+                    return
+
+                # Get KS for metadata
+                stmt_ks = select(KnowledgeSource).where(KnowledgeSource.id == qa.knowledge_source_id)
+                ks_res = await db.execute(stmt_ks)
+                ks = ks_res.scalar_one()
+
+                # 2. Delete existing embedding for this specific pair
+                qa_id_str = str(qa_id)
+                await db.execute(
+                    delete(Embedding).where(
+                        and_(
+                            Embedding.knowledge_source_id == qa.knowledge_source_id,
+                            text(f"metadata_json->>'qa_id' = '{qa_id_str}'")
+                        )
+                    )
+                )
+
+                # 3. Generate new embedding
+                combined_text = f"Question: {qa.question}\nAnswer: {qa.answer}"
+                vector = await get_single_embedding(combined_text)
+
+                # 4. Store new embedding
+                emb_obj = Embedding(
+                    chatbot_id=ks.chatbot_id,
+                    knowledge_source_id=qa.knowledge_source_id,
+                    source_type=KnowledgeSourceType.QA_PAIR,
+                    content=combined_text,
+                    embedding=vector,
+                    metadata_json={"qa_id": str(qa_id), "type": "qa_pair"},
+                    priority_weight=1.0
+                )
+                db.add(emb_obj)
+                await db.commit()
+                logger.success(f"Successfully re-embedded QA pair: {qa_id}")
+
+            except Exception as e:
+                logger.error(f"Error re-embedding QA pair {qa_id}: {e}")
+                await db.rollback()
 
     @staticmethod
     async def cleanup_removed_pages_embeddings(knowledge_source_id: UUID):

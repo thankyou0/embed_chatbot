@@ -77,6 +77,7 @@ class CrawledPageResponse(BaseModel):
     knowledge_source_id: UUID
     url: str
     title: Optional[str] = None
+    is_product: bool = False
     created_at: datetime
 
     class Config:
