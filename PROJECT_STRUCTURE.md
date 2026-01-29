@@ -1,5 +1,7 @@
 # Project Structure
 
+> **💡 New to this codebase?** Check out [CODE_EXPLANATION.md](./CODE_EXPLANATION.md) for a comprehensive guide explaining the entire architecture, data flow, and implementation details!
+
 ```
 embed_chatbot/
 ├── .env                        # Shared environment configuration
