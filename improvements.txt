@@ -1,33 +1,47 @@
 Current Feature Analysis
+
 Your project is highly sophisticated, focusing on an e-commerce-ready "Chatbot as a Service" (CaaS) model.
 
 Advanced RAG Engine: Use of pgvector with PostgreSQL is an excellent choice for scaling vector searches without a dedicated vector DB.
+
 Product-Specific Intelligence: Your extraction logic and vision-based search (likely for jewelry/products) set you apart from general-purpose chatbot builders.
+
 Knowledge Gap Analytics: The use of LLM-tagged messages ([[MISSING_INFO]]) to automatically identify what the chatbot doesn't know is a high-level feature typically seen in enterprise platforms like Intercom.
+
 Widget Implementation: The Preact-based widget with CSS injection is optimized for load performance and ease of installation.
 Production-Level Improvements
 1. Scalability & Architecture
+
 Distributed Task Queue: Currently, crawling and embedding are handled via apscheduler within the API process. In production, these should be moved to Celery with Redis or RabbitMQ. This ensures that multiple crawling jobs don't crash your API and allows you to scale workers independently.
+
 S3-Compatible Storage: Your FileService currently saves to local disk (uploads/ folder). For production (especially in Kubernetes or horizontal scaling), you should switch to AWS S3, Google Cloud Storage, or MinIO. Local storage will lead to data loss if the container restarts or if a user requests a file from a different pod.
+
 Distributed Rate Limiting: The current rate limiter in chat.py:19 is in-memory. If you run multiple workers (you are using 4 in Docker), the rate limit is enforced per-worker. Move this to Redis using a library like slowapi or custom Redis logic.
 2. Chat & UX Improvements
+
 Streaming Responses (SSE): Currently, the user waits for the full Groq response before seeing anything. Switching to Server-Sent Events (SSE) in FastAPI would allow the widget to display text as it's generated, significantly improving perceived latency.
+
 Headless Browser for Crawler: trafilatura and httpx are fast but cannot crawl Single Page Applications (React/Vue/Next.js sites) that require JavaScript to render content. Integrating Playwright or a service like Browserless would make your knowledge ingestion much more robust.
+
 Markdown Rendering: Ensure the widget uses a library like marked or react-markdown to render the LLM's responses (which often include bold text, lists, and links) correctly.
 3. Security & Reliability
+
 Content Security Policy (CSP): The widget injects CSS directly into the head. High-security sites may block this via CSP. Provide a hosted CSS file option or a nonce system for enterprise clients.
-Vector Indexing: Your 006_embeddings.py migration mentions HNSW indexing but has it commented out. For datasets >10k chunks, uncomment and enable HNSW indexing on the embedding column for 
-O
-(
-1
-)
-O(1) search performance.
+
+Vector Indexing: Your 006_embeddings.py migration mentions HNSW indexing but has it commented out. For datasets >10k chunks, uncomment and enable HNSW indexing on the embedding column for O(1) search performance.
+
 Secret Management: While you use .env, for production-level security, consider a dedicated secret manager (like AWS Secret Manager or Doppler) and ensure SECRET_KEY is rotated.
 4. Observability & Monitoring
+
 Error Tracking: Integrate Sentry. Your custom traceback logic is good for logs, but Sentry will aggregate these and alert you when a specific chatbot's crawling fails repeatedly.
+
 Semantic Caching: Use Redis to cache common queries. If multiple users ask "What is your refund policy?", you shouldn't call Groq/HuggingFace every time. A semantic cache can return the previous answer if the embedding similarity is >0.98.
 Priority Roadmap
+
 Critical (Security/Stability): Redis-based Rate Limiting + S3 Storage.
+
 UX (Conversion): Streaming Responses + Markdown in Widget.
+
 Performance: HNSW Indexing + Redis Caching.
+
 Feature Gap: Playwright-based crawler for JS-heavy sites.
