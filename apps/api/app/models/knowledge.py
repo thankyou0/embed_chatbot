@@ -79,7 +79,7 @@ class KnowledgeSource(Base):
     source_url = Column(String(2048), nullable=True)
     status = Column(KnowledgeSourceStatusDB(), nullable=False, default=KnowledgeSourceStatus.PENDING)
     pages_found = Column(Integer, nullable=False, default=0)
-    error_message = Column(Text, nullable=True)  # Store error message when status is FAILED
+    error_message = Column(Text, nullable=True)  # Error messages (FAILED status) or warnings (quota reached, etc.)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 

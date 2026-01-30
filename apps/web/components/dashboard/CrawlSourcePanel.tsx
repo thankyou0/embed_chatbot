@@ -119,7 +119,10 @@ export function CrawlSourcePanel({
               <ChevronDown className="h-4 w-4" />
             )}
           </Button>
-          <div className="font-medium truncate flex items-center gap-2" title={source.source_url || ""}>
+          <div
+            className="font-medium truncate flex items-center gap-2"
+            title={source.source_url || ""}
+          >
             <Globe
               className={cn(
                 "h-4 w-4",
@@ -134,7 +137,7 @@ export function CrawlSourcePanel({
           </div>
           <Badge
             variant={getStatusBadgeVariant(source.status)}
-            className="capitalize"
+            className="capitalize font-normal"
           >
             {(source.status === "processing" ||
               source.status === "crawling") && (
@@ -145,7 +148,7 @@ export function CrawlSourcePanel({
             )}
             {source.status}
           </Badge>
-          <Badge variant="outline" className="text-xs">
+          <Badge variant="outline" className="text-xs font-normal">
             {pages.length} Pages
           </Badge>
         </div>
@@ -232,7 +235,10 @@ export function CrawlSourcePanel({
                       }}
                     />
                     <div className="overflow-hidden min-w-0">
-                      <div className="text-sm truncate font-medium flex items-center gap-2" title={page.title || page.url}>
+                      <div
+                        className="text-sm truncate font-medium flex items-center gap-2"
+                        title={page.title || page.url}
+                      >
                         <span>{page.title || page.url}</span>
                         {page.is_product && (
                           <Badge
@@ -244,7 +250,10 @@ export function CrawlSourcePanel({
                           </Badge>
                         )}
                       </div>
-                      <div className="text-xs text-muted-foreground truncate" title={page.url}>
+                      <div
+                        className="text-xs text-muted-foreground truncate"
+                        title={page.url}
+                      >
                         {page.url}
                       </div>
                     </div>

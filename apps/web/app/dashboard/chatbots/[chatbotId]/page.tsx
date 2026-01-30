@@ -91,7 +91,7 @@ interface KnowledgeSource {
   source_url: string | null;
   status: "pending" | "processing" | "crawling" | "completed" | "failed";
   pages_found: number;
-  error_message: string | null; // Error message when status is failed
+  error_message: string | null; // Error messages or warnings (e.g., quota reached)
   created_at: string;
   updated_at: string;
   files?: {
@@ -387,7 +387,9 @@ export default function ChatbotDetailPage() {
     // Check for crawling/pending/processing status (case-insensitive)
     const hasCrawlingSources = knowledgeSources.some((s) => {
       const status = s.status?.toLowerCase();
-      return status === "processing" || status === "pending" || status === "crawling";
+      return (
+        status === "processing" || status === "pending" || status === "crawling"
+      );
     });
 
     // Detect status changes and show toast notifications
@@ -426,10 +428,21 @@ export default function ChatbotDetailPage() {
           const verb = getActionVerb(current);
 
           if (current.status === "completed") {
-            setToastMessage({
-              type: "success",
-              message: `${verb} completed for ${displayName}`,
-            });
+            // Check if there's a warning message (like quota reached)
+            if (
+              current.error_message &&
+              current.error_message.toLowerCase().includes("quota")
+            ) {
+              setToastMessage({
+                type: "info", // Use "info" for warnings (yellow/blue)
+                message: current.error_message, // Show the quota warning
+              });
+            } else {
+              setToastMessage({
+                type: "success",
+                message: `${verb} completed for ${displayName}`,
+              });
+            }
           } else if (current.status === "failed") {
             setToastMessage({
               type: "error",
@@ -466,11 +479,13 @@ export default function ChatbotDetailPage() {
 
     // Stop polling if all crawls/processing are complete
     if (!hasCrawlingSources && isPolling) {
-      console.log("✅ All process items complete, stopping polling and performing final sync");
+      console.log(
+        "✅ All process items complete, stopping polling and performing final sync",
+      );
       setIsPolling(false);
       setPollingStartTime(null);
       setManuallyStartedCrawl(false);
-      
+
       // Perform one final sync to ensure everything is up to date
       fetchKnowledgeSources(false);
       fetchChatbotStats();
@@ -563,10 +578,13 @@ export default function ChatbotDetailPage() {
 
       // Add a timestamp to bust any potential caches during polling
       const timestamp = new Date().getTime();
-      
+
       // Update last fetch time reference to prevent race conditions from slow responses
       const requestTimestamp = timestamp;
-      lastFetchTimeRef.current = Math.max(lastFetchTimeRef.current, requestTimestamp);
+      lastFetchTimeRef.current = Math.max(
+        lastFetchTimeRef.current,
+        requestTimestamp,
+      );
 
       const response = await apiRequestWithAuth<KnowledgeSource[]>(
         `/api/v1/chatbots/${chatbotId}/knowledge-sources?t=${timestamp}`,
@@ -723,9 +741,7 @@ export default function ChatbotDetailPage() {
         if (!response.ok) {
           const errData = await response.json();
           const errorMessage = errData.detail || "Unknown error";
-          throw new Error(
-            `Failed to upload ${file.name}: ${errorMessage}`
-          );
+          throw new Error(`Failed to upload ${file.name}: ${errorMessage}`);
         }
       }
 
@@ -770,7 +786,7 @@ export default function ChatbotDetailPage() {
       await fetchKnowledgeSources();
       // Refresh stats after adding QA
       fetchChatbotStats();
-      
+
       setToastMessage({
         type: "success",
         message: editingQA ? "QA pair updated" : "QA pair added successfully",
@@ -1993,18 +2009,18 @@ export default function ChatbotDetailPage() {
                             s.source_type === "qa_pair" &&
                             s.source_url === "manual",
                         );
-                        
+
                         // Fallback: if we can't find manual source but we have pairs that don't belong to known bundles
                         // For now, let's treat `qaPairs` as the source of truth for ALL, but we want to visually group.
                         // If `qaPairs` contains everything, we need to filter out those we display in panels.
-                        
+
                         // Actually, usage of KnowledgeSourceResponse in backend for upload_qa_xlsx returns a KS with pre-loaded qa_pairs.
                         // But `fetchKnowledgeSources` might not load all qa_pairs for every source to avoid payload size?
                         // Let's assume for now we use the `knowledgeSources` array which hopefully includes `qa_pairs` if updated properly.
                         // The `upload_qa_xlsx` returns the KS with pairs. `list_knowledge_sources` normally doesn't include potentially huge lists of pairs?
                         // Wait, `ChatbotService.list_knowledge_sources` just returns KnowledgeSource objects.
                         // The frontend 'qaPairs' state comes from `fetchQAPairs`.
-                        
+
                         // We need to match pairs to sources.
                         // The QAPair interface in frontend doesn't have knowledge_source_id.
                         // Let's assume we render:
@@ -2012,17 +2028,24 @@ export default function ChatbotDetailPage() {
                         // If the QA pair list API doesn't return source_id, we can't separate them easily on frontend without changing API.
                         // Looking at backend `list_qa_pairs`: it returns `QAPairResponse` which DOES have `knowledge_source_id`.
                         // The frontend `QAPair` interface just missed it. Let's update the interface first.
-                        
+
                         return (
                           <>
                             {/* Render Bundles */}
                             {qaSources.map((source) => {
                               // Find pairs for this source
                               const sourcePairs = qaPairs
-                                .filter((qa: any) => qa.knowledge_source_id === source.id)
+                                .filter(
+                                  (qa: any) =>
+                                    qa.knowledge_source_id === source.id,
+                                )
                                 .sort((a, b) => {
-                                  const timeA = new Date(a.created_at || 0).getTime();
-                                  const timeB = new Date(b.created_at || 0).getTime();
+                                  const timeA = new Date(
+                                    a.created_at || 0,
+                                  ).getTime();
+                                  const timeB = new Date(
+                                    b.created_at || 0,
+                                  ).getTime();
                                   if (timeA !== timeB) return timeA - timeB;
                                   return a.id.localeCompare(b.id);
                                 });
@@ -2068,26 +2091,37 @@ export default function ChatbotDetailPage() {
                               <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
                                 Manual Q&A Pairs
                               </h3>
-                              
+
                               {/* Filter standalone pairs */}
                               {(() => {
                                 const standalone = qaPairs
                                   .filter((qa: any) => {
                                     // Include if it belongs to "manual" source OR if we can't find its source in the bundles list
-                                    return !bundleIds.includes(qa.knowledge_source_id);
+                                    return !bundleIds.includes(
+                                      qa.knowledge_source_id,
+                                    );
                                   })
                                   .sort((a, b) => {
-                                    const timeA = new Date(a.created_at || 0).getTime();
-                                    const timeB = new Date(b.created_at || 0).getTime();
+                                    const timeA = new Date(
+                                      a.created_at || 0,
+                                    ).getTime();
+                                    const timeB = new Date(
+                                      b.created_at || 0,
+                                    ).getTime();
                                     if (timeA !== timeB) return timeA - timeB;
                                     return a.id.localeCompare(b.id);
                                   });
 
-                                if (standalone.length === 0 && qaSources.length === 0) {
-                                   return (
+                                if (
+                                  standalone.length === 0 &&
+                                  qaSources.length === 0
+                                ) {
+                                  return (
                                     <div className="text-center py-12 border-2 border-dashed rounded-xl">
                                       <MessageSquare className="h-12 w-12 mx-auto text-gray-300 mb-3" />
-                                      <p className="text-gray-500">No Q&A pairs added</p>
+                                      <p className="text-gray-500">
+                                        No Q&A pairs added
+                                      </p>
                                       <Button
                                         variant="link"
                                         onClick={() => {
@@ -2101,7 +2135,12 @@ export default function ChatbotDetailPage() {
                                   );
                                 }
 
-                                if (standalone.length === 0) return <p className="text-sm text-muted-foreground italic">No manual Q&A pairs.</p>;
+                                if (standalone.length === 0)
+                                  return (
+                                    <p className="text-sm text-muted-foreground italic">
+                                      No manual Q&A pairs.
+                                    </p>
+                                  );
 
                                 return (
                                   <>
@@ -2111,17 +2150,39 @@ export default function ChatbotDetailPage() {
                                           <Checkbox
                                             checked={
                                               standalone.length > 0 &&
-                                              standalone.every(q => selectedQAs.includes(q.id))
+                                              standalone.every((q) =>
+                                                selectedQAs.includes(q.id),
+                                              )
                                             }
-                                            onCheckedChange={(checked: boolean) => {
+                                            onCheckedChange={(
+                                              checked: boolean,
+                                            ) => {
                                               if (checked) {
                                                 // Add all standalone IDs
-                                                const newSelected = [...selectedQAs, ...standalone.map(q => q.id).filter(id => !selectedQAs.includes(id))];
+                                                const newSelected = [
+                                                  ...selectedQAs,
+                                                  ...standalone
+                                                    .map((q) => q.id)
+                                                    .filter(
+                                                      (id) =>
+                                                        !selectedQAs.includes(
+                                                          id,
+                                                        ),
+                                                    ),
+                                                ];
                                                 setSelectedQAs(newSelected);
                                               } else {
                                                 // Remove all standalone IDs
-                                                const standaloneIds = standalone.map(q => q.id);
-                                                setSelectedQAs(selectedQAs.filter(id => !standaloneIds.includes(id)));
+                                                const standaloneIds =
+                                                  standalone.map((q) => q.id);
+                                                setSelectedQAs(
+                                                  selectedQAs.filter(
+                                                    (id) =>
+                                                      !standaloneIds.includes(
+                                                        id,
+                                                      ),
+                                                  ),
+                                                );
                                               }
                                             }}
                                           />
@@ -2129,11 +2190,15 @@ export default function ChatbotDetailPage() {
                                             Select All ({standalone.length})
                                           </span>
                                         </div>
-                                        {selectedQAs.filter(id => standalone.find(q => q.id === id)).length > 0 && (
+                                        {selectedQAs.filter((id) =>
+                                          standalone.find((q) => q.id === id),
+                                        ).length > 0 && (
                                           <Button
                                             variant="destructive"
                                             size="sm"
-                                            onClick={() => handleBulkDelete("qa")}
+                                            onClick={() =>
+                                              handleBulkDelete("qa")
+                                            }
                                             disabled={isBulkDeleting}
                                           >
                                             <Trash2 className="h-4 w-4 mr-2" />
@@ -2157,8 +2222,12 @@ export default function ChatbotDetailPage() {
                                             <div className="flex items-start gap-3 flex-1">
                                               <Checkbox
                                                 className="mt-1"
-                                                checked={selectedQAs.includes(qa.id)}
-                                                onCheckedChange={(checked: boolean) => {
+                                                checked={selectedQAs.includes(
+                                                  qa.id,
+                                                )}
+                                                onCheckedChange={(
+                                                  checked: boolean,
+                                                ) => {
                                                   if (checked)
                                                     setSelectedQAs([
                                                       ...selectedQAs,

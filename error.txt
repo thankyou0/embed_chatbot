@@ -14,12 +14,6 @@ preview widget conversation count should not be counted in stats.
 deletion of crawling site's embedding isn't actually deleting that info pls check.
 
 
-for ramraj it's not crawling accurately.
-
-https://ramrajcotton.in/collections/white-shirts
-https://ramrajcotton.in/collections/colour-shirts
-
-
 (function () {
   const script = document.createElement("script");
   script.src = "https://ecom-chatbot-widget-3fhmc.ondigitalocean.app/widget.umd.js";
@@ -34,3 +28,18 @@ https://ramrajcotton.in/collections/colour-shirts
 
   document.head.appendChild(script);
 })();
+
+
+
+
+how can i grow my bussiness
+Growing Your Business requires a combination of strategies. At Kriyanta, we believe in empowering artisans and bringing meaningful creations into people's lives. To grow your business, you might consider unique handmade products like our home decor and gifting items, which can help you stand out in the market.
+How do I find unique products to sell in my business?
+What are some effective marketing strategies for a small business?
+
+Not helpful
+how can i compete with kriyanta?
+To compete with Kriyanta, you could focus on creating unique and high-quality handmade products that tell a story and bring tradition to life with a modern touch. At Kriyanta, we believe every creation should carry a story, a soul, and a smile, so you might consider emphasizing the heritage and craftsmanship behind your products. Additionally, you could explore customized items and personalized gifts to differentiate your brand and appeal to customers looking for one-of-a-kind creations.
+
+
+still 'hi' msg is considered as an 'missing info'.

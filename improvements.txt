@@ -14,18 +14,18 @@ Production-Level Improvements
 
 Distributed Task Queue: Currently, crawling and embedding are handled via apscheduler within the API process. In production, these should be moved to Celery with Redis or RabbitMQ. This ensures that multiple crawling jobs don't crash your API and allows you to scale workers independently.
 
-S3-Compatible Storage: Your FileService currently saves to local disk (uploads/ folder). For production (especially in Kubernetes or horizontal scaling), you should switch to AWS S3, Google Cloud Storage, or MinIO. Local storage will lead to data loss if the container restarts or if a user requests a file from a different pod.
+Done. S3-Compatible Storage: Your FileService currently saves to local disk (uploads/ folder). For production (especially in Kubernetes or horizontal scaling), you should switch to AWS S3, Google Cloud Storage, or MinIO. Local storage will lead to data loss if the container restarts or if a user requests a file from a different pod.
 
 Distributed Rate Limiting: The current rate limiter in chat.py:19 is in-memory. If you run multiple workers (you are using 4 in Docker), the rate limit is enforced per-worker. Move this to Redis using a library like slowapi or custom Redis logic.
 2. Chat & UX Improvements
 
-Streaming Responses (SSE): Currently, the user waits for the full Groq response before seeing anything. Switching to Server-Sent Events (SSE) in FastAPI would allow the widget to display text as it's generated, significantly improving perceived latency.
+Done. Streaming Responses (SSE): Currently, the user waits for the full Groq response before seeing anything. Switching to Server-Sent Events (SSE) in FastAPI would allow the widget to display text as it's generated, significantly improving perceived latency.
 
 Headless Browser for Crawler: trafilatura and httpx are fast but cannot crawl Single Page Applications (React/Vue/Next.js sites) that require JavaScript to render content. Integrating Playwright or a service like Browserless would make your knowledge ingestion much more robust.
 
-Markdown Rendering: Ensure the widget uses a library like marked or react-markdown to render the LLM's responses (which often include bold text, lists, and links) correctly.
-3. Security & Reliability
+Done. Markdown Rendering: Ensure the widget uses a library like marked or react-markdown to render the LLM's responses (which often include bold text, lists, and links) correctly.
 
+3. Security & Reliability
 Content Security Policy (CSP): The widget injects CSS directly into the head. High-security sites may block this via CSP. Provide a hosted CSS file option or a nonce system for enterprise clients.
 
 Vector Indexing: Your 006_embeddings.py migration mentions HNSW indexing but has it commented out. For datasets >10k chunks, uncomment and enable HNSW indexing on the embedding column for O(1) search performance.

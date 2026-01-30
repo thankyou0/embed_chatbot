@@ -21,7 +21,7 @@ from bs4 import BeautifulSoup
 logger = get_logger(__name__)
 
 class WebsiteCrawler:
-    def __init__(self, base_url: str, max_pages: int = 100):
+    def __init__(self, base_url: str, max_pages: int = 999999):
         # Normalize base_url: ensure it has a scheme and trailing slash if needed
         parsed_base = urlparse(base_url)
         if not parsed_base.scheme:
@@ -30,16 +30,21 @@ class WebsiteCrawler:
         
         self.base_url = base_url
         self.domain = parsed_base.netloc
-        # Don't restrict to path prefix - allow crawling entire domain
-        # This is important because category pages (/category-view/shop) 
-        # link to product pages (/product-detail/item) which have different paths
-        self.path_prefix = "/"  # Allow all paths on the domain
+        
+        # Extract actual path from URL to use as prefix
+        # Example: https://example.com/collections/shirts -> /collections/shirts
+        # This restricts crawling to only pages under this path
+        self.path_prefix = parsed_base.path.rstrip('/') or '/'
+        
+        # max_pages is set very high by default - quota_limit in start_crawl() controls actual limit
         self.max_pages = max_pages
         self.visited_urls: Set[str] = set()
         self.queue: List[str] = [base_url]
         self.robot_parser = urllib.robotparser.RobotFileParser()
         self.robot_parser.set_url(urljoin(base_url, "/robots.txt"))
         self._robots_loaded = False
+        
+        logger.info(f"Initialized crawler for domain: {self.domain}, path prefix: {self.path_prefix}")
         
     async def _load_robots(self):
         if not self._robots_loaded:
@@ -59,12 +64,49 @@ class WebsiteCrawler:
         except:
             return True
 
+    def _get_url_depth(self, url: str) -> int:
+        """Calculate depth of URL path (number of segments)"""
+        parsed = urlparse(url)
+        path = parsed.path.strip('/')
+        return len([p for p in path.split('/') if p]) if path else 0
+    
+    def _get_path_similarity(self, url: str, reference_url: str) -> int:
+        """Calculate how many path segments match between two URLs"""
+        parsed1 = urlparse(url)
+        parsed2 = urlparse(reference_url)
+        
+        path1_parts = [p for p in parsed1.path.strip('/').split('/') if p]
+        path2_parts = [p for p in parsed2.path.strip('/').split('/') if p]
+        
+        # Count matching segments from the start
+        matches = 0
+        for p1, p2 in zip(path1_parts, path2_parts):
+            if p1 == p2:
+                matches += 1
+            else:
+                break
+        return matches
+    
+    def _sort_queue_by_priority(self, current_url: str):
+        """Sort queue for Smart DFS: prioritize similar paths and deeper URLs"""
+        if len(self.queue) <= 1:
+            return
+        
+        def priority_score(url: str) -> tuple:
+            # Higher similarity = crawl first (negative for sorting)
+            similarity = -self._get_path_similarity(url, current_url)
+            # Higher depth = crawl first (negative for sorting)
+            depth = -self._get_url_depth(url)
+            return (similarity, depth, url)
+        
+        self.queue.sort(key=priority_score)
+    
     def _is_valid_link(self, url: str) -> bool:
         parsed = urlparse(url)
         # Same domain check
         if parsed.netloc != self.domain:
             return False
-        # Same path prefix check
+        # Same path prefix check - URL must start with the path prefix
         if not parsed.path.startswith(self.path_prefix):
             return False
         # Already visited
@@ -83,7 +125,13 @@ class WebsiteCrawler:
         }
 
         async with httpx.AsyncClient(timeout=15.0, follow_redirects=True, headers=headers) as client:
-            while self.queue and len(self.visited_urls) < self.max_pages:
+            # No max_pages limit in loop - quota_limit in start_crawl() will stop crawling
+            while self.queue:
+                # Sort queue by priority before each pop (Smart DFS)
+                current_context = list(self.visited_urls)[-1] if self.visited_urls else self.base_url
+                self._sort_queue_by_priority(current_context)
+                
+                # Pop from front (will be highest priority due to sorting)
                 url = self.queue.pop(0)
                 if url in self.visited_urls:
                     continue
@@ -92,7 +140,7 @@ class WebsiteCrawler:
                     continue
 
                 self.visited_urls.add(url)
-                logger.info(f"Crawling: {url} ({len(self.visited_urls)}/{self.max_pages})")
+                logger.info(f"Crawling [{self._get_url_depth(url)}]: {url} (Page #{len(self.visited_urls)})")
 
                 try:
                     response = await client.get(url)
@@ -167,13 +215,18 @@ class WebsiteCrawler:
 
                     # Extract links for further crawling
                     soup = BeautifulSoup(html_content, 'html.parser')
+                    new_links = []
                     for a in soup.find_all('a', href=True):
                         link = urljoin(url, a['href'])
                         # Clean fragments and normalize
                         link = link.split('#')[0].rstrip('/')
                         
                         if self._is_valid_link(link):
-                            self.queue.append(link)
+                            new_links.append(link)
+                    
+                    # Add all new links at once
+                    self.queue.extend(new_links)
+                    logger.debug(f"Found {len(new_links)} new valid links from {url}")
                             
                 except Exception as e:
                     logger.error(f"Error crawling {url}: {str(e)}")
@@ -189,10 +242,19 @@ class CrawlerService:
         base_url: str,
         max_pages: int = 100,
         is_recrawl: bool = False,
-        crawl_history_id: Optional[str] = None
+        crawl_history_id: Optional[str] = None,
+        quota_limit: Optional[int] = None  # New parameter for quota enforcement
     ):
         """
-        Entry point for background crawl job with diff detection support.
+        Entry point for background crawl job with diff detection support and quota management.
+        
+        Args:
+            knowledge_source_id: ID of the knowledge source
+            base_url: Starting URL to crawl
+            max_pages: Maximum pages to crawl in this session
+            is_recrawl: Whether this is a recrawl of existing source
+            crawl_history_id: ID of crawl history entry (if exists)
+            quota_limit: Total page quota remaining (None = unlimited)
         """
         session_factory = get_session_factory()
         async with session_factory() as db:
@@ -304,6 +366,7 @@ class CrawlerService:
                 pages_added = 0
                 pages_updated = 0
                 pages_skipped = 0  # Track URLs skipped due to existing in other knowledge sources
+                quota_reached = False  # Track if quota limit was hit
                 
                 async for page_data in crawler.crawl():
                     url = page_data['url']
@@ -319,6 +382,28 @@ class CrawlerService:
                         pages_skipped += 1
                         logger.info(f"Skipping duplicate URL (already in another knowledge source): {url}")
                         continue
+                    
+                    # CHECK QUOTA LIMIT BEFORE PROCESSING: Stop if we've reached the quota
+                    # This prevents going over limit by checking BEFORE adding new pages
+                    if quota_limit is not None and url not in existing_pages:
+                        # Count total pages across all sources for this chatbot
+                        total_pages_stmt = select(func.count(CrawledPage.id)).join(
+                            KnowledgeSource,
+                            KnowledgeSource.id == CrawledPage.knowledge_source_id
+                        ).where(
+                            KnowledgeSource.chatbot_id == current_ks.chatbot_id,
+                            CrawledPage.is_removed == False
+                        )
+                        total_result = await db.execute(total_pages_stmt)
+                        current_total = total_result.scalar() or 0
+                        
+                        if current_total >= quota_limit:
+                            quota_reached = True
+                            logger.warning(
+                                f"Quota limit reached! Total pages: {current_total}/{quota_limit}. "
+                                f"Stopping crawl and processing what we have."
+                            )
+                            break  # Stop crawling - don't add this page
                     
                     if url in existing_pages:
                         # Check if content changed
@@ -378,8 +463,47 @@ class CrawlerService:
                     logger.info(f"Cleaning up embeddings for {pages_removed} removed pages...")
                     await EmbeddingService.cleanup_removed_pages_embeddings(knowledge_source_id)
 
-                # Calculate total pages
-                total_pages = len(existing_pages) + pages_added - pages_removed if is_recrawl else pages_added
+                # Calculate total pages for this knowledge source
+                ks_total_pages = len(existing_pages) + pages_added - pages_removed if is_recrawl else pages_added
+                
+                # For quota warnings, we need the CHATBOT total across all sources, not just this KS
+                if quota_limit and is_recrawl:
+                    # Get actual total across all knowledge sources for this chatbot
+                    chatbot_total_stmt = select(func.count(CrawledPage.id)).join(
+                        KnowledgeSource,
+                        KnowledgeSource.id == CrawledPage.knowledge_source_id
+                    ).where(
+                        KnowledgeSource.chatbot_id == current_ks.chatbot_id,
+                        CrawledPage.is_removed == False
+                    )
+                    chatbot_total_result = await db.execute(chatbot_total_stmt)
+                    chatbot_total_pages = chatbot_total_result.scalar() or 0
+                else:
+                    chatbot_total_pages = ks_total_pages
+                
+                # DEBUG: Log quota calculations
+                logger.info(f"Quota debug - quota_limit: {quota_limit}, ks_pages: {ks_total_pages}, chatbot_total: {chatbot_total_pages}, quota_reached: {quota_reached}, is_recrawl: {is_recrawl}")
+
+                # Prepare quota warning message if limit was reached or we are at capacity
+                quota_warning = None
+                # For re-crawl: Always show warning if at or over quota limit (use chatbot total)
+                # For new crawl: Only show if quota was actually hit during crawling
+                if quota_limit and is_recrawl and chatbot_total_pages >= quota_limit:
+                    # Re-crawl at capacity - always inform user
+                    quota_warning = (
+                        f"⚠️ Sync completed: Updated {pages_updated} pages. "
+                        f"Note: Your {quota_limit} page limit is reached, so no new pages can be added. "
+                        f"Upgrade your plan to add more pages."
+                    )
+                elif quota_limit and not is_recrawl and quota_reached:
+                    # New crawl that hit quota
+                    quota_warning = (
+                        f"⚠️ Page limit reached: Crawled {pages_added} pages before hitting your "
+                        f"{quota_limit} page quota. Upgrade your plan to crawl more pages."
+                    )
+                
+                if quota_warning:
+                    logger.warning(f"Setting quota warning: {quota_warning}")
 
                 # Update crawl history
                 await db.execute(
@@ -391,19 +515,31 @@ class CrawlerService:
                         pages_checked=len(crawled_urls),
                         pages_added=pages_added,
                         pages_updated=pages_updated,
-                        pages_removed=pages_removed
+                        pages_removed=pages_removed,
+                        error_message=quota_warning  # Store quota warning in history
                     )
                 )
 
-                # Update knowledge source (keep status as CRAWLING - embeddings will set to COMPLETED or FAILED)
+                # Update knowledge source
+                # If quota reached, we still process embeddings but show warning
+                update_values = {
+                    'pages_found': ks_total_pages,  # Use KS total for this field
+                    # Keep status as CRAWLING - embeddings will set to COMPLETED
+                    # But if quota reached and no pages added, mark as failed
+                }
+                
+                # Add quota warning to error_message if quota was reached (user-facing message)
+                # This will be shown in the frontend
+                if quota_warning:
+                    update_values['error_message'] = quota_warning
+                else:
+                    # Clear any previous error if crawl was successful
+                    update_values['error_message'] = None
+                
                 await db.execute(
                     update(KnowledgeSource)
                     .where(KnowledgeSource.id == knowledge_source_id)
-                    .values(
-                        pages_found=total_pages
-                        # Don't set status to COMPLETED here - let embedding service handle it
-                        # Status stays as CRAWLING until embeddings complete
-                    )
+                    .values(**update_values)
                 )
                 
                 # Update schedule last_crawl_at
@@ -414,12 +550,18 @@ class CrawlerService:
                 )
                 
                 await db.commit()
-                logger.success(
+                
+                # Enhanced logging with quota info
+                log_message = (
                     f"Crawl completed for {base_url}. "
                     f"Checked: {len(crawled_urls)}, Added: {pages_added}, "
                     f"Updated: {pages_updated}, Removed: {pages_removed}, "
                     f"Skipped (duplicates): {pages_skipped}"
                 )
+                if quota_reached:
+                    log_message += f" | ⚠️ QUOTA LIMIT REACHED at {quota_limit} pages"
+                    
+                logger.success(log_message)
 
                 # Check if we actually crawled any pages (first crawl)
                 if not is_recrawl and len(crawled_urls) == 0:

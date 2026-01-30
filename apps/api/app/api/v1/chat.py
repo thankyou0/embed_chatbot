@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, Form, UploadFile, File
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import UUID
 from typing import Optional
@@ -9,6 +10,7 @@ from app.services.chat_service import ChatService
 from app.services.chatbot_service import ChatbotService
 from app.services.analytics_service import AnalyticsService
 import time
+import json
 from collections import defaultdict
 
 router = APIRouter(prefix="/chat", tags=["chat"])
@@ -33,8 +35,8 @@ def check_rate_limit(request: Request):
     rate_limits[ip].append(now)
 
 
-@router.post("/{chatbot_id}/message", response_model=ChatMessageResponse)
-async def send_message(
+@router.post("/{chatbot_id}/message/stream")
+async def send_message_stream(
     chatbot_id: UUID,
     req: Request,
     db: AsyncSession = Depends(get_db),
@@ -44,7 +46,9 @@ async def send_message(
     is_preview: bool = Form(False)
 ):
     """
-    Public endpoint for chatbot messages with optional image upload.
+    Public endpoint for chatbot messages with SSE streaming support.
+    
+    Streams the response as Server-Sent Events for progressive rendering.
     
     Accepts multipart form data:
     - message: The user's text message (required)
@@ -76,18 +80,33 @@ async def send_message(
                 detail=f"Image too large. Max size: {MAX_IMAGE_SIZE // (1024*1024)}MB"
             )
     
-    try:
-        response = await ChatService.get_response(
-            db=db,
-            chatbot_id=chatbot_id,
-            message=message,
-            session_id=session_id,
-            image_bytes=image_bytes,
-            is_preview=is_preview
-        )
-        return response
-    except Exception as e:
-        raise HTTPException(status_code=404, detail=str(e))
+    async def event_generator():
+        try:
+            async for chunk in ChatService.get_response_stream(
+                db=db,
+                chatbot_id=chatbot_id,
+                message=message,
+                session_id=session_id,
+                image_bytes=image_bytes,
+                is_preview=is_preview
+            ):
+                yield f"data: {json.dumps(chunk)}\n\n"
+        except Exception as e:
+            error_chunk = {
+                "type": "error",
+                "error": str(e)
+            }
+            yield f"data: {json.dumps(error_chunk)}\n\n"
+    
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"  # Disable nginx buffering
+        }
+    )
 
 
 @router.get("/{chatbot_id}/config", response_model=WidgetConfigResponse)

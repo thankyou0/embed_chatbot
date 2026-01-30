@@ -34,12 +34,22 @@ class KnowledgeSourceResponse(BaseModel):
     source_url: Optional[str] = None
     status: KnowledgeSourceStatus
     pages_found: int
-    error_message: Optional[str] = None  # Error message when status is FAILED
+    error_message: Optional[str] = None  # Error/warning message (errors when FAILED, warnings when quota reached)
     created_at: datetime
     updated_at: datetime
     files: Optional[List[UploadedFileResponse]] = []
     qa_pairs: Optional[List['QAPairResponse']] = []
     pages: Optional[List['CrawledPageResponse']] = []
+    
+    # Computed property to help frontend distinguish warnings from errors
+    @property
+    def has_warning(self) -> bool:
+        """True if there's a warning message (like quota reached) even though status is COMPLETED"""
+        return (
+            self.status == KnowledgeSourceStatus.COMPLETED and 
+            self.error_message is not None and 
+            'quota' in self.error_message.lower()
+        )
 
     class Config:
         from_attributes = True

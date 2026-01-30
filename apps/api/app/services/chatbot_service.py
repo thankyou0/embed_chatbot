@@ -58,6 +58,7 @@ from app.services.file_service import FileService
 from app.services.embedding_service import EmbeddingService
 from app.services.scheduler_service import SchedulerService
 from app.core.database import get_session_factory
+from app.core.tier_limits import get_limit
 from fastapi import BackgroundTasks, UploadFile
 from sqlalchemy import select, update, delete, func, text, bindparam
 from sqlalchemy.orm import selectinload
@@ -911,6 +912,36 @@ class ChatbotService:
     # ============== Knowledge Base Management ==============
 
     @staticmethod
+    async def get_remaining_page_quota(db: AsyncSession, chatbot_id: UUID, user: User) -> dict:
+        """
+        Calculate remaining crawl page quota for a chatbot based on user's tier.
+        Returns dict with total_limit, used, and remaining pages.
+        """
+        # Get user's tier (for now, assume free tier - update when you add user tiers)
+        user_tier = getattr(user, 'tier', 'free')
+        total_limit = get_limit(user_tier, 'max_total_crawled_pages')
+        
+        # Count existing crawled pages for this chatbot (across all knowledge sources)
+        stmt = select(func.count(CrawledPage.id)).join(
+            KnowledgeSource,
+            KnowledgeSource.id == CrawledPage.knowledge_source_id
+        ).where(
+            KnowledgeSource.chatbot_id == chatbot_id,
+            CrawledPage.is_removed == False  # Don't count removed pages
+        )
+        
+        result = await db.execute(stmt)
+        used_pages = result.scalar() or 0
+        remaining_pages = max(0, total_limit - used_pages)
+        
+        return {
+            'total_limit': total_limit,
+            'used': used_pages,
+            'remaining': remaining_pages,
+            'tier': user_tier
+        }
+
+    @staticmethod
     async def create_crawl_source(
         db: AsyncSession,
         tenant_id: int,
@@ -924,6 +955,21 @@ class ChatbotService:
         # Verify chatbot access and check permissions
         if not await ChatbotService.has_permission(db, chatbot_id, user, "can_manage_knowledge"):
             raise ForbiddenError("Insufficient permissions to add knowledge source")
+
+        # Check remaining page quota
+        quota = await ChatbotService.get_remaining_page_quota(db, chatbot_id, user)
+        
+        if quota['remaining'] <= 0:
+            raise ForbiddenError(
+                f"Page limit reached. You've used {quota['used']}/{quota['total_limit']} pages. "
+                f"Upgrade to increase your limit."
+            )
+        
+        # Log quota info
+        logger.info(
+            f"Chatbot {chatbot_id} page quota: {quota['used']}/{quota['total_limit']} used, "
+            f"{quota['remaining']} remaining"
+        )
 
         # Normalize URL - strip trailing slash to prevent duplicates
         # https://example.com/ and https://example.com should be treated as the same
@@ -943,6 +989,9 @@ class ChatbotService:
         existing_ks = (await db.execute(stmt)).scalar_one_or_none()
         
         if existing_ks:
+            # Re-crawl: No per-crawl limit, only total quota matters
+            # The crawler will stop when hitting the total page quota
+            
             # If already exists, update status to CRAWLING and clear error message immediately
             await db.execute(
                 update(KnowledgeSource)
@@ -957,15 +1006,21 @@ class ChatbotService:
             # Refresh to get updated values
             await db.refresh(existing_ks)
             
-            # Trigger a re-crawl
+            # Trigger a re-crawl with no per-crawl limit (only quota matters)
             background_tasks.add_task(
                 CrawlerService.start_crawl,
                 knowledge_source_id=existing_ks.id,
                 base_url=normalized_url,
-                max_pages=request.max_pages,
-                is_recrawl=True
+                max_pages=999999,  # Very high limit - quota will stop it
+                is_recrawl=True,
+                quota_limit=quota['total_limit']  # Pass total limit, runtime check will enforce
             )
             return KnowledgeSourceResponse.model_validate(existing_ks)
+
+        # New crawl: No per-crawl limit, only total quota matters
+        # The runtime quota check will stop crawling when total reaches 300
+        
+        logger.info(f"Starting new crawl - no per-crawl limit, total quota: {quota['total_limit']}")
 
         # Create knowledge source with normalized URL
         ks = KnowledgeSource(
@@ -996,12 +1051,14 @@ class ChatbotService:
         ).where(KnowledgeSource.id == ks.id)
         ks = (await db.execute(stmt)).scalar_one()
 
-        # Start background crawl
+        # Start background crawl with no per-crawl limit (quota enforces total)
         background_tasks.add_task(
             CrawlerService.start_crawl,
             knowledge_source_id=ks.id,
             base_url=request.base_url,
-            max_pages=request.max_pages
+            max_pages=999999,  # Very high limit - quota will stop it
+            is_recrawl=False,
+            quota_limit=quota['total_limit']  # Pass total limit, runtime check will enforce
         )
 
         return KnowledgeSourceResponse.model_validate(ks)
@@ -2113,6 +2170,18 @@ class ChatbotService:
         if ks.status == KnowledgeSourceStatus.PROCESSING:
             raise BadRequestError("Crawl already in progress")
         
+        # Get quota info for logging and passing to crawler
+        # NOTE: We don't block sync even at quota limit - sync updates existing pages
+        # The crawler will intelligently:
+        # - Always allow updating existing pages (no quota check)
+        # - Only enforce quota when adding NEW pages
+        quota = await ChatbotService.get_remaining_page_quota(db, ks.chatbot_id, user)
+        
+        logger.info(
+            f"Sync crawl for chatbot {ks.chatbot_id}: {quota['used']}/{quota['total_limit']} used, "
+            f"{quota['remaining']} remaining. Sync allowed to update existing pages."
+        )
+        
         # IMPORTANT: Update status to PROCESSING immediately so frontend sees it without refresh
         from sqlalchemy import update as sql_update
         await db.execute(
@@ -2139,14 +2208,15 @@ class ChatbotService:
         await db.commit()
         await db.refresh(crawl_history)
         
-        # Trigger crawl in background
+        # Trigger crawl in background with quota enforcement
         background_tasks.add_task(
             CrawlerService.start_crawl,
             knowledge_source_id=str(knowledge_source_id),
             base_url=ks.source_url,
-            max_pages=100,
+            max_pages=999999,  # No per-crawl limit, quota will stop it
             is_recrawl=True,
-            crawl_history_id=str(crawl_history.id)
+            crawl_history_id=str(crawl_history.id),
+            quota_limit=quota['total_limit']  # CRITICAL: Enforce quota on sync
         )
         
         return TriggerCrawlResponse(

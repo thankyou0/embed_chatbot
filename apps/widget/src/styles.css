@@ -310,7 +310,7 @@
 
 .chatbot-typing-cursor {
   display: inline-block;
-  width: 2px; /* w-1 = 2px */
+  width: 1px; /* w-1 = 2px */
   height: 12px; /* h-3 = 12px */
   background-color: #6b7280; /* bg-gray-400 */
   margin-left: 2px; /* ml-1 = 4px */

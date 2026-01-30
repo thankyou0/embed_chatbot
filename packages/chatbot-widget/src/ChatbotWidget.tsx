@@ -6,7 +6,19 @@ import type {
   ProductInfo,
 } from "./types";
 import { compressImage, generateId } from "./utils";
+import { marked } from "marked";
 import "./styles.css";
+
+// Configure marked
+marked.use({
+  breaks: true,
+  gfm: true,
+  renderer: {
+    link({ href, title, text }) {
+      return `<a href="${href}" ${title ? `title="${title}"` : ""} target="_blank" rel="noopener noreferrer">${text}</a>`;
+    },
+  },
+});
 
 // Product Carousel Component
 function ProductCarousel({ products }: { products: ProductInfo[] }) {
@@ -421,48 +433,6 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
     }
   };
 
-  // Type message character by character (matches preview)
-  const typeMessage = (
-    fullText: string,
-    suggestions?: string[],
-    products?: ProductInfo[],
-  ) => {
-    let currentIndex = 0;
-    const typingMessage: Message = {
-      id: generateId(),
-      role: "assistant",
-      content: "",
-      isTyping: true,
-      suggestions,
-      products,
-      timestamp: new Date(),
-    };
-
-    setMessages((prev: Message[]) => [...prev, typingMessage]);
-
-    const typingInterval = setInterval(() => {
-      currentIndex++;
-      const partialText = fullText.slice(0, currentIndex);
-
-      setMessages((prev: Message[]) => {
-        const newMessages = [...prev];
-        const lastMessage = newMessages[newMessages.length - 1];
-        if (lastMessage && lastMessage.isTyping) {
-          lastMessage.content = partialText;
-          if (currentIndex >= fullText.length) {
-            lastMessage.isTyping = false;
-            clearInterval(typingInterval);
-          }
-        }
-        return newMessages;
-      });
-
-      if (currentIndex >= fullText.length) {
-        clearInterval(typingInterval);
-      }
-    }, 20); // 20ms per character
-  };
-
   const sendMessage = async (messageText?: string) => {
     if (isTyping) return;
 
@@ -491,6 +461,17 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
     setIsTyping(true);
     setError(null);
 
+    // Create placeholder assistant message for streaming
+    const assistantMessageId = generateId();
+    const assistantMessage: Message = {
+      id: assistantMessageId,
+      role: "assistant",
+      content: "",
+      isTyping: true,
+      timestamp: new Date(),
+    };
+    setMessages((prev: Message[]) => [...prev, assistantMessage]);
+
     try {
       // Build form data
       const formData = new FormData();
@@ -510,8 +491,9 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
         }
       }
 
+      // Use streaming endpoint
       const response = await fetch(
-        `${apiUrl}/api/v1/chat/${chatbotId}/message`,
+        `${apiUrl}/api/v1/chat/${chatbotId}/message/stream`,
         {
           method: "POST",
           body: formData,
@@ -522,23 +504,213 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
         throw new Error("Failed to send message");
       }
 
-      const data = await response.json();
+      // Process SSE stream
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let streamedContent = "";
+      let streamSessionId = sessionId;
+      let finalSuggestions: string[] = [];
+      let finalProducts: ProductInfo[] = [];
 
-      // Update session ID
-      if (data.session_id) {
-        setSessionId(data.session_id);
+      // ===== PRODUCTION-GRADE 4-STAGE PACING SYSTEM =====
+
+      // Stage A: Sentence-level gating buffer
+      let sentenceBuffer = "";
+      let displayedContent = "";
+      let renderQueue: string[] = []; // Sentence/phrase queue
+      let isRendering = false;
+      let firstCharShown = false;
+      let streamEnded = false;
+
+      // Tunable parameters
+      const CHAR_DELAY_MS = 20; // Constant brisk speed (~50 chars/sec)
+      const CHAR_VARIANCE = 0; // Uniform speed
+      const COMMA_PAUSE_MS = 20;
+      const PERIOD_PAUSE_MS = 20;
+      const PARAGRAPH_PAUSE_MS = 20;
+      const SENTENCE_GATE_TIMEOUT_MS = 50;
+      const FIRST_CHAR_DELAY_MS = 20;
+      const MAX_BUFFER_CHARS = 500;
+      const ADAPTIVE_SPEED_MULTIPLIER = 0.5;
+
+      // Sentence detection regex
+      const SENTENCE_END_REGEX =
+        /[.!?]\s+|<br\s*\/?>\s*|<\/p>\s*|<\/li>\s*|\n\n/;
+
+      // Stage B: Character-by-character renderer with consistent speed
+      const renderCharacters = async (text: string) => {
+        if (isRendering) return;
+        isRendering = true;
+
+        // Minimum latency before first character
+        if (!firstCharShown) {
+          await new Promise((r) => setTimeout(r, FIRST_CHAR_DELAY_MS));
+          firstCharShown = true;
+        }
+
+        for (let i = 0; i < text.length; i++) {
+          const char = text[i];
+          displayedContent += char;
+
+          setMessages((prev: Message[]) => {
+            const newMessages = [...prev];
+            const lastMessage = newMessages[newMessages.length - 1];
+            if (lastMessage && lastMessage.id === assistantMessageId) {
+              lastMessage.content = displayedContent;
+            }
+            return newMessages;
+          });
+
+          // Constant speed (Stage C and variance removed)
+          let delay = CHAR_DELAY_MS;
+
+          // Stage D: Adaptive speed when buffer is large
+          if (
+            renderQueue.length > 2 ||
+            sentenceBuffer.length > MAX_BUFFER_CHARS
+          ) {
+            delay *= ADAPTIVE_SPEED_MULTIPLIER;
+          }
+
+          await new Promise((r) => setTimeout(r, delay));
+        }
+
+        isRendering = false;
+        processRenderQueue(); // Continue with next chunk
+      };
+
+      // Stage A+D: Sentence gating and burst handling
+      const processRenderQueue = async () => {
+        if (isRendering || renderQueue.length === 0) return;
+
+        const nextChunk = renderQueue.shift();
+        if (nextChunk) {
+          await renderCharacters(nextChunk);
+        }
+      };
+
+      // Sentence gate timer
+      let sentenceGateTimer: NodeJS.Timeout | null = null;
+
+      const flushSentenceBuffer = () => {
+        if (sentenceBuffer.trim()) {
+          renderQueue.push(sentenceBuffer);
+          sentenceBuffer = "";
+          processRenderQueue();
+        }
+        if (sentenceGateTimer) {
+          clearTimeout(sentenceGateTimer);
+          sentenceGateTimer = null;
+        }
+      };
+
+      const addToSentenceBuffer = (content: string) => {
+        sentenceBuffer += content;
+        streamedContent += content;
+
+        // Check if we have a complete sentence
+        const match = sentenceBuffer.match(SENTENCE_END_REGEX);
+        if (match) {
+          flushSentenceBuffer();
+        } else {
+          // Emergency flush if buffer too large
+          if (sentenceBuffer.length > MAX_BUFFER_CHARS) {
+            flushSentenceBuffer();
+          } else {
+            // Reset sentence gate timeout
+            if (sentenceGateTimer) clearTimeout(sentenceGateTimer);
+            sentenceGateTimer = setTimeout(() => {
+              flushSentenceBuffer();
+            }, SENTENCE_GATE_TIMEOUT_MS);
+          }
+        }
+      };
+
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          // Decode chunk and add to buffer
+          buffer += decoder.decode(value, { stream: true });
+
+          // Process complete SSE messages
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || ""; // Keep incomplete line in buffer
+
+          for (const line of lines) {
+            if (line.startsWith("data: ")) {
+              const data = line.slice(6);
+              try {
+                const chunk = JSON.parse(data);
+
+                if (chunk.type === "session") {
+                  // Update session ID
+                  streamSessionId = chunk.session_id;
+                  setSessionId(chunk.session_id);
+                } else if (chunk.type === "content") {
+                  // Add to sentence buffer for gated rendering
+                  addToSentenceBuffer(chunk.content);
+                } else if (chunk.type === "done") {
+                  // Stream ended - flush any remaining content
+                  streamEnded = true;
+                  flushSentenceBuffer();
+
+                  // Save final metadata
+                  finalSuggestions = chunk.suggestions || [];
+                  finalProducts = chunk.products || [];
+
+                  // Wait for all rendering to complete
+                  const finishAllRendering = async () => {
+                    while (renderQueue.length > 0 || isRendering) {
+                      await new Promise((r) => setTimeout(r, 100));
+                    }
+
+                    setMessages((prev: Message[]) => {
+                      const newMessages = [...prev];
+                      const lastMessage = newMessages[newMessages.length - 1];
+                      if (
+                        lastMessage &&
+                        lastMessage.id === assistantMessageId
+                      ) {
+                        lastMessage.isTyping = false;
+                        lastMessage.suggestions = finalSuggestions;
+                        lastMessage.products = finalProducts;
+                      }
+                      return newMessages;
+                    });
+                  };
+                  finishAllRendering();
+                } else if (chunk.type === "error") {
+                  throw new Error(chunk.error || "Stream error");
+                }
+              } catch (err) {
+                console.error("Failed to parse SSE chunk:", err);
+              }
+            }
+          }
+        }
       }
 
       setIsTyping(false);
       removeImage();
-
-      // Use typing effect to show response with products
-      typeMessage(data.message, data.suggestions, data.products);
     } catch (err) {
       console.error("Failed to send message:", err);
       setIsTyping(false);
       removeImage();
-      typeMessage("I'm sorry, I encountered an error. Please try again.");
+
+      // Update assistant message with error
+      setMessages((prev: Message[]) => {
+        const newMessages = [...prev];
+        const lastMessage = newMessages[newMessages.length - 1];
+        if (lastMessage && lastMessage.id === assistantMessageId) {
+          lastMessage.content =
+            "I'm sorry, I encountered an error. Please try again.";
+          lastMessage.isTyping = false;
+        }
+        return newMessages;
+      });
     }
   };
 
@@ -621,6 +793,36 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
     // Default fixed positioning for floating widget
     return base;
   }, [position, offsetX, offsetY, config.isContained]);
+
+  // Helper to render message content as markdown
+  const renderMessageContent = (content: string, isTyping?: boolean) => {
+    try {
+      // Use marked to parse markdown
+      // marked.parse returns a string or Promise<string>. In modern versions it is sync unless async: true is set.
+      let html = marked.parse(content) as string;
+
+      if (isTyping) {
+        // If typing, we want to append the cursor inside the last <p> tag if it exists
+        // so it stays inline with the last sentence
+        if (html.includes("</p>")) {
+          html = html.replace(
+            /<\/p>\s*$/,
+            '<span class="chatbot-typing-cursor"></span></p>',
+          );
+        } else {
+          html += '<span class="chatbot-typing-cursor"></span>';
+        }
+      }
+
+      return html;
+    } catch (e) {
+      console.error("Error parsing markdown:", e);
+      return (
+        content +
+        (isTyping ? '<span class="chatbot-typing-cursor"></span>' : "")
+      );
+    }
+  };
 
   return (
     <div className="chatbot-widget-container" style={positionStyle}>
@@ -750,11 +952,10 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
                       <div
                         className="chatbot-message-text"
                         dangerouslySetInnerHTML={{
-                          __html:
-                            msg.content +
-                            (msg.isTyping
-                              ? '<span class="chatbot-typing-cursor">|</span>'
-                              : ""),
+                          __html: renderMessageContent(
+                            msg.content,
+                            msg.isTyping,
+                          ),
                         }}
                       />
                     </div>

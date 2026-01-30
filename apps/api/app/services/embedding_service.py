@@ -308,14 +308,21 @@ class EmbeddingService:
                     
                     logger.info(f"Batch {batch_start // EMBEDDING_BATCH_SIZE + 1}: Stored {total_stored}/{total_chunks} embeddings")
 
-                # Update status to COMPLETED after successful embedding and clear any previous error
+                # Update status to COMPLETED after successful embedding
+                # Keep existing error_message if it contains a warning (like quota reached)
+                # Only clear error messages that indicate actual failures
+                update_values = {
+                    'status': KnowledgeSourceStatus.COMPLETED
+                }
+                
+                # Only clear error_message if it doesn't contain warnings like "quota"
+                if not ks.error_message or 'quota' not in ks.error_message.lower():
+                    update_values['error_message'] = None
+                
                 await db.execute(
                     update(KnowledgeSource)
                     .where(KnowledgeSource.id == knowledge_source_id)
-                    .values(
-                        status=KnowledgeSourceStatus.COMPLETED,
-                        error_message=None  # Clear any previous error message
-                    )
+                    .values(**update_values)
                 )
                 # Commit immediately so frontend polling sees the updated status without manual refresh
                 await db.commit()
