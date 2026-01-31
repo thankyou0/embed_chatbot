@@ -294,6 +294,7 @@ class AnalyticsService:
             confidence = metadata.get("retrieval_confidence", 0.0)
             unanswered_messages.append({
                 "message": user_msg,
+                "bot_response": bot_response.content if bot_response else None,
                 "confidence": confidence
             })
         
@@ -310,7 +311,10 @@ class AnalyticsService:
                     "confidences": []
                 }
             
-            query_groups[query_text]["messages"].append(msg)
+            query_groups[query_text]["messages"].append({
+                "msg": msg,
+                "bot_response": item["bot_response"]
+            })
             query_groups[query_text]["confidences"].append(item["confidence"])
         
         # Build response
@@ -324,9 +328,10 @@ class AnalyticsService:
             # Get up to 3 sample messages
             samples = [
                 UnansweredQuerySample(
-                    id=m.id,
-                    content=m.content,
-                    created_at=m.created_at
+                    id=m["msg"].id,
+                    content=m["msg"].content,
+                    bot_response=m["bot_response"],
+                    created_at=m["msg"].created_at
                 )
                 for m in messages[:3]
             ]
@@ -335,8 +340,8 @@ class AnalyticsService:
                 query=data["original_query"],
                 count=len(messages),
                 avg_confidence=round(avg_confidence, 3),
-                first_asked=min(m.created_at for m in messages),
-                last_asked=max(m.created_at for m in messages),
+                first_asked=min(m["msg"].created_at for m in messages),
+                last_asked=max(m["msg"].created_at for m in messages),
                 sample_messages=samples
             ))
         

@@ -777,13 +777,19 @@ class ChatService:
                 "**Instructions:**\n"
                 "1. **Accuracy First**: Answer ONLY from the provided context. If information is not in the context, say so politely.\n"
                 "2. **Conversational**: Be friendly and natural. Handle greetings warmly. Use emojis sparingly (only for greetings or excitement).\n"
-                "3. **Out-of-Scope Queries**: If asked about something completely unrelated to the business (e.g., general knowledge, other companies), "
-                f"reply nicely that you can only answer questions related to {chatbot.name}, and append the tag `[[IRRELEVANT]]` to the very end of your response.\n"
+                "3. **Out-of-Scope Queries**: If asked about something completely unrelated to the business (e.g., general knowledge, other companies, competitors), "
+                f"reply nicely and professionally. You may answer generic questions about the industry if helpful, but if the query is about a specific competitor or unrelated topic, politely redirect to {chatbot.name}. "
+                "Append `[[IRRELEVANT]]` to the end ONLY if the query is spam or completely unrelated to the business domain.\n"
                 "4. **Missing Information**: Use [[MISSING_INFO]] ONLY if ALL these conditions are met: "
-                "(a) The query is about a business-specific topic (products, services, policies, pricing, features, etc.), "
+                "(a) The query is about a SPECIFIC business detail (specific product price, specific policy clause, etc.) that is NOT in the context, "
                 "(b) You cannot find the answer in the provided context, "
                 "(c) You must respond with a message saying you don't have that information. "
-                "DO NOT use [[MISSING_INFO]] for: greetings, contact information, general business info, or when you CAN answer from context.\n"
+                "DO NOT use [[MISSING_INFO]] for: \n"
+                "   - Greetings (Hi, Hello)\n"
+                "   - General business questions (What do you do?)\n"
+                "   - Contact requests (How do I contact you?)\n"
+                "   - Product listings (What products do you have?)\n"
+                "   - When you can provide a partial or helpful answer.\n"
                 "5. **Response Format**: \n"
                 "   - Use HTML formatting: <strong>bold</strong>, <em>italic</em>, <br> for line breaks\n"
                 "   - For lists: use <ul><li>item</li></ul> or <ol><li>item</li></ol>\n"
@@ -794,7 +800,7 @@ class ChatService:
                 "   - DO NOT use markdown symbols like ##, *, **, ***, - for formatting\n"
                 "   - DO NOT use <u> or underline tags\n"
                 "6. **Product Listings**: When products will be displayed (product carousel will show automatically), keep your text response MINIMAL:\n"
-                "   - Use a short intro like 'Here are our products:' or 'Available products:'\n"
+                "   - Use a short intro like 'Here are our products:' or 'Check out our collection:'\n"
                 "   - DO NOT list product details (name, price, etc.) as they appear in the product carousel\n"
                 "   - Keep response to 1-2 sentences maximum\n"
                 "7. **Price Filters**: If a price filter is applied, STRICTLY only mention products that fall within the specified price range. Do not recommend products outside the user's budget.\n"
@@ -807,8 +813,14 @@ class ChatService:
                 "1. Your Answer (use HTML formatting as specified)\n"
                 "2. (Optional) `[[IRRELEVANT]]` or `[[MISSING_INFO]]` tag if applicable. Do NOT output both.\n"
                 "3. `---SUGGESTIONS---`\n"
-                "4. JSON list of exactly 2 follow-up questions from the USER'S perspective (e.g. \"How do I...?\").\n"
-                "5. `---END---`"
+                "4. JSON list of exactly 3 candidates for the USER'S next message. RULES FOR SUGGESTIONS:\n"
+                    "   - Suggestions MUST be user utterances (what the user would click/ say next), not questions the bot would ask.\n"
+                    "   - Suggestions SHOULD be actionable or intent-bearing (examples: 'Show watches under ₹3000', 'Filter by sporty', 'Surprise me — best sellers').\n"
+                    "   - Suggestions MUST NOT be bot-originated questions eg. 'What is your budget?'.\n"
+                    "   - If the bot asked a clarifying question in the answer, the suggestions SHOULD be plausible *user responses* to that question (e.g., 'Under ₹3000', 'No budget').\n"
+                    "   - Do NOT repeat exactly the bot's own question as a suggestion.\n"
+                    "   - Keep each suggestion medium (ideally 4 to 12 words) and written from the user's perspective.\n"
+                "5. `---END---`\n"
             )
             
             llm_messages = [{"role": "system", "content": system_prompt}]
@@ -934,18 +946,35 @@ class ChatService:
             is_missing_info = "[[MISSING_INFO]]" in full_content
             
             # Post-processing validation
+            # Post-processing validation
             if is_missing_info:
                 user_lower = text_content.lower().strip()
                 response_lower = full_content.lower()
                 
-                greeting_patterns = ['hi', 'hello', 'hey', 'good morning', 'good afternoon', 'good evening']
-                is_greeting = any(user_lower.startswith(g) for g in greeting_patterns)
+                # Check for greetings
+                greeting_patterns = [
+                    r'\bhi+\b', r'\bhello+\b', r'\bhey+\b', r'\bheya+\b', 
+                    r'\bgood\s+morning', r'\bgood\s+afternoon', r'\bgood\s+evening',
+                    r'\bhowdy\b', r'\bwhat\'?s\s+up\b'
+                ]
+                is_greeting = any(re.search(p, user_lower) for p in greeting_patterns)
                 
-                contact_patterns = ['contact', 'reach', 'phone', 'email', 'address', 'location']
+                # Check for contact info queries
+                contact_patterns = ['contact', 'reach', 'phone', 'email', 'address', 'location', 'call', 'support']
                 has_contact_query = any(pattern in user_lower for pattern in contact_patterns)
-                has_contact_info = any(pattern in response_lower for pattern in ['email', 'phone', 'contact', 'address', '@', 'call'])
+                # If user asks for contact and we give a response (even if generic), don't mark as missing info
+                # The prompt should prevent MISSING_INFO tag here, but as a fallback:
+                if has_contact_query:
+                    # If response contains helpful keywords or is not just "I don't know"
+                    if len(response_lower) > 20: 
+                        is_missing_info = False
+
+                # Check for product queries
+                # If we found products and are returning them, it's NOT missing info
+                if products:
+                    is_missing_info = False
                 
-                if is_greeting or (has_contact_query and has_contact_info):
+                if is_greeting:
                     is_missing_info = False
             
             # Clean content

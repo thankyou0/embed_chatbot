@@ -720,11 +720,9 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
   };
 
   const handleReportAnswer = async (userMessage: string, messageId: string) => {
-    // Allow reporting in preview mode (just show toast, skip API call)
-    if (!chatbotId || !sessionId || isPreview) {
-      // In preview mode, just show toast and mark as reported
-      setReportedMessages((prev) => new Set(prev).add(messageId));
-      setToast("Thank you for your feedback!");
+    // Allow reporting in preview mode (submit report and show toast)
+    if (!chatbotId || !sessionId) {
+      setToast("missing fields. can't submit report");
       setTimeout(() => setToast(null), 3000);
       return;
     }

@@ -113,13 +113,13 @@ class MemberService:
         await db.commit()
         await db.refresh(member)
         
-        # Log team activity to all chatbots in the tenant (limited to first 5)
+        # Log team activity to all chatbots in the tenant
         from app.models.chatbot import ChatbotActivity, Chatbot
         
         chatbots_stmt = select(Chatbot.id).where(
             Chatbot.tenant_id == tenant_id,
             Chatbot.deleted_at.is_(None)
-        ).limit(5)
+        )
         chatbot_ids = (await db.execute(chatbots_stmt)).scalars().all()
         
         for chatbot_id in chatbot_ids:
@@ -275,13 +275,13 @@ class MemberService:
         await db.commit()
         await db.refresh(member)
         
-        # Log team activity to all chatbots in the tenant (limited to first 5)
+        # Log team activity to all chatbots in the tenant
         from app.models.chatbot import ChatbotActivity, Chatbot
         
         chatbots_stmt = select(Chatbot.id).where(
             Chatbot.tenant_id == tenant_id,
             Chatbot.deleted_at.is_(None)
-        ).limit(5)
+        )
         chatbot_ids = (await db.execute(chatbots_stmt)).scalars().all()
         
         for chatbot_id in chatbot_ids:
@@ -336,6 +336,27 @@ class MemberService:
         await db.commit()
         await db.refresh(member)
         
+        # Log team activity to all chatbots in the tenant
+        from app.models.chatbot import ChatbotActivity, Chatbot
+        
+        chatbots_stmt = select(Chatbot.id).where(
+            Chatbot.tenant_id == tenant_id,
+            Chatbot.deleted_at.is_(None)
+        )
+        chatbot_ids = (await db.execute(chatbots_stmt)).scalars().all()
+        
+        for chatbot_id in chatbot_ids:
+            activity = ChatbotActivity(
+                chatbot_id=chatbot_id,
+                user_id=admin_user.id,
+                activity_type="team_member_password_reset",
+                description=f"Team member password reset: {member.email} by {admin_user.email}"
+            )
+            db.add(activity)
+        
+        if chatbot_ids:
+            await db.commit()
+            
         logger.success(f"Password reset for member: {member.email}")
         
         permissions = await MemberService._get_member_chatbot_permissions(db, member.id)
@@ -403,13 +424,13 @@ class MemberService:
         await db.commit()
         await db.refresh(member)
         
-        # Log team activity to all chatbots in the tenant (limited to first 5)
+        # Log team activity to all chatbots in the tenant
         from app.models.chatbot import ChatbotActivity, Chatbot
         
         chatbots_stmt = select(Chatbot.id).where(
             Chatbot.tenant_id == tenant_id,
             Chatbot.deleted_at.is_(None)
-        ).limit(5)
+        )
         chatbot_ids = (await db.execute(chatbots_stmt)).scalars().all()
         
         for chatbot_id in chatbot_ids:
@@ -465,13 +486,13 @@ class MemberService:
         await db.delete(member)
         await db.commit()
         
-        # Log team activity to all chatbots in the tenant (limited to first 5)
+        # Log team activity to all chatbots in the tenant
         from app.models.chatbot import ChatbotActivity, Chatbot
         
         chatbots_stmt = select(Chatbot.id).where(
             Chatbot.tenant_id == tenant_id,
             Chatbot.deleted_at.is_(None)
-        ).limit(5)
+        )
         chatbot_ids = (await db.execute(chatbots_stmt)).scalars().all()
         
         for chatbot_id in chatbot_ids:

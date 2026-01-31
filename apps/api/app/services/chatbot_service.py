@@ -456,6 +456,16 @@ class ChatbotService:
             await db.commit()
             await db.refresh(existing_permission)
             
+            # Log activity
+            activity = ChatbotActivity(
+                chatbot_id=chatbot_id,
+                user_id=user.id,
+                activity_type="permission_updated",
+                description=f"Permission updated for user {target_user.email} to {request.permission_level.value} by {user.email}"
+            )
+            db.add(activity)
+            await db.commit()
+            
             logger.success(f"Permission updated for user {target_user.email} on chatbot {chatbot.name}")
             
             return PermissionResponse(
@@ -487,6 +497,16 @@ class ChatbotService:
         db.add(permission)
         await db.commit()
         await db.refresh(permission)
+        
+        # Log activity
+        activity = ChatbotActivity(
+            chatbot_id=chatbot_id,
+            user_id=user.id,
+            activity_type="permission_granted",
+            description=f"Permission granted to user {target_user.email} as {request.permission_level.value} by {user.email}"
+        )
+        db.add(activity)
+        await db.commit()
         
         logger.success(f"Permission granted to user {target_user.email} on chatbot {chatbot.name}")
         
@@ -608,11 +628,25 @@ class ChatbotService:
         if not permission:
             raise NotFoundError("Permission not found")
         
+        # Get target user email for logging
+        result = await db.execute(select(User.email).where(User.id == target_user_id))
+        target_email = result.scalar_one_or_none() or "Unknown"
+
         # Cannot remove OWNER's permission
         if permission.permission_level == PermissionLevel.OWNER:
             raise BadRequestError("Cannot remove OWNER permission. Transfer ownership first.")
         
         await db.delete(permission)
+        await db.commit()
+        
+        # Log activity
+        activity = ChatbotActivity(
+            chatbot_id=chatbot_id,
+            user_id=user.id,
+            activity_type="permission_removed",
+            description=f"Permission removed for user {target_email} by {user.email}"
+        )
+        db.add(activity)
         await db.commit()
         
         logger.success(f"Permission removed for user {target_user_id} on chatbot {chatbot.name}")
@@ -1955,22 +1989,24 @@ class ChatbotService:
             breakdown['total_qa_count'] = qa_pairs_count
             total_kb_size += qa_pairs_count * 500  # Estimate 500 bytes per QA pair
 
-        # 3. Recent Activity (Knowledge additions and Status changes)
+        # 3. Recent Activity (Knowledge, Status, Team, Permission changes)
         activity = []
-        
-        # Fetch explicit activities from database
-        activity_stmt = select(ChatbotActivity).where(ChatbotActivity.chatbot_id == chatbot_id).order_by(ChatbotActivity.created_at.desc()).limit(10)
+        # Fetch all recent activities for this chatbot (team, permission, knowledge, status, etc.)
+        activity_stmt = select(ChatbotActivity).where(ChatbotActivity.chatbot_id == chatbot_id).order_by(ChatbotActivity.created_at.desc()).limit(15)
         db_activities = (await db.execute(activity_stmt)).scalars().all()
-        
+
         for db_act in db_activities:
+            # Map backend activity_type to frontend expected type if needed
+            frontend_type = db_act.activity_type
+            # Optionally, you could map/normalize here if needed
             activity.append(RecentActivity(
                 id=db_act.id,
-                type=db_act.activity_type,
+                type=frontend_type,
                 description=db_act.description,
                 created_at=db_act.created_at
             ))
 
-        # Sort combined activity by date
+        # Sort combined activity by date (should already be sorted, but for safety)
         activity.sort(key=lambda x: x.created_at, reverse=True)
 
         return ChatbotStatsResponse(
@@ -1979,7 +2015,7 @@ class ChatbotService:
             active_knowledge_sources=active_ks,
             total_kb_size=total_kb_size,
             knowledge_breakdown=KnowledgeSourceBreakdown(**breakdown),
-            recent_activity=activity[:10]
+            recent_activity=activity[:15]
         )
 
     @staticmethod

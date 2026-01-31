@@ -17,6 +17,7 @@ class AnalyticsOverviewResponse(BaseModel):
 class UnansweredQuerySample(BaseModel):
     id: UUID
     content: str
+    bot_response: Optional[str] = None
     created_at: datetime
 
 
