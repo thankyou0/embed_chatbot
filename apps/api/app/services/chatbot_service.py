@@ -1011,9 +1011,9 @@ class ChatbotService:
                 CrawlerService.start_crawl,
                 knowledge_source_id=existing_ks.id,
                 base_url=normalized_url,
-                max_pages=999999,  # Very high limit - quota will stop it
                 is_recrawl=True,
-                quota_limit=quota['total_limit']  # Pass total limit, runtime check will enforce
+                quota_limit=quota['total_limit'],  # Pass total limit, runtime check will enforce
+                background_tasks=background_tasks
             )
             return KnowledgeSourceResponse.model_validate(existing_ks)
 
@@ -1056,9 +1056,9 @@ class ChatbotService:
             CrawlerService.start_crawl,
             knowledge_source_id=ks.id,
             base_url=request.base_url,
-            max_pages=999999,  # Very high limit - quota will stop it
             is_recrawl=False,
-            quota_limit=quota['total_limit']  # Pass total limit, runtime check will enforce
+            quota_limit=quota['total_limit'],  # Pass total limit, runtime check will enforce
+            background_tasks=background_tasks
         )
 
         return KnowledgeSourceResponse.model_validate(ks)
@@ -2213,10 +2213,10 @@ class ChatbotService:
             CrawlerService.start_crawl,
             knowledge_source_id=str(knowledge_source_id),
             base_url=ks.source_url,
-            max_pages=999999,  # No per-crawl limit, quota will stop it
             is_recrawl=True,
             crawl_history_id=str(crawl_history.id),
-            quota_limit=quota['total_limit']  # CRITICAL: Enforce quota on sync
+            quota_limit=quota['total_limit'],  # CRITICAL: Enforce quota on sync
+            background_tasks=background_tasks
         )
         
         return TriggerCrawlResponse(

@@ -43,3 +43,13 @@ To compete with Kriyanta, you could focus on creating unique and high-quality ha
 
 
 still 'hi' msg is considered as an 'missing info'.
+
+suggestions --> 
+What is your brother's favorite color
+What is your budget for the gift
+Does your brother have a preferred clock style
+
+
+IT'S RED. (missing info)
+Red Clock Options: We have a few clock options that feature the color red, but unfortunately, none of our current clock products are primarily red. However, we do have clocks with golden or metallic finishes that might complement a red accent wall or decor.
+One option to consider is the DOUBLE RING GOLDEN METAL WALL CLOCK, which has a luxurious golden finish.

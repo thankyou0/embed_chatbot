@@ -12,7 +12,6 @@ class KnowledgeSourceBase(BaseModel):
 
 class KnowledgeSourceCreate(BaseModel):
     base_url: str
-    max_pages: Optional[int] = 100
 
 
 class UploadedFileResponse(BaseModel):

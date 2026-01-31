@@ -3,9 +3,10 @@ import hashlib
 import urllib.robotparser
 from urllib.parse import urljoin, urlparse
 from typing import Set, List, Optional, AsyncGenerator, Dict
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import httpx
 import trafilatura
+from fastapi import BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete, and_, func
 from app.models.knowledge import (
@@ -21,7 +22,7 @@ from bs4 import BeautifulSoup
 logger = get_logger(__name__)
 
 class WebsiteCrawler:
-    def __init__(self, base_url: str, max_pages: int = 999999):
+    def __init__(self, base_url: str):
         # Normalize base_url: ensure it has a scheme and trailing slash if needed
         parsed_base = urlparse(base_url)
         if not parsed_base.scheme:
@@ -36,8 +37,6 @@ class WebsiteCrawler:
         # This restricts crawling to only pages under this path
         self.path_prefix = parsed_base.path.rstrip('/') or '/'
         
-        # max_pages is set very high by default - quota_limit in start_crawl() controls actual limit
-        self.max_pages = max_pages
         self.visited_urls: Set[str] = set()
         self.queue: List[str] = [base_url]
         self.robot_parser = urllib.robotparser.RobotFileParser()
@@ -125,7 +124,7 @@ class WebsiteCrawler:
         }
 
         async with httpx.AsyncClient(timeout=15.0, follow_redirects=True, headers=headers) as client:
-            # No max_pages limit in loop - quota_limit in start_crawl() will stop crawling
+            # Quota_limit in start_crawl() will stop crawling
             while self.queue:
                 # Sort queue by priority before each pop (Smart DFS)
                 current_context = list(self.visited_urls)[-1] if self.visited_urls else self.base_url
@@ -206,8 +205,8 @@ class WebsiteCrawler:
 
                     if extracted:
                         yield {
-                            'url': url,
                             'title': title,
+                            'url': url,
                             'content': content_to_store,
                             'is_product': product_data is not None,
                             'product_metadata': product_data
@@ -240,10 +239,10 @@ class CrawlerService:
     async def start_crawl(
         knowledge_source_id: str,
         base_url: str,
-        max_pages: int = 100,
         is_recrawl: bool = False,
         crawl_history_id: Optional[str] = None,
-        quota_limit: Optional[int] = None  # New parameter for quota enforcement
+        quota_limit: Optional[int] = None,  # New parameter for quota enforcement
+        background_tasks: Optional[BackgroundTasks] = None
     ):
         """
         Entry point for background crawl job with diff detection support and quota management.
@@ -251,10 +250,10 @@ class CrawlerService:
         Args:
             knowledge_source_id: ID of the knowledge source
             base_url: Starting URL to crawl
-            max_pages: Maximum pages to crawl in this session
             is_recrawl: Whether this is a recrawl of existing source
             crawl_history_id: ID of crawl history entry (if exists)
             quota_limit: Total page quota remaining (None = unlimited)
+            background_tasks: Optional FastAPI background tasks for chaining
         """
         session_factory = get_session_factory()
         async with session_factory() as db:
@@ -292,12 +291,10 @@ class CrawlerService:
                 # Get existing pages for this knowledge source (for recrawl detection)
                 existing_pages: Dict[str, CrawledPage] = {}
                 if is_recrawl:
+                    # Load BOTH active and removed pages to support resurrection
                     result = await db.execute(
                         select(CrawledPage).where(
-                            and_(
-                                CrawledPage.knowledge_source_id == knowledge_source_id,
-                                CrawledPage.is_removed == False
-                            )
+                            CrawledPage.knowledge_source_id == knowledge_source_id
                         )
                     )
                     for page in result.scalars().all():
@@ -355,7 +352,7 @@ class CrawlerService:
                     logger.warning(f"URL pre-check encountered an issue but proceeding: {e}")
 
                 # Start crawling
-                crawler = WebsiteCrawler(base_url, max_pages)
+                crawler = WebsiteCrawler(base_url)
                 
                 # Check robots.txt BEFORE starting the crawl loop
                 if not await crawler.can_fetch(base_url):
@@ -406,10 +403,15 @@ class CrawlerService:
                             break  # Stop crawling - don't add this page
                     
                     if url in existing_pages:
-                        # Check if content changed
                         existing_page = existing_pages[url]
-                        if existing_page.content_hash != content_hash:
-                            # Content changed - update
+                        
+                        # 🔁 RESURRECT if page was previously removed
+                        resurrected = False
+                        if existing_page.is_removed:
+                            resurrected = True
+                            
+                        if existing_page.content_hash != content_hash or resurrected:
+                            # Content changed or resurrected - update
                             await db.execute(
                                 update(CrawledPage)
                                 .where(CrawledPage.id == existing_page.id)
@@ -417,14 +419,20 @@ class CrawlerService:
                                     title=page_data['title'],
                                     content=page_data['content'],
                                     content_hash=content_hash,
+                                    is_removed=False,  # 🔥 resurrect
                                     is_product=is_product,
                                     product_metadata=product_metadata,
                                     updated_at=datetime.now(timezone.utc)
                                 )
                             )
+                            
+                            if resurrected:
+                                logger.info(f"Resurrected page: {url}")
+                            else:
+                                logger.info(f"Updated page: {url} (is_product: {is_product})")
+                                
                             pages_updated += 1
-                            logger.info(f"Updated page: {url} (is_product: {is_product})")
-                        # else: Hash match - skip (no change)
+                        # else: Hash match and not removed - skip (no change)
                     else:
                         # New URL - add
                         crawled_page = CrawledPage(
@@ -626,6 +634,13 @@ class CrawlerService:
                         await db.commit()
                         logger.info(f"No content changes detected for KS {knowledge_source_id}, marked as COMPLETED")
 
+                # Trigger background cleanup for old removed pages (daily policy)
+                if background_tasks:
+                    background_tasks.add_task(
+                        CrawlerService.cleanup_old_removed_pages,
+                        days=30
+                    )
+
             except Exception as e:
                 error_msg = str(e)
                 logger.error(f"Crawl failed for {base_url}: {error_msg}")
@@ -687,5 +702,52 @@ class CrawlerService:
                 except Exception as update_error:
                     logger.error(f"Failed to handle crawl error: {update_error}")
                     await db.rollback()
+
+    @staticmethod
+    async def cleanup_old_removed_pages(days: int = 30):
+        """Hard delete pages that have been marked as removed for more than X days."""
+        from app.models.knowledge import Embedding
+        session_factory = get_session_factory()
+        cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+
+        async with session_factory() as db:
+            try:
+                # Find pages eligible for hard delete
+                stmt = select(CrawledPage).where(
+                    and_(
+                        CrawledPage.is_removed == True,
+                        CrawledPage.updated_at < cutoff
+                    )
+                )
+
+                result = await db.execute(stmt)
+                pages_to_delete = result.scalars().all()
+
+                if not pages_to_delete:
+                    return
+
+                page_count = len(pages_to_delete)
+                logger.info(f"Hard deleting {page_count} stale removed pages (older than {days} days)")
+
+                for page in pages_to_delete:
+                    # 1. Delete associated embeddings using URL-based approach 
+                    # consistent with EmbeddingService.cleanup_removed_pages_embeddings
+                    delete_emb_stmt = delete(Embedding).where(
+                        and_(
+                            Embedding.knowledge_source_id == page.knowledge_source_id,
+                            Embedding.metadata_json['url'].astext == page.url
+                        )
+                    )
+                    await db.execute(delete_emb_stmt)
+
+                    # 2. Delete the page itself
+                    await db.delete(page)
+
+                await db.commit()
+                logger.success(f"Successfully hard-deleted {page_count} stale removed pages and their embeddings")
+
+            except Exception as e:
+                logger.error(f"Error during removed pages cleanup: {e}")
+                await db.rollback()
 
 
