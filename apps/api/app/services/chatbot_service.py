@@ -19,6 +19,7 @@ from app.core.exceptions import (
     NotFoundError,
     ForbiddenError,
 )
+from app.services.billing_service import BillingService
 from app.schemas.chatbot import (
     ChatbotCreate,
     ChatbotUpdate,
@@ -946,22 +947,23 @@ class ChatbotService:
     # ============== Knowledge Base Management ==============
 
     @staticmethod
+    @staticmethod
     async def get_remaining_page_quota(db: AsyncSession, chatbot_id: UUID, user: User) -> dict:
         """
-        Calculate remaining crawl page quota for a chatbot based on user's tier.
+        Calculate remaining crawl page quota for a chatbot based on tenant's subscription.
         Returns dict with total_limit, used, and remaining pages.
         """
-        # Get user's tier (for now, assume free tier - update when you add user tiers)
-        user_tier = getattr(user, 'tier', 'free')
-        total_limit = get_limit(user_tier, 'max_total_crawled_pages')
+        # Get billing overview for the tenant
+        billing_overview = await BillingService.get_billing_overview(db, user.tenant_id, user)
+        total_limit = billing_overview.current_plan.limits.knowledge_pages
+        user_tier = billing_overview.subscription.plan_type
         
         # Count existing crawled pages for this chatbot (across all knowledge sources)
         stmt = select(func.count(CrawledPage.id)).join(
             KnowledgeSource,
             KnowledgeSource.id == CrawledPage.knowledge_source_id
         ).where(
-            KnowledgeSource.chatbot_id == chatbot_id,
-            CrawledPage.is_removed == False  # Don't count removed pages
+            KnowledgeSource.chatbot_id == chatbot_id
         )
         
         result = await db.execute(stmt)

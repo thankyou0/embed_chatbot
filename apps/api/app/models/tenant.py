@@ -15,4 +15,5 @@ class Tenant(Base):
     # Relationships
     users = relationship("User", back_populates="tenant", cascade="all, delete-orphan")
     chatbots = relationship("Chatbot", back_populates="tenant", cascade="all, delete-orphan")
+    subscription = relationship("Subscription", back_populates="tenant", uselist=False, cascade="all, delete-orphan")
 

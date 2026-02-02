@@ -6,5 +6,6 @@ from app.models.chatbot_permission import ChatbotPermission, PermissionLevel
 from app.models.chatbot_appearance import ChatbotAppearance, WidgetPosition
 from app.models.knowledge import KnowledgeSource, CrawledPage, KnowledgeSourceType, KnowledgeSourceStatus
 from app.models.chat import ChatSession, ChatMessage, MessageRole
+from app.models.subscription import Subscription, UsageRecord, BillingHistory, PlanType, BillingCycle, SubscriptionStatus
 
-__all__ = ["Tenant", "User", "UserRole", "PasswordResetToken", "Chatbot", "ChatbotActivity", "ChatbotPermission", "PermissionLevel", "ChatbotAppearance", "WidgetPosition", "KnowledgeSource", "CrawledPage", "KnowledgeSourceType", "KnowledgeSourceStatus", "ChatSession", "ChatMessage", "MessageRole"]
+__all__ = ["Tenant", "User", "UserRole", "PasswordResetToken", "Chatbot", "ChatbotActivity", "ChatbotPermission", "PermissionLevel", "ChatbotAppearance", "WidgetPosition", "KnowledgeSource", "CrawledPage", "KnowledgeSourceType", "KnowledgeSourceStatus", "ChatSession", "ChatMessage", "MessageRole", "Subscription", "UsageRecord", "BillingHistory", "PlanType", "BillingCycle", "SubscriptionStatus"]

@@ -4,9 +4,8 @@ should avoid mentioning "context" --> The price of the Moissanite Oval Diamond S
 
 Team member activity not showing in recent activity
 
-offset x & y is not working in embed widget.
+The bubble should now appear in the correct position with your custom colors the moment the page loads, without any jump or default settings flashing.
 
-embed widget still showing duplicate suggestions
 
 preview widget conversation count should not be counted in stats.
 

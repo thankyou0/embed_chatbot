@@ -198,9 +198,10 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
   const apiUrl = config.apiUrl || "http://localhost:8000";
   const chatbotId = config.chatbotId;
 
-  // In preview mode, prioritize config prop over widgetConfig from API for real-time updates
-  // In production, use widgetConfig from API (fetched once)
   const isPreview = config.isPreview || false;
+  const [isConfigLoading, setIsConfigLoading] = useState(
+    !isPreview && !!chatbotId,
+  );
 
   const position = isPreview
     ? config.position || config.theme?.position || "bottom-right"
@@ -314,12 +315,94 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
     isAtBottomRef.current = isAtBottom;
   };
 
-  // Fetch widget config and show welcome message on first open
-  // Skip API fetch in preview mode - use config prop directly
+  const fetchWidgetConfig = async () => {
+    if (!chatbotId || isPreview) return;
+
+    try {
+      const response = await fetch(`${apiUrl}/api/v1/chat/${chatbotId}/config`);
+      if (response.ok) {
+        const data = await response.json();
+        setWidgetConfig(data);
+
+        // Only set welcome message if we don't have messages yet
+        setMessages((prev) => {
+          if (prev.length > 0) return prev;
+
+          if (data.is_paused) {
+            const pausedMessage = `🚧 ${data.display_name || "This chatbot"} is currently offline for maintenance. Please check back later. We appreciate your patience!`;
+            return [
+              {
+                id: generateId(),
+                role: "assistant",
+                content: pausedMessage,
+                suggestions: [],
+                timestamp: new Date(),
+              },
+            ];
+          } else {
+            const welcomeMsg =
+              data.welcome_message || "Hi! How can I help you today?";
+            const initialSugs = data.initial_suggestions || [];
+            return [
+              {
+                id: generateId(),
+                role: "assistant",
+                content: welcomeMsg,
+                suggestions: initialSugs,
+                timestamp: new Date(),
+              },
+            ];
+          }
+        });
+      } else {
+        // Fallback to default if load fails
+        setWidgetConfig({});
+        setMessages((prev) => {
+          if (prev.length > 0) return prev;
+          return [
+            {
+              id: generateId(),
+              role: "assistant",
+              content: "Hi! How can I help you today?",
+              suggestions: [],
+              timestamp: new Date(),
+            },
+          ];
+        });
+      }
+    } catch (err) {
+      console.error("Failed to fetch widget config:", err);
+      setWidgetConfig({});
+      setMessages((prev) => {
+        if (prev.length > 0) return prev;
+        return [
+          {
+            id: generateId(),
+            role: "assistant",
+            content: "Hi! How can I help you today?",
+            suggestions: [],
+            timestamp: new Date(),
+          },
+        ];
+      });
+    } finally {
+      setIsConfigLoading(false);
+    }
+  };
+
+  // Pre-fetch widget config on mount to ensure bubble appearance (color, avatar, offsets) is correct
+  // even before the user opens the chat.
+  const hasInitedFetch = useRef(false);
   useEffect(() => {
-    if (isOpen && messages.length === 0 && chatbotId && !isPreview) {
+    if (!isPreview && chatbotId && !hasInitedFetch.current) {
+      hasInitedFetch.current = true;
       fetchWidgetConfig();
-    } else if (isOpen && messages.length === 0 && isPreview) {
+    }
+  }, [chatbotId, isPreview, apiUrl]);
+
+  // Show welcome message on first open (handles preview mode logic)
+  useEffect(() => {
+    if (isOpen && messages.length === 0 && isPreview) {
       // In preview mode, use config prop directly
       const welcomeMsg =
         config.welcomeMessage || "Hi! How can I help you today?";
@@ -339,71 +422,10 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
     isOpen,
     chatbotId,
     isPreview,
+    messages.length,
     config.welcomeMessage,
     config.initialSuggestions,
   ]);
-
-  const fetchWidgetConfig = async () => {
-    try {
-      const response = await fetch(`${apiUrl}/api/v1/chat/${chatbotId}/config`);
-      if (response.ok) {
-        const data = await response.json();
-        setWidgetConfig(data);
-
-        // Check if chatbot is paused
-        if (data.is_paused) {
-          const pausedMessage = `🚧 ${data.display_name || "This chatbot"} is currently offline for maintenance. Please check back later. We appreciate your patience!`;
-          setMessages([
-            {
-              id: generateId(),
-              role: "assistant",
-              content: pausedMessage,
-              suggestions: [],
-              timestamp: new Date(),
-            },
-          ]);
-        } else {
-          // Show welcome message
-          const welcomeMsg =
-            data.welcome_message || "Hi! How can I help you today?";
-          const initialSugs = data.initial_suggestions || [];
-
-          setMessages([
-            {
-              id: generateId(),
-              role: "assistant",
-              content: welcomeMsg,
-              suggestions: initialSugs,
-              timestamp: new Date(),
-            },
-          ]);
-        }
-      } else {
-        // Fallback to default
-        setMessages([
-          {
-            id: generateId(),
-            role: "assistant",
-            content: "Hi! How can I help you today?",
-            suggestions: [],
-            timestamp: new Date(),
-          },
-        ]);
-      }
-    } catch (err) {
-      console.error("Failed to fetch widget config:", err);
-      // Show default welcome
-      setMessages([
-        {
-          id: generateId(),
-          role: "assistant",
-          content: "Hi! How can I help you today?",
-          suggestions: [],
-          timestamp: new Date(),
-        },
-      ]);
-    }
-  };
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const input = e.target;
@@ -780,7 +802,7 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
       [position === "bottom-right" ? "right" : "left"]: `${16 + offsetX}px`,
     };
 
-    // If contained (like in preview), use absolute positioning
+    // If contained (like in preview or iframe), use absolute positioning
     if (config.isContained) {
       return {
         ...base,
@@ -788,8 +810,11 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
       };
     }
 
-    // Default fixed positioning for floating widget
-    return base;
+    // Default fixed positioning for floating widget on host site
+    return {
+      ...base,
+      position: "fixed",
+    };
   }, [position, offsetX, offsetY, config.isContained]);
 
   // Helper to render message content as markdown
@@ -823,7 +848,14 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
   };
 
   return (
-    <div className="chatbot-widget-container" style={positionStyle}>
+    <div
+      className="chatbot-widget-container"
+      style={{
+        ...positionStyle,
+        // Hide while loading in production to prevent "flash" of default blue settings
+        visibility: isConfigLoading ? "hidden" : "visible",
+      }}
+    >
       {isOpen ? (
         <div className="chatbot-window">
           {/* Header */}

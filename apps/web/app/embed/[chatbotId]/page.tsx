@@ -14,18 +14,21 @@ export default function EmbedPage() {
     script.async = true;
     script.onload = () => {
       if (window.ChatbotWidget) {
-        window.ChatbotWidget.init({
-          chatbotId: chatbotId,
-          apiUrl: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000",
-          isContained: true, // Use absolute positioning for embed
-        });
+        window.ChatbotWidget.init(
+          {
+            chatbotId: chatbotId,
+            apiUrl: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000",
+            isContained: true, // Use absolute positioning for embed
+          },
+          document.getElementById("chatbot-widget-container") || undefined,
+        );
       }
     };
     document.head.appendChild(script);
 
     return () => {
       const existingScript = document.querySelector(
-        'script[src*="widget.umd.js"]'
+        'script[src*="widget.umd.js"]',
       );
       if (existingScript) {
         existingScript.remove();
@@ -35,6 +38,7 @@ export default function EmbedPage() {
 
   return (
     <div
+      id="chatbot-widget-container"
       style={{
         width: "100%",
         height: "100vh",
