@@ -277,7 +277,8 @@ export default function AnalyticsPage() {
       );
 
       setSelectedQueries([]);
-      await fetchAnalytics();
+      // Force refresh analytics to update stats immediately
+      await fetchAnalytics(true);
     } catch (err: any) {
       alert(err.message || "Failed to resolve queries");
     } finally {
@@ -629,9 +630,11 @@ export default function AnalyticsPage() {
                                     }}
                                     className="mt-1"
                                   />
-                                    <div className="flex-1">
-                                      <p className="font-medium text-lg">{query.query}</p>
-                                    </div>
+                                  <div className="flex-1">
+                                    <p className="font-medium text-lg">
+                                      {query.query}
+                                    </p>
+                                  </div>
                                 </div>
                                 <Badge
                                   variant={
@@ -657,34 +660,45 @@ export default function AnalyticsPage() {
                               </div>
 
                               {/* Sample Messages with Bot Responses */}
-                              {query.sample_messages && query.sample_messages.length > 0 && (
-                                <div className="mt-3 pt-3 border-t border-dashed">
-                                  
-                                  <div className="space-y-4">
-                                    {query.sample_messages.map((sample) => (
-                                      <div key={sample.id} className="relative">
-                                        {sample.bot_response && (
-                                          <div className="flex items-start gap-4 bg-muted/30 rounded-xl p-5 border border-muted/50 group hover:border-primary/20 transition-all duration-300">
-                                            <div className="w-8 h-8 rounded-full bg-primary/5 flex items-center justify-center shrink-0 border border-primary/10">
-                                              <MessageSquare className="h-4 w-4 text-primary" />
-                                            </div>
-                                            <div className="flex-1 space-y-2">
-                                              <div className="flex items-center justify-between">
-                                                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">Response</span>
-                                                <span className="text-[10px] text-muted-foreground/50">{new Date(sample.created_at).toLocaleDateString()}</span>
+                              {query.sample_messages &&
+                                query.sample_messages.length > 0 && (
+                                  <div className="mt-3 pt-3 border-t border-dashed">
+                                    <div className="space-y-4">
+                                      {query.sample_messages.map((sample) => (
+                                        <div
+                                          key={sample.id}
+                                          className="relative"
+                                        >
+                                          {sample.bot_response && (
+                                            <div className="flex items-start gap-4 bg-muted/30 rounded-xl p-5 border border-muted/50 group hover:border-primary/20 transition-all duration-300">
+                                              <div className="w-8 h-8 rounded-full bg-primary/5 flex items-center justify-center shrink-0 border border-primary/10">
+                                                <MessageSquare className="h-4 w-4 text-primary" />
                                               </div>
-                                              <div 
-                                                className="text-sm leading-relaxed text-foreground/90 max-w-none line-clamp-4 hover:line-clamp-none transition-all cursor-pointer"
-                                                dangerouslySetInnerHTML={{ __html: sample.bot_response }}
-                                              />
+                                              <div className="flex-1 space-y-2">
+                                                <div className="flex items-center justify-between">
+                                                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">
+                                                    Response
+                                                  </span>
+                                                  <span className="text-[10px] text-muted-foreground/50">
+                                                    {new Date(
+                                                      sample.created_at,
+                                                    ).toLocaleDateString()}
+                                                  </span>
+                                                </div>
+                                                <div
+                                                  className="text-sm leading-relaxed text-foreground/90 max-w-none line-clamp-4 hover:line-clamp-none transition-all cursor-pointer"
+                                                  dangerouslySetInnerHTML={{
+                                                    __html: sample.bot_response,
+                                                  }}
+                                                />
+                                              </div>
                                             </div>
-                                          </div>
-                                        )}
-                                      </div>
-                                    ))}
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
                                   </div>
-                                </div>
-                              )}
+                                )}
                             </div>
                           ))}
                         </div>

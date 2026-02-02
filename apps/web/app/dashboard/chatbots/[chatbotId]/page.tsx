@@ -37,6 +37,7 @@ import {
   Users,
   CheckCircle2,
   X,
+  TrendingUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CrawlScheduleModal } from "@/components/dashboard/CrawlScheduleModal";
@@ -1382,7 +1383,7 @@ export default function ChatbotDetailPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-4 md:grid-cols-1">
+              <div className="grid gap-4 md:grid-cols-2">
                 <Button
                   variant="outline"
                   className="h-auto flex-col items-start p-4"
@@ -1395,6 +1396,21 @@ export default function ChatbotDetailPage() {
                     <div className="font-semibold">View Analytics</div>
                     <div className="text-xs text-muted-foreground mt-1">
                       See usage and performance
+                    </div>
+                  </div>
+                </Button>
+                <Button
+                  variant="outline"
+                  className="h-auto flex-col items-start p-4"
+                  onClick={() =>
+                    router.push(`/dashboard/usage?chatbot_id=${chatbotId}`)
+                  }
+                >
+                  <TrendingUp className="h-5 w-5 mb-2" />
+                  <div className="text-left">
+                    <div className="font-semibold">Show Usage</div>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      Message counts and billing
                     </div>
                   </div>
                 </Button>

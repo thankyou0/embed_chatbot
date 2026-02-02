@@ -78,7 +78,7 @@ export interface ResetPasswordResponse {
 }
 
 export function setTokens(accessToken: string, refreshToken: string) {
-  Cookies.set(ACCESS_TOKEN_KEY, accessToken, { expires: 1 / 96 }); // 15 minutes
+  Cookies.set(ACCESS_TOKEN_KEY, accessToken, { expires: 30 / (24 * 60) }); // 1500 minutes = 25 hours (matches backend)
   Cookies.set(REFRESH_TOKEN_KEY, refreshToken, { expires: 7 });
 }
 
@@ -127,7 +127,9 @@ export async function refreshAccessToken(): Promise<string> {
     },
   );
 
-  Cookies.set(ACCESS_TOKEN_KEY, response.access_token, { expires: 1 / 96 });
+  Cookies.set(ACCESS_TOKEN_KEY, response.access_token, {
+    expires: 1500 / (24 * 60),
+  }); // 1500 minutes = 25 hours (matches backend)
   return response.access_token;
 }
 

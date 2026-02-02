@@ -167,6 +167,9 @@ class BillingService:
     ) -> CurrentUsage:
         """Calculate current usage for tenant in the given period"""
         
+        # Get subscription for global message count
+        subscription = await BillingService.get_or_create_subscription(db, tenant_id)
+        
         # Count chatbots (excluding deleted)
         chatbots_result = await db.execute(
             select(func.count(Chatbot.id)).where(
@@ -286,6 +289,7 @@ class BillingService:
         return CurrentUsage(
             chatbots_count=chatbots_count,
             messages_count=messages_count,
+            global_message_count=subscription.global_message_count or 0,
             conversations_count=conversations_count,
             knowledge_pages_count=knowledge_pages_count,
             knowledge_files_count=knowledge_files_count,
@@ -326,7 +330,7 @@ class BillingService:
         # Calculate usage percentages
         usage_percentages = {
             "chatbots": (current_usage.chatbots_count / current_plan.limits.chatbots * 100) if current_plan.limits.chatbots > 0 else 0,
-            "messages": (current_usage.messages_count / current_plan.limits.messages_per_month * 100) if current_plan.limits.messages_per_month > 0 else 0,
+            "messages": (current_usage.global_message_count / current_plan.limits.messages_per_month * 100) if current_plan.limits.messages_per_month > 0 else 0,
             "conversations": (current_usage.conversations_count / current_plan.limits.conversations_per_month * 100) if current_plan.limits.conversations_per_month > 0 else 0,
             "knowledge_pages": (current_usage.knowledge_pages_count / current_plan.limits.knowledge_pages * 100) if current_plan.limits.knowledge_pages > 0 else 0,
             "knowledge_files": (current_usage.knowledge_files_count / current_plan.limits.knowledge_files * 100) if current_plan.limits.knowledge_files > 0 else 0,
@@ -477,3 +481,80 @@ class BillingService:
             subscription=subscription_response,
             effective_date=effective_date
         )
+
+    @staticmethod
+    async def check_message_limit(db: AsyncSession, tenant_id: int) -> dict:
+        """
+        Check if tenant has exceeded message limit
+        Returns: {exceeded: bool, current: int, limit: int, percentage: float}
+        """
+        try:
+            # Get subscription and plan
+            subscription = await BillingService.get_or_create_subscription(db, tenant_id)
+            plan_type = PlanType(subscription.plan_type.value)
+            plan_config = PLAN_CONFIGS[plan_type]
+            limit = plan_config.limits.messages_per_month
+            
+            # Get global message count
+            current = subscription.global_message_count or 0
+            percentage = (current / limit * 100) if limit > 0 else 0
+            
+            return {
+                "exceeded": current >= limit,
+                "current": current,
+                "limit": limit,
+                "percentage": percentage,
+                "plan": plan_type.value
+            }
+        except Exception as e:
+            logger.error(f"Error checking message limit: {e}")
+            return {
+                "exceeded": False,
+                "current": 0,
+                "limit": 0,
+                "percentage": 0,
+                "plan": "unknown"
+            }
+
+    @staticmethod
+    async def check_file_upload_limit(db: AsyncSession, tenant_id: int, chatbot_id: str) -> dict:
+        """
+        Check if tenant/chatbot has exceeded file upload limits
+        Returns: {exceeded: bool, current: int, limit: int}
+        """
+        try:
+            # Get subscription and plan
+            subscription = await BillingService.get_or_create_subscription(db, tenant_id)
+            plan_type = PlanType(subscription.plan_type.value)
+            plan_config = PLAN_CONFIGS[plan_type]
+            limit = plan_config.limits.knowledge_files
+            
+            # Count uploaded files for this chatbot
+            files_result = await db.execute(
+                select(func.count(UploadedFile.id)).where(
+                    UploadedFile.knowledge_source_id.in_(
+                        select(KnowledgeSource.id).where(
+                            and_(
+                                KnowledgeSource.chatbot_id == chatbot_id,
+                                KnowledgeSource.source_type == "uploaded_file"
+                            )
+                        )
+                    )
+                )
+            )
+            current = files_result.scalar() or 0
+            
+            return {
+                "exceeded": current >= limit,
+                "current": current,
+                "limit": limit,
+                "chatbot_id": str(chatbot_id)
+            }
+        except Exception as e:
+            logger.error(f"Error checking file upload limit: {e}")
+            return {
+                "exceeded": False,
+                "current": 0,
+                "limit": 0,
+                "chatbot_id": str(chatbot_id)
+            }

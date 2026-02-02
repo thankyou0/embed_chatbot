@@ -16,6 +16,7 @@ export interface Message {
   suggestions?: string[];
   imagePreview?: string;
   isTyping?: boolean;
+  isWaitingForContent?: boolean; // True while waiting for first content chunk (shows skeleton)
   timestamp: Date;
   products?: ProductInfo[]; // Product carousel data
 }

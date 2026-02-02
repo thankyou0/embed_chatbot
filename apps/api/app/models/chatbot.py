@@ -1,6 +1,6 @@
 import enum
 import uuid
-from sqlalchemy import Column, String, DateTime, ForeignKey, Text, Enum as SAEnum, func, TypeDecorator, Float
+from sqlalchemy import Column, String, DateTime, ForeignKey, Text, Enum as SAEnum, func, TypeDecorator, Float, Integer
 from sqlalchemy.dialects.postgresql import UUID, ENUM as PG_ENUM
 from sqlalchemy.orm import relationship
 from app.core.database import Base
@@ -49,6 +49,9 @@ class Chatbot(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
     deleted_at = Column(DateTime(timezone=True), nullable=True)
+    
+    # Per-chatbot message count (deleted with chatbot)
+    message_count = Column(Integer, nullable=False, default=0, index=True)
 
     # Relationships
     tenant = relationship("Tenant", back_populates="chatbots")

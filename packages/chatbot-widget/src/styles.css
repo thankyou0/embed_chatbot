@@ -374,6 +374,170 @@
   }
 }
 
+/* Fix #3: Professional typing animation with smooth transitions */
+.typing-skeleton-wrapper {
+  display: flex;
+  align-items: center;
+  padding: 4px 0;
+  min-width: 200px;
+}
+
+.typing-bubble {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  background: rgba(37, 99, 235, 0.06);
+  border: 1px solid rgba(37, 99, 235, 0.08);
+  padding: 12px 14px;
+  border-radius: 14px;
+  width: 100%;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.04);
+  animation: typingFadeIn 0.3s ease-out;
+}
+
+@keyframes typingFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Animated dots */
+.typing-dots {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  width: 40px;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.typing-dots .dot {
+  display: block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #9ca3af;
+  animation: dotJump 1.2s infinite cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.typing-dots .dot:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.typing-dots .dot:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes dotJump {
+  0% {
+    transform: translateY(0);
+    opacity: 0.6;
+  }
+  30% {
+    transform: translateY(-8px);
+    opacity: 1;
+    background: #6b7280;
+  }
+  60% {
+    transform: translateY(0);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 0.6;
+  }
+}
+
+/* Skeleton lines next to dots */
+.skeleton-lines {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.skeleton-lines .line {
+  height: 9px;
+  background: linear-gradient(
+    90deg,
+    #e5e7eb 0%,
+    #f3f4f6 20%,
+    #e5e7eb 40%,
+    #e5e7eb 100%
+  );
+  border-radius: 6px;
+  background-size: 200% 100%;
+  animation: shimmer 1.8s ease-in-out infinite;
+  opacity: 0.9;
+}
+
+.skeleton-lines .line.lg {
+  width: 88%;
+  height: 10px;
+}
+
+.skeleton-lines .line.md {
+  width: 72%;
+  height: 9px;
+  animation-delay: 0.1s;
+}
+
+.skeleton-lines .line.sm {
+  width: 50%;
+  height: 8px;
+  animation-delay: 0.2s;
+  opacity: 0.7;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+    opacity: 0.7;
+  }
+  50% {
+    background-position: 0% 0;
+    opacity: 0.95;
+  }
+  100% {
+    background-position: 200% 0;
+    opacity: 0.7;
+  }
+}
+
+/* Smooth reveal for actual message */
+.chatbot-message-text {
+  animation: messageReveal 0.4s ease-out;
+}
+
+@keyframes messageReveal {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .typing-dots .dot,
+  .skeleton-lines .line,
+  .typing-bubble,
+  .chatbot-message-text {
+    animation: none;
+  }
+  .typing-dots .dot {
+    opacity: 0.8;
+  }
+}
+
 /* Typing Indicator */
 .chatbot-typing-indicator {
   display: flex;
@@ -547,6 +711,103 @@
   border-top: 1px solid #f3f4f6; /* border-t border-gray-100 */
   padding: 12px; /* p-3 = 12px */
   flex-shrink: 0;
+  position: relative;
+  transition: background-color 0.2s ease;
+}
+
+/* Drag and drop active state */
+.chatbot-input-area.drag-active {
+  background-color: #eff6ff;
+  border-top-color: #3b82f6;
+}
+
+/* Fix #2: Full chatbox drag overlay */
+.chatbot-drag-overlay-fullscreen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(59, 130, 246, 0.95),
+    rgba(37, 99, 235, 0.98)
+  );
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: dragOverlayFade 0.2s ease-out;
+}
+
+.chatbot-drag-overlay-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 32px 24px;
+  background: white;
+  border: 3px dashed #3b82f6;
+  border-radius: 20px;
+  box-shadow: 0 20px 60px rgba(59, 130, 246, 0.4);
+  animation: dragBounce 0.6s ease-out;
+}
+
+.chatbot-drag-icon {
+  color: #3b82f6;
+  filter: drop-shadow(0 4px 8px rgba(59, 130, 246, 0.3));
+  animation: iconFloat 2s ease-in-out infinite;
+}
+
+.chatbot-drag-text {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1e40af;
+  margin: 0;
+  text-align: center;
+  letter-spacing: -0.02em;
+}
+
+.chatbot-drag-subtext {
+  font-size: 13px;
+  font-weight: 500;
+  color: #60a5fa;
+  margin: 0;
+  text-align: center;
+}
+
+@keyframes dragOverlayFade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes dragBounce {
+  0% {
+    transform: scale(0.9) translateY(10px);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.05) translateY(-5px);
+  }
+  100% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes iconFloat {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
 }
 
 .chatbot-image-preview {

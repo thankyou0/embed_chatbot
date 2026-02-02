@@ -95,6 +95,9 @@ class Subscription(Base):
     trial_end = Column(DateTime(timezone=True), nullable=True)
     cancelled_at = Column(DateTime(timezone=True), nullable=True)
     
+    # Global message tracking (persists even after bot deletion)
+    global_message_count = Column(Integer, nullable=False, default=0, index=True)
+    
     # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)

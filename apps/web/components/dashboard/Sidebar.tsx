@@ -1,10 +1,10 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { useAuth } from '@/contexts/AuthContext'
-import { cn } from '@/lib/utils'
+import { useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
+import { cn } from "@/lib/utils";
 import {
   MessageSquare,
   BarChart3,
@@ -16,41 +16,41 @@ import {
   Building2,
   ArrowRight,
   ChevronDown,
-  Users
-} from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-} from '@/components/ui/card'
+  Users,
+  TrendingUp,
+  Tag,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+} from "@/components/ui/dropdown-menu";
 
 const navigation = [
-  { name: 'Chatbots', href: '/dashboard/chatbots', icon: MessageSquare },
-  { name: 'Analytics', href: '/dashboard/analytics', icon: BarChart3 },
-  { name: 'Usage & Billing', href: '/dashboard/billing', icon: CreditCard },
-  { name: 'Settings', href: '/dashboard/settings', icon: Settings },
-]
+  { name: "Chatbots", href: "/dashboard/chatbots", icon: MessageSquare },
+  { name: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
+  { name: "Usage & Billing", href: "/dashboard/usage", icon: TrendingUp },
+  { name: "Pricing", href: "/dashboard/pricing", icon: Tag },
+  { name: "Settings", href: "/dashboard/settings", icon: Settings },
+];
 
 // Admin-only navigation items
 const adminNavigation = [
-  { name: 'Team', href: '/dashboard/settings/team', icon: Users },
-]
+  { name: "Team", href: "/dashboard/settings/team", icon: Users },
+];
 
 export function Sidebar() {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const pathname = usePathname()
-  const { user, tenant, logout, isAdmin } = useAuth()
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const pathname = usePathname();
+  const { user, tenant, logout, isAdmin } = useAuth();
 
   // Extract chatbot ID from pathname if we're on a chatbot-specific page
   // Path format: /dashboard/chatbots/[chatbotId]/...
-  const chatbotIdMatch = pathname.match(/\/dashboard\/chatbots\/([^\/]+)/)
-  const currentChatbotId = chatbotIdMatch ? chatbotIdMatch[1] : null
+  const chatbotIdMatch = pathname.match(/\/dashboard\/chatbots\/([^\/]+)/);
+  const currentChatbotId = chatbotIdMatch ? chatbotIdMatch[1] : null;
 
   return (
     <>
@@ -61,15 +61,19 @@ export function Sidebar() {
           size="icon"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
         >
-          {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          {mobileMenuOpen ? (
+            <X className="h-6 w-6" />
+          ) : (
+            <Menu className="h-6 w-6" />
+          )}
         </Button>
       </div>
 
       {/* Sidebar */}
       <div
         className={cn(
-          'fixed inset-y-0 left-0 z-40 w-64 bg-card border-r border-border transform transition-transform duration-200 ease-in-out lg:translate-x-0 flex flex-col',
-          mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+          "fixed inset-y-0 left-0 z-40 w-64 bg-card border-r border-border transform transition-transform duration-200 ease-in-out lg:translate-x-0 flex flex-col",
+          mobileMenuOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
         <div className="flex flex-col h-full">
@@ -78,12 +82,19 @@ export function Sidebar() {
           </div>
           <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
             {navigation.map((item) => {
-              const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))
-              
-              // Dynamically update analytics link if chatbot is selected
-              let href = item.href
-              if (item.name === 'Analytics' && currentChatbotId && currentChatbotId !== 'new') {
-                href = `${item.href}?chatbot_id=${currentChatbotId}`
+              const isActive =
+                pathname === item.href ||
+                (item.href !== "/dashboard" && pathname.startsWith(item.href));
+
+              // Dynamically update analytics/usage links if chatbot is selected
+              let href = item.href;
+              if (
+                (item.name === "Analytics" ||
+                  item.name === "Usage & Billing") &&
+                currentChatbotId &&
+                currentChatbotId !== "new"
+              ) {
+                href = `${item.href}?chatbot_id=${currentChatbotId}`;
               }
 
               return (
@@ -92,18 +103,18 @@ export function Sidebar() {
                   href={href}
                   onClick={() => setMobileMenuOpen(false)}
                   className={cn(
-                    'flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors',
+                    "flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors",
                     isActive
-                      ? 'bg-primary text-primary-foreground'
-                      : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
                   )}
                 >
                   <item.icon className="mr-3 h-5 w-5" />
                   {item.name}
                 </Link>
-              )
+              );
             })}
-            
+
             {/* Admin-only navigation */}
             {isAdmin && adminNavigation.length > 0 && (
               <>
@@ -113,28 +124,28 @@ export function Sidebar() {
                   </p>
                 </div>
                 {adminNavigation.map((item) => {
-                  const isActive = pathname === item.href
+                  const isActive = pathname === item.href;
                   return (
                     <Link
                       key={item.name}
                       href={item.href}
                       onClick={() => setMobileMenuOpen(false)}
                       className={cn(
-                        'flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors',
+                        "flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors",
                         isActive
-                          ? 'bg-primary text-primary-foreground'
-                          : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                          ? "bg-primary text-primary-foreground"
+                          : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
                       )}
                     >
                       <item.icon className="mr-3 h-5 w-5" />
                       {item.name}
                     </Link>
-                  )
+                  );
                 })}
               </>
             )}
           </nav>
-          
+
           {/* Account Details at Bottom */}
           {user && (
             <div className="border-t border-border p-4 mt-auto">
@@ -147,7 +158,9 @@ export function Sidebar() {
                           <UserIcon className="h-4 w-4 text-primary-foreground" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">@{user.username}</p>
+                          <p className="text-sm font-medium truncate">
+                            @{user.username}
+                          </p>
                           <p className="text-xs text-muted-foreground truncate">
                             {user.email}
                           </p>
@@ -155,15 +168,19 @@ export function Sidebar() {
                       </div>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                          >
                             <ChevronDown className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-48">
                           <DropdownMenuItem
                             onClick={() => {
-                              logout()
-                              setMobileMenuOpen(false)
+                              logout();
+                              setMobileMenuOpen(false);
                             }}
                             className="text-red-600 focus:text-red-600"
                           >
@@ -197,6 +214,5 @@ export function Sidebar() {
         />
       )}
     </>
-  )
+  );
 }
-

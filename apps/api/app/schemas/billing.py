@@ -59,6 +59,7 @@ class CurrentUsage(BaseModel):
     """Current usage metrics"""
     chatbots_count: int
     messages_count: int
+    global_message_count: int  # Total messages across all bots (persists after deletion)
     conversations_count: int
     knowledge_pages_count: int
     knowledge_files_count: int
@@ -124,3 +125,26 @@ class ChangePlanResponse(BaseModel):
     message: str
     subscription: SubscriptionResponse
     effective_date: datetime
+
+
+class ChatbotUsage(BaseModel):
+    """Per-chatbot usage metrics"""
+    chatbot_id: str
+    chatbot_name: str
+    message_count: int
+    conversation_count: int
+    knowledge_pages_count: int
+    storage_mb: float
+    created_at: datetime
+    
+
+class UsageOverviewResponse(BaseModel):
+    """Usage overview with per-chatbot breakdown"""
+    global_message_count: int
+    total_conversations: int
+    total_knowledge_pages: int
+    total_knowledge_files: int
+    total_storage_mb: Decimal
+    per_chatbot_usage: List[ChatbotUsage]
+    period_start: datetime
+    period_end: datetime

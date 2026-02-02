@@ -90,10 +90,11 @@ class AnalyticsService:
         period_start = AnalyticsService._get_period_start(period)
         
         # Build base query for sessions (exclude previews)
+        # NOTE: Preview sessions DO count toward usage/billing but NOT toward analytics metrics
         query = select(ChatSession).where(
             and_(
                 ChatSession.started_at >= period_start,
-                ChatSession.is_preview == False
+                ChatSession.is_preview == False  # Exclude preview from analytics
             )
         )
         

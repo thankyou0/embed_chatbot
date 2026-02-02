@@ -73,6 +73,7 @@ interface PlanFeatures {
 interface CurrentUsage {
   chatbots_count: number;
   messages_count: number;
+  global_message_count: number;
   conversations_count: number;
   knowledge_pages_count: number;
   knowledge_files_count: number;
@@ -232,9 +233,9 @@ export default function BillingPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold">Usage & Billing</h1>
+          <h1 className="text-3xl font-bold">Billing</h1>
           <p className="text-muted-foreground">
-            Manage your subscription and view usage statistics
+            Manage your subscription and billing information
           </p>
         </div>
         <Card>
@@ -258,9 +259,9 @@ export default function BillingPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold">Usage & Billing</h1>
+        <h1 className="text-3xl font-bold">Billing</h1>
         <p className="text-muted-foreground">
-          Manage your subscription and view usage statistics
+          Manage your subscription and billing information
         </p>
       </div>
 
@@ -368,12 +369,15 @@ export default function BillingPage() {
             />
           </div>
 
-          {/* Messages */}
+          {/* Messages (Global Count) */}
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm">
               <div className="flex items-center gap-2">
                 <MessageSquare className="h-4 w-4 text-muted-foreground" />
-                <span>Messages</span>
+                <span>Total Messages (Global)</span>
+                <span className="text-xs text-muted-foreground">
+                  (persists after bot deletion)
+                </span>
               </div>
               <span
                 className={cn(
@@ -381,7 +385,7 @@ export default function BillingPage() {
                   getUsageColor(usage.usage_percentages.messages),
                 )}
               >
-                {formatNumber(usage.current_usage.messages_count)} /{" "}
+                {formatNumber(usage.current_usage.global_message_count)} /{" "}
                 {formatNumber(usage.plan_limits.messages_per_month)}
               </span>
             </div>

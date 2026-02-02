@@ -184,6 +184,7 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const [widgetConfig, setWidgetConfig] = useState<any>(null);
   const [_error, setError] = useState<string | null>(null);
   const [reportedMessages, setReportedMessages] = useState<Set<string>>(
@@ -193,6 +194,7 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const windowRef = useRef<HTMLDivElement>(null);
   const isAtBottomRef = useRef(true);
 
   const apiUrl = config.apiUrl || "http://localhost:8000";
@@ -391,11 +393,12 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
   };
 
   // Pre-fetch widget config on mount to ensure bubble appearance (color, avatar, offsets) is correct
-  // even before the user opens the chat.
+  // This runs immediately and synchronously to prevent any flash of default colors
   const hasInitedFetch = useRef(false);
   useEffect(() => {
     if (!isPreview && chatbotId && !hasInitedFetch.current) {
       hasInitedFetch.current = true;
+      // Start fetch immediately - don't delay
       fetchWidgetConfig();
     }
   }, [chatbotId, isPreview, apiUrl]);
@@ -431,21 +434,99 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
     const input = e.target;
     const file = input.files?.[0];
     if (file) {
-      if (!file.type.startsWith("image/")) {
-        setError("Please select an image file");
-        return;
-      }
-      setSelectedImage(file);
-
-      // Create preview
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setImagePreview(e.target?.result as string);
-      };
-      reader.readAsDataURL(file);
-      setError(null);
+      processImageFile(file);
     }
   };
+
+  const processImageFile = (file: File) => {
+    // Validate file type - support all common image formats
+    const validImageTypes = [
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "image/gif",
+      "image/webp",
+      "image/svg+xml",
+      "image/bmp",
+      "image/tiff",
+    ];
+
+    if (
+      !validImageTypes.includes(file.type) &&
+      !file.type.startsWith("image/")
+    ) {
+      // Fix #3: Show toast for unsupported file types
+      const fileExt = file.name.split(".").pop()?.toUpperCase() || "file";
+      setToast(
+        `❌ ${fileExt} files are not supported. Please upload an image file (JPG, PNG, GIF, WebP, SVG, etc.)`,
+      );
+      setTimeout(() => setToast(null), 4000);
+      return;
+    }
+
+    // Check file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      setError("Image size must be less than 10MB");
+      return;
+    }
+
+    setSelectedImage(file);
+
+    // Create preview
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setImagePreview(e.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+    setError(null);
+  };
+
+  // Handle drag and drop
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Only set dragging to false when leaving the entire chatbot window
+    // relatedTarget will be null when mouse leaves the window or moves to outside elements
+    const relatedTarget = e.relatedTarget as HTMLElement | null;
+    if (relatedTarget === null || !windowRef.current?.contains(relatedTarget)) {
+      setIsDragging(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const files = e.dataTransfer?.files;
+    if (files && files.length > 0) {
+      const file = files[0];
+      processImageFile(file);
+    }
+  };
+
+  // Add Escape key handler to clear dragging state
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isDragging) {
+        setIsDragging(false);
+      }
+    };
+
+    if (isDragging) {
+      window.addEventListener("keydown", handleKeyDown);
+    }
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isDragging]);
 
   const removeImage = () => {
     setSelectedImage(null);
@@ -470,18 +551,31 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
       return;
     }
 
+    // Store image data before clearing
+    const currentImagePreview = imagePreview;
+    const currentSelectedImage = selectedImage;
+
     // Add user message to UI
     const userMessage: Message = {
       id: generateId(),
       role: "user",
       content: text || "(Image uploaded)",
-      imagePreview: imagePreview || undefined,
+      imagePreview: currentImagePreview || undefined,
       timestamp: new Date(),
     };
     setMessages((prev: Message[]) => [...prev, userMessage]);
     if (!messageText) setInputValue("");
+
+    // Fix #5: Clear image selection immediately after adding user message
+    removeImage();
+
     setIsTyping(true);
     setError(null);
+
+    // Fix #1: Scroll to bottom immediately when user sends message
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, 50);
 
     // Create placeholder assistant message for streaming
     const assistantMessageId = generateId();
@@ -490,6 +584,7 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
       role: "assistant",
       content: "",
       isTyping: true,
+      isWaitingForContent: true, // Fix #3: Show skeleton while waiting for first content
       timestamp: new Date(),
     };
     setMessages((prev: Message[]) => [...prev, assistantMessage]);
@@ -502,14 +597,17 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
         formData.append("session_id", sessionId);
       }
 
-      // Compress and add image if selected
-      if (selectedImage) {
+      // Compress and add image if selected (use stored reference since state is cleared)
+      if (currentSelectedImage) {
         try {
-          const compressedBlob = await compressImage(selectedImage, 1024);
+          const compressedBlob = await compressImage(
+            currentSelectedImage,
+            1024,
+          );
           formData.append("image", compressedBlob, "image.jpg");
         } catch (err) {
           console.error("Image compression failed:", err);
-          formData.append("image", selectedImage);
+          formData.append("image", currentSelectedImage);
         }
       }
 
@@ -545,6 +643,9 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
       let firstCharShown = false;
       let streamEnded = false;
 
+      // Fix #3: Track if we're still waiting for first content
+      let hasReceivedFirstContent = false;
+
       // Tunable parameters
       const CHAR_DELAY_MS = 20; // Constant brisk speed (~50 chars/sec)
       const CHAR_VARIANCE = 0; // Uniform speed
@@ -556,11 +657,25 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
       const MAX_BUFFER_CHARS = 500;
       const ADAPTIVE_SPEED_MULTIPLIER = 0.5;
 
+      // Fix #2: Markdown tag buffering - collect content until tag is complete
+      let tagBuffer = "";
+      const INCOMPLETE_TAG_REGEX = /<[^>]*$/; // Matches incomplete HTML tags at end
+      const COMPLETE_TAG_PAIRS = [
+        { open: /<strong>/, close: /<\/strong>/ },
+        { open: /<em>/, close: /<\/em>/ },
+        { open: /<ul>/, close: /<\/ul>/ },
+        { open: /<ol>/, close: /<\/ol>/ },
+        { open: /<li>/, close: /<\/li>/ },
+        { open: /<p>/, close: /<\/p>/ },
+        { open: /<br\s*\/?>/, close: null }, // Self-closing
+      ];
+
       // Sentence detection regex
       const SENTENCE_END_REGEX =
         /[.!?]\s+|<br\s*\/?>\s*|<\/p>\s*|<\/li>\s*|\n\n/;
 
       // Stage B: Character-by-character renderer with consistent speed
+      // Fix #2: Enhanced with markdown tag buffering to prevent showing raw tags
       const renderCharacters = async (text: string) => {
         if (isRendering) return;
         isRendering = true;
@@ -569,11 +684,88 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
         if (!firstCharShown) {
           await new Promise((r) => setTimeout(r, FIRST_CHAR_DELAY_MS));
           firstCharShown = true;
+
+          // Fix #3: Mark that we have content now (hide skeleton)
+          hasReceivedFirstContent = true;
+          setMessages((prev: Message[]) => {
+            const newMessages = [...prev];
+            const lastMessage = newMessages[newMessages.length - 1];
+            if (lastMessage && lastMessage.id === assistantMessageId) {
+              lastMessage.isWaitingForContent = false;
+            }
+            return newMessages;
+          });
         }
 
-        for (let i = 0; i < text.length; i++) {
-          const char = text[i];
+        // Fix #2: Combine with any buffered incomplete tags
+        let fullText = tagBuffer + text;
+        tagBuffer = "";
+
+        // Check for incomplete HTML tags at the end
+        const incompleteMatch = fullText.match(INCOMPLETE_TAG_REGEX);
+        if (incompleteMatch) {
+          // Buffer the incomplete tag for next chunk
+          tagBuffer = incompleteMatch[0];
+          fullText = fullText.slice(0, -tagBuffer.length);
+        }
+
+        // Also buffer if we're in the middle of a tag (between < and >)
+        // This handles cases where tags come character by character
+        let safeToRender = "";
+        let pendingTagContent = "";
+        let inTag = false;
+
+        for (let i = 0; i < fullText.length; i++) {
+          const char = fullText[i];
+          if (char === "<") {
+            inTag = true;
+            pendingTagContent += char;
+          } else if (char === ">" && inTag) {
+            inTag = false;
+            pendingTagContent += char;
+            // Complete tag found - render it all at once
+            safeToRender += pendingTagContent;
+            pendingTagContent = "";
+          } else if (inTag) {
+            pendingTagContent += char;
+          } else {
+            safeToRender += char;
+          }
+        }
+
+        // If we ended inside a tag, buffer it
+        if (pendingTagContent) {
+          tagBuffer = pendingTagContent + tagBuffer;
+        }
+
+        // Render the safe content character by character
+        // But render complete HTML tags instantly
+        let i = 0;
+        while (i < safeToRender.length) {
+          // Check if we're at the start of an HTML tag
+          if (safeToRender[i] === "<") {
+            // Find the end of this tag and render it all at once
+            const tagEnd = safeToRender.indexOf(">", i);
+            if (tagEnd !== -1) {
+              const fullTag = safeToRender.slice(i, tagEnd + 1);
+              displayedContent += fullTag;
+              i = tagEnd + 1;
+
+              setMessages((prev: Message[]) => {
+                const newMessages = [...prev];
+                const lastMessage = newMessages[newMessages.length - 1];
+                if (lastMessage && lastMessage.id === assistantMessageId) {
+                  lastMessage.content = displayedContent;
+                }
+                return newMessages;
+              });
+              continue;
+            }
+          }
+
+          const char = safeToRender[i];
           displayedContent += char;
+          i++;
 
           setMessages((prev: Message[]) => {
             const newMessages = [...prev];
@@ -716,11 +908,11 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
       }
 
       setIsTyping(false);
-      removeImage();
+      // Image already cleared at start of sendMessage
     } catch (err) {
       console.error("Failed to send message:", err);
       setIsTyping(false);
-      removeImage();
+      // Image already cleared at start of sendMessage
 
       // Update assistant message with error
       setMessages((prev: Message[]) => {
@@ -738,6 +930,7 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
 
   const handleSuggestionClick = (suggestion: string) => {
     if (isTyping) return;
+    // Fix #1: Scroll will happen inside sendMessage after adding user message
     sendMessage(suggestion);
   };
 
@@ -852,12 +1045,43 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
       className="chatbot-widget-container"
       style={{
         ...positionStyle,
-        // Hide while loading in production to prevent "flash" of default blue settings
-        visibility: isConfigLoading ? "hidden" : "visible",
+        // Hide while loading config in production to prevent "flash" of default settings
+        // Show immediately in preview mode or when config is loaded
+        opacity: isConfigLoading ? 0 : 1,
+        pointerEvents: isConfigLoading ? "none" : "auto",
+        transition: "opacity 0.2s ease-in-out",
       }}
     >
       {isOpen ? (
-        <div className="chatbot-window">
+        <div
+          ref={windowRef}
+          className="chatbot-window"
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
+          {/* Fix #2: Drag overlay at window level for full coverage */}
+          {isDragging && (
+            <div className="chatbot-drag-overlay-fullscreen">
+              <div className="chatbot-drag-overlay-content">
+                <svg
+                  width="64"
+                  height="64"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  className="chatbot-drag-icon"
+                >
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                  <circle cx="8.5" cy="8.5" r="1.5" />
+                  <polyline points="21 15 16 10 5 21" />
+                </svg>
+                <p className="chatbot-drag-text">Drop your image here</p>
+                <p className="chatbot-drag-subtext">We'll analyze it for you</p>
+              </div>
+            </div>
+          )}
           {/* Header */}
           <div
             className="chatbot-header"
@@ -979,15 +1203,33 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
                           : {}
                       }
                     >
-                      <div
-                        className="chatbot-message-text"
-                        dangerouslySetInnerHTML={{
-                          __html: renderMessageContent(
-                            msg.content,
-                            msg.isTyping,
-                          ),
-                        }}
-                      />
+                      {/* Fix #3: Enhanced typing animation with smooth crossfade */}
+                      {msg.isWaitingForContent ? (
+                        <div className="typing-skeleton-wrapper">
+                          <div className="typing-bubble">
+                            <div className="typing-dots">
+                              <span className="dot"></span>
+                              <span className="dot"></span>
+                              <span className="dot"></span>
+                            </div>
+                            <div className="skeleton-lines">
+                              <div className="line lg"></div>
+                              <div className="line md"></div>
+                              <div className="line sm"></div>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div
+                          className="chatbot-message-text"
+                          dangerouslySetInnerHTML={{
+                            __html: renderMessageContent(
+                              msg.content,
+                              msg.isTyping && !msg.isWaitingForContent,
+                            ),
+                          }}
+                        />
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1081,7 +1323,9 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
           </div>
 
           {/* Input */}
-          <div className="chatbot-input-area">
+          <div
+            className={`chatbot-input-area ${isDragging ? "drag-active" : ""}`}
+          >
             {/* Image Preview */}
             {imagePreview && (
               <div className="chatbot-image-preview">
@@ -1116,7 +1360,7 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,image/svg+xml,image/bmp,image/tiff,image/*"
                 onChange={handleImageSelect}
                 className="chatbot-file-input"
               />

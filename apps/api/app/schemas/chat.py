@@ -13,11 +13,20 @@ class ImageAnalysisResult(BaseModel):
     """Result of image analysis from vision model."""
     product_type: str = ""
     category: str = ""
-    color: str = ""
+    color: str = ""                   # Primary color
     style: str = ""
     other_attributes: str = ""
     confidence: float = 0.0
     needs_clarification: bool = False
+    clarification_question: str = ""  # Question to ask if image is unclear
+    
+    # Enhanced fields (optional for backward compatibility)
+    subcategory: Optional[str] = None
+    material: Optional[str] = None
+    pattern: Optional[str] = None
+    gender_target: Optional[str] = None
+    secondary_colors: Optional[List[str]] = None
+    notable_features: Optional[List[str]] = None
 
 
 class ChatSource(BaseModel):

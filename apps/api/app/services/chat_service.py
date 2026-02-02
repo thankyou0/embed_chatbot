@@ -20,8 +20,8 @@ from app.schemas.chat import ChatMessageResponse, ChatSource, ImageAnalysisResul
 
 logger = get_logger(__name__)
 
-# Confidence threshold for vision analysis
-VISION_CONFIDENCE_THRESHOLD = 0.4
+# Confidence threshold for vision analysis (lowered for better coverage)
+VISION_CONFIDENCE_THRESHOLD = 0.35
 
 # Keywords that indicate product-related queries
 PRODUCT_QUERY_KEYWORDS = [
@@ -560,6 +560,44 @@ class ChatService:
             chatbot_res = await db.execute(chatbot_stmt)
             chatbot = chatbot_res.scalar_one()
             
+            # Check message limits (only for non-preview chats)
+            if not is_preview:
+                from app.services.billing_service import BillingService
+                limit_check = await BillingService.check_message_limit(db, chatbot.tenant_id)
+                if limit_check["exceeded"]:
+                    limit_message = (
+                        f"❌ Message limit reached. "
+                        f"You have used {limit_check['current']} out of {limit_check['limit']} messages "
+                        f"on your {limit_check['plan']} plan. Please upgrade your plan to continue."
+                    )
+                    
+                    # Stream limit reached message
+                    for char in limit_message:
+                        yield {"type": "content", "content": char}
+                        await asyncio.sleep(0.02)
+                    
+                    # Save user message but not assistant response
+                    if message:
+                        user_msg = ChatMessage(
+                            session_id=session.id, 
+                            role=MessageRole.USER, 
+                            content=message,
+                            metadata_json={"limit_exceeded": True}
+                        )
+                        db.add(user_msg)
+                    
+                    await db.commit()
+                    
+                    yield {
+                        "type": "done",
+                        "sources": [],
+                        "suggestions": [],
+                        "products": [],
+                        "image_analysis": None,
+                        "error": "message_limit_exceeded"
+                    }
+                    return
+            
             # Check if chatbot is paused (and not in preview mode)
             if not is_preview and chatbot.status == ChatbotStatus.PAUSED:
                 paused_message = (
@@ -603,30 +641,60 @@ class ChatService:
                 }
                 return
             
-            # --- 3. Process image if provided (vision analysis) ---
+            # --- 3. Process image if provided (enhanced vision analysis) ---
             image_attrs = None
             image_analysis_result = None
             effective_message = message
             
             if image_bytes:
                 try:
-                    image_attrs = await VisionService.analyze_image(image_bytes)
+                    # Use enhanced vision service with user context
+                    image_attrs = await VisionService.analyze_image(
+                        image_bytes, 
+                        user_context=message or "",
+                        quick_mode=False  # Use full analysis for better results
+                    )
+                    
+                    # Build ImageAnalysisResult for response
                     image_analysis_result = ImageAnalysisResult(
                         product_type=image_attrs.product_type,
                         category=image_attrs.category,
-                        color=image_attrs.color,
+                        color=image_attrs.primary_color,  # Use primary_color
                         style=image_attrs.style,
-                        other_attributes=image_attrs.other_attributes,
+                        other_attributes=image_attrs.other_attributes or ", ".join(image_attrs.notable_features[:3]),
                         confidence=image_attrs.confidence,
                         needs_clarification=image_attrs.needs_clarification
                     )
                     
+                    # Use LLM-powered query building for intelligent intent understanding
                     if image_attrs.confidence >= VISION_CONFIDENCE_THRESHOLD:
-                        effective_message = f"Looking for: {image_attrs.product_type} {image_attrs.category} {image_attrs.color} {image_attrs.style} {image_attrs.other_attributes}".strip()
-                        if message:
-                            effective_message = f"{message}. {effective_message}"
+                        # Try LLM-powered query building first (handles complex cases)
+                        try:
+                            primary_query, intent, detailed_info = await VisionService.build_query_with_llm(
+                                user_message=message or "",
+                                image_attrs=image_attrs
+                            )
+                            effective_message = primary_query
+                            logger.info(f"LLM Query: intent='{intent}', query='{primary_query}'")
+                        except Exception as llm_err:
+                            # Fallback to heuristic method
+                            logger.warning(f"LLM query building failed, using fallback: {llm_err}")
+                            primary_query, detailed_query = VisionService.build_combined_query(
+                                user_message=message or "",
+                                image_attrs=image_attrs
+                            )
+                            effective_message = primary_query
+                        
+                        # Log for debugging
+                        logger.info(f"Vision analysis: confidence={image_attrs.confidence:.2f}, "
+                                   f"product={image_attrs.product_type}, color={image_attrs.primary_color}, "
+                                   f"query='{effective_message}'")
+                    elif image_attrs.needs_clarification:
+                        # Image was unclear, keep original message
+                        logger.info(f"Vision analysis needs clarification: {image_attrs.clarification_question}")
+                        
                 except Exception as e:
-                    logger.error(f"Vision analysis failed: {e}")
+                    logger.error(f"Vision analysis failed: {e}", exc_info=True)
             
             text_content = effective_message or message or "What is this?"
             
@@ -729,6 +797,21 @@ class ChatService:
             retrieval_confidence = max([c["score"] for c in top_chunks]) if top_chunks else 0.0
             sources_count = len(top_chunks)
             
+            # --- Early out-of-scope detection ---
+            # Check if this is a greeting (should always be answered)
+            greeting_patterns = [
+                r'^\s*(hi+|hello+|hey+|heya*|good\s+(morning|afternoon|evening)|howdy|what\'?s\s+up)\s*[!.?]*\s*$',
+            ]
+            is_greeting = any(re.match(p, text_content.lower().strip()) for p in greeting_patterns)
+            
+            # Very low retrieval confidence + not a greeting = likely out-of-scope
+            # We still let the LLM handle it, but this flag helps with post-processing
+            is_likely_out_of_scope = retrieval_confidence < 0.35 and not is_greeting and sources_count > 0
+            
+            # Log for debugging
+            if is_likely_out_of_scope:
+                logger.info(f"Low retrieval confidence ({retrieval_confidence:.2f}) for query: {text_content[:100]}")
+            
             # --- 6. Build system prompt with context ---
             context_text = ""
             if top_chunks:
@@ -747,15 +830,12 @@ class ChatService:
             # Build context strings
             image_context = ""
             if image_attrs and image_attrs.confidence >= VISION_CONFIDENCE_THRESHOLD:
-                image_context = (
-                    f"\n\nUser uploaded an image. Analysis: "
-                    f"Type: {image_attrs.product_type}, "
-                    f"Category: {image_attrs.category}, "
-                    f"Color: {image_attrs.color}, "
-                    f"Style: {image_attrs.style}, "
-                    f"Attributes: {image_attrs.other_attributes}, "
-                    f"Confidence: {image_attrs.confidence:.2f}"
-                )
+                # Use enhanced formatting from VisionService
+                image_context = "\n\n" + VisionService.format_image_context_for_llm(image_attrs)
+                
+                # Add clarification question if needed
+                if image_attrs.needs_clarification and image_attrs.clarification_question:
+                    image_context += f"\nNote: Image may need clarification. Suggested question: {image_attrs.clarification_question}"
             
             price_context = ""
             if price_filter:
@@ -771,55 +851,55 @@ class ChatService:
                 if 'color' in attribute_filter:
                     attribute_context += f"\n\nColor Filter: {attribute_filter['color']}"
             
+            # Determine if we have relevant context
+            has_relevant_context = retrieval_confidence > 0.5 and sources_count > 0
+            
             system_prompt = (
                 f"You are a helpful AI assistant for {chatbot.name}. "
-                "Your role is to answer questions based on the provided context.\n\n"
-                "**Instructions:**\n"
-                "1. **Accuracy First**: Answer ONLY from the provided context. If information is not in the context, say so politely.\n"
-                "2. **Conversational**: Be friendly and natural. Handle greetings warmly. Use emojis sparingly (only for greetings or excitement).\n"
-                "3. **Out-of-Scope Queries**: If asked about something completely unrelated to the business (e.g., general knowledge, other companies, competitors), "
-                f"reply nicely and professionally. You may answer generic questions about the industry if helpful, but if the query is about a specific competitor or unrelated topic, politely redirect to {chatbot.name}. "
-                "Append `[[IRRELEVANT]]` to the end ONLY if the query is spam or completely unrelated to the business domain.\n"
-                "4. **Missing Information**: Use [[MISSING_INFO]] ONLY if ALL these conditions are met: "
-                "(a) The query is about a SPECIFIC business detail (specific product price, specific policy clause, etc.) that is NOT in the context, "
-                "(b) You cannot find the answer in the provided context, "
-                "(c) You must respond with a message saying you don't have that information. "
-                "DO NOT use [[MISSING_INFO]] for: \n"
-                "   - Greetings (Hi, Hello)\n"
-                "   - General business questions (What do you do?)\n"
-                "   - Contact requests (How do I contact you?)\n"
-                "   - Product listings (What products do you have?)\n"
-                "   - When you can provide a partial or helpful answer.\n"
-                "5. **Response Format**: \n"
-                "   - Use HTML formatting: <strong>bold</strong>, <em>italic</em>, <br> for line breaks\n"
-                "   - For lists: use <ul><li>item</li></ul> or <ol><li>item</li></ol>\n"
-                "   - For headings: use <strong> tags to emphasize important text\n"
-                "   - Use <strong> for emphasis and important information\n"
-                "   - Use <em> for subtle emphasis or technical terms\n"
-                "   - Keep answers concise and professional\n"
-                "   - DO NOT use markdown symbols like ##, *, **, ***, - for formatting\n"
-                "   - DO NOT use <u> or underline tags\n"
-                "6. **Product Listings**: When products will be displayed (product carousel will show automatically), keep your text response MINIMAL:\n"
-                "   - Use a short intro like 'Here are our products:' or 'Check out our collection:'\n"
-                "   - DO NOT list product details (name, price, etc.) as they appear in the product carousel\n"
-                "   - Keep response to 1-2 sentences maximum\n"
-                "7. **Price Filters**: If a price filter is applied, STRICTLY only mention products that fall within the specified price range. Do not recommend products outside the user's budget.\n"
-                "8. **Color/Attribute Filters**: If a color or attribute filter is applied, STRICTLY only mention products that match the specified color/attribute.\n"
-                "\n"
+                "Your role is to answer questions STRICTLY based on the provided context.\n\n"
+                "**CRITICAL RULES - MUST FOLLOW:**\n"
+                "1. **ONLY USE PROVIDED CONTEXT**: You can ONLY answer questions using information explicitly present in the 'Relevant information from knowledge base' section below.\n"
+                "2. **NO FABRICATION**: NEVER make up, invent, or hallucinate information. If the context doesn't contain the answer, admit it.\n"
+                "3. **NO GENERAL KNOWLEDGE**: Do NOT use your general knowledge to answer questions about products, services, prices, policies, people, companies, or any factual information that isn't in the context.\n"
+                "4. **OUT-OF-SCOPE HANDLING**: For questions about topics NOT covered in the context (e.g., celebrities, competitors, unrelated products, general knowledge), respond with:\n"
+                f"   'I'm sorry, I can only help with questions about {chatbot.name} and the information I have access to. Is there something specific about {chatbot.name} I can help you with?'\n"
+                "   Then append `[[IRRELEVANT]]` at the end.\n"
+                "5. **GREETINGS ARE FINE**: You can respond warmly to greetings (Hi, Hello, etc.) without needing context.\n"
+                "6. **CONTEXT QUALITY CHECK**: If the retrieved context doesn't seem relevant to the user's question (low similarity), politely say you don't have information about that specific topic.\n\n"
+                "**Response Formatting (Fix #5):**\n"
+                "- Be friendly and conversational\n"
+                "- Use HTML formatting appropriately for better readability:\n"
+                "  • <strong>text</strong> for important terms, product names, key features, prices\n"
+                "  • <em>text</em> for emphasis or subtle highlights\n"
+                "  • <br> for line breaks when needed\n"
+                "  • <ul><li>item</li></ul> for bullet lists (use when listing features, options, benefits)\n"
+                "  • <ol><li>item</li></ol> for numbered lists (use for steps or ordered information)\n"
+                "- Use lists (<ul> or <ol>) when presenting 3+ items or features\n"
+                "- Use <strong> to highlight product names, prices, key specifications\n"
+                "- Keep answers well-structured and scannable\n"
+                "- DO NOT use markdown symbols (##, *, **, etc.)\n\n"
+                "**Special Cases:**\n"
+                "- **Product Listings**: If product carousel will show, just say 'Here are our products:' or similar. Don't list details.\n"
+                "- **Price Filters**: ONLY mention products within the specified price range from the context.\n"
+                "- **Missing Specific Info**: If asked about specific details not in context, say 'I don't have that specific information' and append `[[MISSING_INFO]]`\n\n"
                 f"Background Context: {summary}{image_context}{price_context}{attribute_context}\n"
+                f"Retrieval Confidence: {retrieval_confidence:.2f} (contexts found: {sources_count})\n"
                 f"{context_text}\n"
                 "\n"
                 "--- STRICT RESPONSE FORMAT ---\n"
-                "1. Your Answer (use HTML formatting as specified)\n"
-                "2. (Optional) `[[IRRELEVANT]]` or `[[MISSING_INFO]]` tag if applicable. Do NOT output both.\n"
+                "1. Your Answer (ONLY from the context above, well-formatted with HTML)\n"
+                "2. (Optional) `[[IRRELEVANT]]` if query is completely unrelated to the business, OR `[[MISSING_INFO]]` if specific business detail is missing. Do NOT output both.\n"
                 "3. `---SUGGESTIONS---`\n"
-                "4. JSON list of exactly 3 candidates for the USER'S next message. RULES FOR SUGGESTIONS:\n"
-                    "   - Suggestions MUST be user utterances (what the user would click/ say next), not questions the bot would ask.\n"
-                    "   - Suggestions SHOULD be actionable or intent-bearing (examples: 'Show watches under ₹3000', 'Filter by sporty', 'Surprise me — best sellers').\n"
-                    "   - Suggestions MUST NOT be bot-originated questions eg. 'What is your budget?'.\n"
-                    "   - If the bot asked a clarifying question in the answer, the suggestions SHOULD be plausible *user responses* to that question (e.g., 'Under ₹3000', 'No budget').\n"
-                    "   - Do NOT repeat exactly the bot's own question as a suggestion.\n"
-                    "   - Keep each suggestion medium (ideally 4 to 12 words) and written from the user's perspective.\n"
+                "4. JSON list of exactly 3 context-aware, user-perspective suggestions (Fix #6):\n"
+                "   - MUST be what the USER would type/click next (not agent questions)\n"
+                "   - MUST relate directly to the current conversation context and user's query\n"
+                "   - Should be 6-15 words for clarity\n"
+                "   - Examples:\n"
+                "     * If discussing product features: [\"Show me similar products\", \"What's the price range?\", \"Do you have this in other colors?\"]\n"
+                "     * If discussing prices: [\"Show me products under $50\", \"What's included in the price?\", \"Any ongoing discounts?\"]\n"
+                "     * If query is [[IRRELEVANT]]: [\"What products do you offer?\", \"Tell me about your services\", \"How can I contact you?\"]\n"
+                "     * If query is [[MISSING_INFO]]: [\"Show me available products\", \"Browse your collection\", \"What can you help me with?\"]\n"
+                "   - Avoid generic suggestions - make them specific to the current context\n"
                 "5. `---END---`\n"
             )
             
@@ -1037,6 +1117,21 @@ class ChatService:
             )
             db.add(user_msg)
             db.add(assistant_msg)
+            
+            # Update message counts (only for non-preview chats)
+            if not is_preview:
+                # Increment per-chatbot message count
+                chatbot.message_count = (chatbot.message_count or 0) + 1
+                
+                # Get and update global message count
+                from app.models.subscription import Subscription
+                sub_stmt = select(Subscription).where(
+                    Subscription.tenant_id == chatbot.tenant_id
+                )
+                sub_result = await db.execute(sub_stmt)
+                subscription = sub_result.scalar_one_or_none()
+                if subscription:
+                    subscription.global_message_count = (subscription.global_message_count or 0) + 1
             
             # Update summary if needed
             from sqlalchemy import func
