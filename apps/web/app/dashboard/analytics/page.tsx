@@ -74,6 +74,7 @@ export default function AnalyticsPage() {
   const chatbotIdParam = searchParams.get("chatbot_id");
 
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [analytics, setAnalytics] = useState<AnalyticsOverview | null>(null);
   const [unansweredQueries, setUnansweredQueries] =
     useState<UnansweredQueriesResponse | null>(null);
@@ -102,10 +103,13 @@ export default function AnalyticsPage() {
 
   useEffect(() => {
     fetchChatbots();
+    fetchAnalytics(true);
   }, []);
 
   useEffect(() => {
-    fetchAnalytics();
+    if (!isLoading) {
+      fetchAnalytics(false);
+    }
   }, [selectedChatbot, period]);
 
   const fetchChatbots = async () => {
@@ -137,7 +141,11 @@ export default function AnalyticsPage() {
     }
 
     try {
-      setIsLoading(true);
+      if (isLoading) {
+        setIsLoading(true);
+      } else {
+        setIsRefreshing(true);
+      }
       const token = getAccessToken();
       if (!token) return;
 
@@ -197,16 +205,22 @@ export default function AnalyticsPage() {
     } catch (err) {
       console.error("Failed to fetch analytics:", err);
     } finally {
-      setIsLoading(false);
+      if (isLoading) {
+        setIsLoading(false);
+      } else {
+        setIsRefreshing(false);
+      }
     }
   };
 
   const handleChatbotChange = (value: string) => {
     setSelectedChatbot(value);
     if (value === "all") {
-      router.push("/dashboard/analytics");
+      router.replace("/dashboard/analytics", undefined, { shallow: true });
     } else {
-      router.push(`/dashboard/analytics?chatbot_id=${value}`);
+      router.replace(`/dashboard/analytics?chatbot_id=${value}`, undefined, {
+        shallow: true,
+      });
     }
   };
 
@@ -317,10 +331,13 @@ export default function AnalyticsPage() {
             size="icon"
             className="h-10 w-10"
             onClick={() => fetchAnalytics(true)}
-            disabled={isLoading}
+            disabled={isLoading || isRefreshing}
           >
             <RefreshCcw
-              className={cn("h-4 w-4", isLoading && "animate-spin")}
+              className={cn(
+                "h-4 w-4",
+                (isLoading || isRefreshing) && "animate-spin",
+              )}
             />
           </Button>
         </div>

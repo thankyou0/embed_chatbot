@@ -68,7 +68,8 @@ async def get_usage_overview(
                     select(KnowledgeSource.id).where(
                         KnowledgeSource.chatbot_id == chatbot.id
                     )
-                )
+                ),
+                CrawledPage.is_removed == False
             )
             pages_result = await db.execute(pages_stmt)
             pages_count = pages_result.scalar() or 0
@@ -135,7 +136,8 @@ async def get_usage_overview(
         
         # Count total pages (CrawledPage + QAPair)
         total_pages_stmt = select(func.count(CrawledPage.id)).where(
-            CrawledPage.knowledge_source_id.in_(tenant_ks_ids)
+            CrawledPage.knowledge_source_id.in_(tenant_ks_ids),
+            CrawledPage.is_removed == False
         )
         total_pages_result = await db.execute(total_pages_stmt)
         total_pages = total_pages_result.scalar() or 0

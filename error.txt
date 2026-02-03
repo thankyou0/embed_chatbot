@@ -57,3 +57,19 @@ One option to consider is the DOUBLE RING GOLDEN METAL WALL CLOCK, which has a l
 
 
 Outfit Analysis: Unfortunately, I'm a text-based AI and cannot view images. However, I can guide you through a process to find a suitable jewelry ring.
+
+
+
+on Downgrading the plans, how to manage limits.
+
+
+on deleting chatbot, make sure it deletes everthing related to that particular chatbot's (knowledge base, analytics data, usage data, team member access data from db )
+
+
+
+
+Crawl failed for https://www.nexertechnology.com/: HuggingFace API error: Server error '504 Gateway Time-out' for url 'https://router.huggingface.co/hf-inference/models/sentence-transformers/all-MiniLM...
+
+3/2/2026, 6:24:00 pm
+
+Embedding generation failed: HuggingFace API error: Server error '504 Gateway Time-out' for url 'https://router.huggingface.co/hf-inference/models/sentence-transformers/all-MiniLM-L6-v2/pipeline/feature-extraction' For more infor...

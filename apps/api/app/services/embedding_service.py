@@ -148,7 +148,26 @@ class EmbeddingService:
                 logger.info(f"Starting embedding pipeline for KS: {ks.id} (Type: {ks.source_type})")
                 
                 # Update status to indicate we're processing embeddings
-                if ks.status != KnowledgeSourceStatus.PROCESSING:
+                # If the source is already marked COMPLETED with a quota/limit warning,
+                # keep it as COMPLETED so the UI can stop polling.
+                allow_processing_status = True
+                try:
+                    status_stmt = select(
+                        KnowledgeSource.status,
+                        KnowledgeSource.error_message
+                    ).where(KnowledgeSource.id == knowledge_source_id)
+                    current_status, current_error = (await db.execute(status_stmt)).one()
+                    if (
+                        current_status == KnowledgeSourceStatus.COMPLETED
+                        and current_error
+                        and any(keyword in current_error.lower() for keyword in ["quota", "limit"])
+                    ):
+                        allow_processing_status = False
+                except Exception:
+                    # Fallback to previous behavior if status lookup fails
+                    allow_processing_status = True
+
+                if allow_processing_status and ks.status != KnowledgeSourceStatus.PROCESSING:
                     await db.execute(
                         update(KnowledgeSource)
                         .where(KnowledgeSource.id == knowledge_source_id)
@@ -309,14 +328,26 @@ class EmbeddingService:
                     logger.info(f"Batch {batch_start // EMBEDDING_BATCH_SIZE + 1}: Stored {total_stored}/{total_chunks} embeddings")
 
                 # Update status to COMPLETED after successful embedding
-                # Keep existing error_message if it contains a warning (like quota reached)
-                # Only clear error messages that indicate actual failures
+                # Keep existing warning messages (like quota/limit reached)
                 update_values = {
                     'status': KnowledgeSourceStatus.COMPLETED
                 }
-                
-                # Only clear error_message if it doesn't contain warnings like "quota"
-                if not ks.error_message or 'quota' not in ks.error_message.lower():
+
+                # Re-check current error_message from DB to avoid stale state
+                current_error_msg = None
+                try:
+                    err_stmt = select(KnowledgeSource.error_message).where(
+                        KnowledgeSource.id == knowledge_source_id
+                    )
+                    current_error_msg = (await db.execute(err_stmt)).scalar_one_or_none()
+                except Exception:
+                    current_error_msg = ks.error_message
+
+                if current_error_msg and any(
+                    keyword in current_error_msg.lower() for keyword in ["quota", "limit"]
+                ):
+                    update_values['error_message'] = current_error_msg
+                else:
                     update_values['error_message'] = None
                 
                 await db.execute(

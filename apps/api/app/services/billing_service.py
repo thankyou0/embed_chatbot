@@ -33,13 +33,13 @@ PLAN_CONFIGS = {
         description="Perfect for trying out our chatbot platform",
         limits=PlanLimits(
             chatbots=1,
-            messages_per_month=100,
-            conversations_per_month=100,
-            knowledge_pages=300,
+            messages_per_month=5,
+            conversations_per_month=5,
+            knowledge_pages=5,
             knowledge_files=5,
             team_members=1,
             api_calls_per_month=1000,
-            storage_mb=100
+            storage_mb=5
         ),
         pricing=PlanPricing(
             monthly_price=Decimal("0.00"),
@@ -48,8 +48,9 @@ PLAN_CONFIGS = {
         ),
         features=[
             "1 Chatbot",
-            "100 messages/month",
-            "300 knowledge pages",
+            "5 messages/month",
+            "5 conversations/month",
+            "5 knowledge pages",
             "5 file uploads",
             "1 team member",
             "Basic analytics",
@@ -243,7 +244,8 @@ class BillingService:
                         select(KnowledgeSource.id).where(
                             KnowledgeSource.chatbot_id.in_(chatbot_ids)
                         )
-                    )
+                    ),
+                    CrawledPage.is_removed == False
                 )
             )
             knowledge_pages_count = pages_result.scalar() or 0
@@ -401,7 +403,8 @@ class BillingService:
         
         # Verify user has admin role
         from app.models.user import UserRole
-        if user.role != UserRole.ADMIN:
+        from app.core.config import settings
+        if user.role != UserRole.ADMIN and not settings.BILLING_MOCK_MODE:
             raise ForbiddenError("Only admins can change subscription plans")
 
         # Get subscription
@@ -557,4 +560,81 @@ class BillingService:
                 "current": 0,
                 "limit": 0,
                 "chatbot_id": str(chatbot_id)
+            }
+
+    @staticmethod
+    async def check_conversation_limit(db: AsyncSession, tenant_id: int) -> dict:
+        """
+        Check if tenant has exceeded conversation limit for the current billing period
+        Returns: {exceeded: bool, current: int, limit: int, percentage: float}
+        """
+        try:
+            subscription = await BillingService.get_or_create_subscription(db, tenant_id)
+            plan_type = PlanType(subscription.plan_type.value)
+            plan_config = PLAN_CONFIGS[plan_type]
+            limit = plan_config.limits.conversations_per_month
+
+            current_usage = await BillingService.calculate_current_usage(
+                db,
+                tenant_id,
+                subscription.current_period_start,
+                subscription.current_period_end
+            )
+            current = current_usage.conversations_count
+            percentage = (current / limit * 100) if limit > 0 else 0
+
+            return {
+                "exceeded": current >= limit,
+                "current": current,
+                "limit": limit,
+                "percentage": percentage,
+                "plan": plan_type.value
+            }
+        except Exception as e:
+            logger.error(f"Error checking conversation limit: {e}")
+            return {
+                "exceeded": False,
+                "current": 0,
+                "limit": 0,
+                "percentage": 0,
+                "plan": "unknown"
+            }
+
+    @staticmethod
+    async def check_storage_limit(db: AsyncSession, tenant_id: int, additional_bytes: int = 0) -> dict:
+        """
+        Check if tenant would exceed storage limit with an additional upload
+        Returns: {exceeded: bool, current_mb: float, projected_mb: float, limit_mb: int, plan: str}
+        """
+        try:
+            subscription = await BillingService.get_or_create_subscription(db, tenant_id)
+            plan_type = PlanType(subscription.plan_type.value)
+            plan_config = PLAN_CONFIGS[plan_type]
+            limit_mb = plan_config.limits.storage_mb
+
+            current_usage = await BillingService.calculate_current_usage(
+                db,
+                tenant_id,
+                subscription.current_period_start,
+                subscription.current_period_end
+            )
+            current_mb = Decimal(current_usage.storage_mb)
+            additional_mb = Decimal(additional_bytes) / Decimal(1024 * 1024)
+            projected_mb = current_mb + additional_mb
+
+            return {
+                "exceeded": projected_mb > Decimal(limit_mb),
+                "current_mb": float(current_mb),
+                "projected_mb": float(projected_mb),
+                "limit_mb": limit_mb,
+                "plan": plan_type.value
+            }
+        except Exception as e:
+            logger.error(f"Error checking storage limit: {e}")
+            return {
+                "exceeded": False,
+                "current_mb": 0.0,
+                "projected_mb": 0.0,
+                "limit_mb": 0,
+                "plan": "unknown"
             }

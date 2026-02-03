@@ -18,6 +18,14 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { apiRequestWithAuth } from "@/lib/api";
 import { getAccessToken } from "@/lib/auth";
 import { cn } from "@/lib/utils";
@@ -61,33 +69,69 @@ export default function PricingPage() {
     "monthly",
   );
   const [error, setError] = useState<string | null>(null);
+  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
+  const [showDialog, setShowDialog] = useState(false);
+  const [isChangingPlan, setIsChangingPlan] = useState(false);
+
+  const fetchPlans = async () => {
+    try {
+      setIsLoading(true);
+      const token = getAccessToken();
+      if (!token) return;
+
+      const response = await apiRequestWithAuth<BillingResponse>(
+        "/api/v1/billing/overview",
+        token,
+        { method: "GET" },
+      );
+
+      setPlans(response.available_plans);
+      setCurrentPlan(response.current_plan.name.toLowerCase());
+      setError(null);
+    } catch (err: any) {
+      setError(err.message || "Failed to fetch pricing plans");
+      console.error("Error fetching plans:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchPlans = async () => {
-      try {
-        setIsLoading(true);
-        const token = getAccessToken();
-        if (!token) return;
-
-        const response = await apiRequestWithAuth<BillingResponse>(
-          "/api/v1/billing/overview",
-          token,
-          { method: "GET" },
-        );
-
-        setPlans(response.available_plans);
-        setCurrentPlan(response.current_plan.name.toLowerCase());
-        setError(null);
-      } catch (err: any) {
-        setError(err.message || "Failed to fetch pricing plans");
-        console.error("Error fetching plans:", err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     fetchPlans();
   }, []);
+
+  const openDialog = (planType: string) => {
+    setSelectedPlan(planType);
+    setShowDialog(true);
+  };
+
+  const handleChangePlan = async () => {
+    if (!selectedPlan) return;
+    try {
+      setIsChangingPlan(true);
+      const token = getAccessToken();
+      if (!token) return;
+
+      const cycle = selectedPlan === "free" ? "monthly" : billingCycle;
+
+      await apiRequestWithAuth("/api/v1/billing/change-plan", token, {
+        method: "POST",
+        body: JSON.stringify({
+          new_plan: selectedPlan,
+          billing_cycle: cycle,
+        }),
+      });
+
+      await fetchPlans();
+      setShowDialog(false);
+      setSelectedPlan(null);
+    } catch (err: any) {
+      console.error("Failed to change plan:", err);
+      alert(err.message || "Failed to change plan");
+    } finally {
+      setIsChangingPlan(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -233,8 +277,11 @@ export default function PricingPage() {
                       Current Plan
                     </Button>
                   ) : (
-                    <Button className="w-full mt-4">
-                      Upgrade Now
+                    <Button
+                      className="w-full mt-4"
+                      onClick={() => openDialog(plan.name.toLowerCase())}
+                    >
+                      {plan.name === "Free" ? "Downgrade" : "Upgrade Now"}
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
                   )}
@@ -340,6 +387,37 @@ export default function PricingPage() {
           </div>
         </CardContent>
       </Card>
+
+      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Plan Change</DialogTitle>
+            <DialogDescription>
+              This is a mock purchase. Your limits will update immediately.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedPlan && (
+            <div className="py-2">
+              <p className="font-medium capitalize">{selectedPlan}</p>
+              <p className="text-sm text-muted-foreground">
+                Billing: {selectedPlan === "free" ? "monthly" : billingCycle}
+              </p>
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowDialog(false)}
+              disabled={isChangingPlan}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleChangePlan} disabled={isChangingPlan}>
+              {isChangingPlan ? "Processing..." : "Confirm"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

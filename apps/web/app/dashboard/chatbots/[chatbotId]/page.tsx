@@ -246,6 +246,7 @@ export default function ChatbotDetailPage() {
   const [pollingStartTime, setPollingStartTime] = useState<number | null>(null);
   const MAX_POLLING_DURATION = 5 * 60 * 1000; // 5 minutes max polling
   const [manuallyStartedCrawl, setManuallyStartedCrawl] = useState(false);
+  const [pollingTimedOut, setPollingTimedOut] = useState(false);
 
   // Toast notification state for crawl status changes
   const [toastMessage, setToastMessage] = useState<{
@@ -494,12 +495,14 @@ export default function ChatbotDetailPage() {
     }
 
     // Start polling if we have active crawls and aren't polling yet
-    if (!isPolling && hasCrawlingSources) {
+    if (!isPolling && hasCrawlingSources && !pollingTimedOut) {
       console.log("🚀 Starting polling - active crawls detected");
       setIsPolling(true);
       setPollingStartTime(Date.now());
+    } else if (!isPolling && hasCrawlingSources && pollingTimedOut) {
+      console.log("⏱️ Polling disabled after timeout; waiting for manual refresh");
     }
-  }, [knowledgeSources, manuallyStartedCrawl, isPolling]);
+  }, [knowledgeSources, manuallyStartedCrawl, isPolling, pollingTimedOut]);
 
   // Separate effect for the actual polling interval
   useEffect(() => {
@@ -522,6 +525,12 @@ export default function ChatbotDetailPage() {
         console.log("Polling timeout reached, stopping automatic refresh");
         setIsPolling(false);
         setPollingStartTime(null);
+        setPollingTimedOut(true);
+        setToastMessage({
+          type: "info",
+          message:
+            "Polling stopped after 5 minutes. Refresh manually if processing continues.",
+        });
         return;
       }
     }, 2000); // Poll every 2 seconds for faster updates
@@ -700,6 +709,7 @@ export default function ChatbotDetailPage() {
       await fetchChatbotStats();
 
       // Enable polling BEFORE fetching to ensure the polling effect recognizes active sources
+      setPollingTimedOut(false);
       setManuallyStartedCrawl(true);
       setIsPolling(true);
       setPollingStartTime(Date.now());
@@ -754,6 +764,7 @@ export default function ChatbotDetailPage() {
       await fetchChatbotStats();
 
       // Enable polling BEFORE fetching to ensure the polling effect recognizes active sources
+      setPollingTimedOut(false);
       setManuallyStartedCrawl(true);
       setIsPolling(true);
       setPollingStartTime(Date.now());
@@ -835,6 +846,7 @@ export default function ChatbotDetailPage() {
       await fetchChatbotStats();
 
       // Enable polling for QA upload processing
+      setPollingTimedOut(false);
       setManuallyStartedCrawl(true);
       setIsPolling(true);
       setPollingStartTime(Date.now());

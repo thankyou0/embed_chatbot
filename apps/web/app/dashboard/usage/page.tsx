@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   TrendingUp,
   MessageSquare,
@@ -110,8 +110,10 @@ interface ChatbotOption {
 export default function UsagePage() {
   const searchParams = useSearchParams();
   const chatbotIdParam = searchParams.get("chatbot_id");
+  const router = useRouter();
 
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [billingData, setBillingData] = useState<BillingOverview | null>(null);
   const [chatbots, setChatbots] = useState<ChatbotOption[]>([]);
   const [perBotUsage, setPerBotUsage] = useState<ChatbotUsageData[]>([]);
@@ -120,10 +122,23 @@ export default function UsagePage() {
   );
   const [error, setError] = useState<string | null>(null);
 
+  const handleChatbotSelection = (value: string) => {
+    setSelectedChatbot(value);
+
+    const queryString = value === "all" ? "" : `?chatbot_id=${value}`;
+    router.replace(`/dashboard/usage${queryString}`, undefined, {
+      shallow: true,
+    });
+  };
+
   // Fetch billing and usage data
-  const fetchData = async () => {
+  const fetchData = async (showLoader = false) => {
     try {
-      setIsLoading(true);
+      if (showLoader) {
+        setIsLoading(true);
+      } else {
+        setIsRefreshing(true);
+      }
       const token = getAccessToken();
       if (!token) return;
 
@@ -153,7 +168,11 @@ export default function UsagePage() {
       setError(err.message || "Failed to fetch data");
       console.error("Error fetching data:", err);
     } finally {
-      setIsLoading(false);
+      if (showLoader) {
+        setIsLoading(false);
+      } else {
+        setIsRefreshing(false);
+      }
     }
   };
 
@@ -177,11 +196,13 @@ export default function UsagePage() {
 
   useEffect(() => {
     fetchChatbots();
-    fetchData();
+    fetchData(true);
   }, []);
 
   useEffect(() => {
-    fetchData();
+    if (!isLoading) {
+      fetchData(false);
+    }
   }, [selectedChatbot]);
 
   const formatDate = (dateString: string) => {
@@ -306,7 +327,7 @@ export default function UsagePage() {
             <Filter className="h-4 w-4 text-muted-foreground" />
             <select
               value={selectedChatbot}
-              onChange={(e) => setSelectedChatbot(e.target.value)}
+              onChange={(e) => handleChatbotSelection(e.target.value)}
               className="bg-transparent border-0 focus:ring-0 text-sm h-8 outline-none cursor-pointer min-w-[200px]"
             >
               <option value="all">All Chatbots (Total Usage)</option>
@@ -317,9 +338,9 @@ export default function UsagePage() {
               ))}
             </select>
           </div>
-          <Button onClick={() => fetchData()} variant="outline" size="icon">
+          <Button onClick={() => fetchData(false)} variant="outline" size="icon">
             <RefreshCcw
-              className={cn("h-4 w-4", isLoading && "animate-spin")}
+              className={cn("h-4 w-4", (isLoading || isRefreshing) && "animate-spin")}
             />
           </Button>
         </div>

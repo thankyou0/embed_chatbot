@@ -55,6 +55,9 @@ class Settings(BaseSettings):
     API_HOST: str = "0.0.0.0"
     SECRET_KEY: str = "your-secret-key-change-in-production"
 
+    # Billing
+    BILLING_MOCK_MODE: bool = True
+
     # JWT
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30

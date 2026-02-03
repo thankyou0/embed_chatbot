@@ -13,6 +13,20 @@ logger = get_logger(__name__)
 
 class FileService:
     @staticmethod
+    def sanitize_text(text: Optional[str]) -> Optional[str]:
+        """Remove invalid unicode (surrogates) and null bytes before storage."""
+        if text is None:
+            return None
+        if not isinstance(text, str):
+            text = str(text)
+        # Drop surrogate code points and other invalid UTF-8 sequences
+        cleaned = text.encode("utf-8", "ignore").decode("utf-8", "ignore")
+        # Remove null bytes which can break DB inserts
+        if "\x00" in cleaned:
+            cleaned = cleaned.replace("\x00", "")
+        return cleaned
+
+    @staticmethod
     async def save_file(file_content: bytes, upload_dir: str, filename: str) -> str:
         """Saves file to S3-compatible storage (like DigitalOcean Spaces) if configured"""
         
@@ -136,14 +150,15 @@ class FileService:
                     file_content = io.BytesIO(f.read())
 
             if mime_type == "application/pdf":
-                return FileService._extract_from_pdf(file_content)
+                extracted = FileService._extract_from_pdf(file_content)
             elif mime_type in ["application/vnd.openxmlformats-officedocument.wordprocessingml.document", "application/msword"]:
-                return FileService._extract_from_docx(file_content)
+                extracted = FileService._extract_from_docx(file_content)
             elif mime_type in ["text/plain", "text/markdown", "application/octet-stream"]:
-                return FileService._extract_from_text(file_content)
+                extracted = FileService._extract_from_text(file_content)
             else:
                 logger.warning(f"Unsupported mime type for extraction: {mime_type}")
                 return None
+            return FileService.sanitize_text(extracted)
         except Exception as e:
             logger.error(f"Error extracting text from {source_name}: {str(e)}")
             return None

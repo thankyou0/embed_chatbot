@@ -546,9 +546,55 @@ class ChatService:
         start_time = time.time()
         
         try:
-            # --- 1. Get/Create Session ---
-            session = await ChatService.get_or_create_session(db, chatbot_id, session_id, is_preview=is_preview)
-            
+            # --- 1. Get chatbot and session (if provided) ---
+            chatbot_stmt = select(Chatbot).where(Chatbot.id == chatbot_id)
+            chatbot_res = await db.execute(chatbot_stmt)
+            chatbot = chatbot_res.scalar_one()
+
+            session = None
+            if session_id:
+                try:
+                    session_uuid = UUID(session_id)
+                    session_stmt = select(ChatSession).where(
+                        ChatSession.id == session_uuid,
+                        ChatSession.chatbot_id == chatbot_id
+                    )
+                    session_res = await db.execute(session_stmt)
+                    session = session_res.scalar_one_or_none()
+                except (ValueError, AttributeError):
+                    session = None
+
+            # Check conversation limits only when starting a new session
+            if session is None:
+                if not is_preview:
+                    from app.services.billing_service import BillingService
+                    conv_limit = await BillingService.check_conversation_limit(db, chatbot.tenant_id)
+                    if conv_limit["exceeded"]:
+                        limit_message = (
+                            "Conversation limit reached. "
+                            f"You have used {conv_limit['current']} out of {conv_limit['limit']} conversations "
+                            f"on your {conv_limit['plan']} plan. Please upgrade your plan to continue."
+                        )
+                        for char in limit_message:
+                            yield {"type": "content", "content": char}
+                            await asyncio.sleep(0.02)
+
+                        yield {
+                            "type": "done",
+                            "sources": [],
+                            "suggestions": [],
+                            "products": [],
+                            "image_analysis": None,
+                            "error": "conversation_limit_exceeded"
+                        }
+                        return
+
+                # Create a new session when under limit (or preview)
+                session = ChatSession(chatbot_id=chatbot_id, is_preview=is_preview)
+                db.add(session)
+                await db.commit()
+                await db.refresh(session)
+
             # Send session ID first
             yield {
                 "type": "session",
@@ -556,9 +602,6 @@ class ChatService:
             }
             
             # --- 2. Get chatbot and history ---
-            chatbot_stmt = select(Chatbot).where(Chatbot.id == chatbot_id)
-            chatbot_res = await db.execute(chatbot_stmt)
-            chatbot = chatbot_res.scalar_one()
             
             # Check message limits (only for non-preview chats)
             if not is_preview:

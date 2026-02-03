@@ -86,6 +86,19 @@ class ChatbotService:
         request: ChatbotCreate
     ) -> ChatbotWithPermission:
         """Create a new chatbot"""
+        # Enforce chatbot limit based on plan
+        billing_overview = await BillingService.get_billing_overview(
+            db=db,
+            tenant_id=tenant_id,
+            user=user
+        )
+        current_count = billing_overview.usage.current_usage.chatbots_count
+        limit = billing_overview.current_plan.limits.chatbots
+        if limit > 0 and current_count >= limit:
+            raise BadRequestError(
+                f"Chatbot limit reached. You have {current_count} out of {limit} chatbots on your "
+                f"{billing_overview.subscription.plan_type.value} plan. Please upgrade to create more."
+            )
         
         # #region agent log
         # with open(r'e:\e_com_Chatbot\.cursor\debug.log', 'a') as f: f.write('{"sessionId":"debug-session","runId":"run1","hypothesisId":"A","location":"chatbot_service.py:42","message":"Before creating chatbot","data":{"status_enum_name":"' + str(ChatbotStatus.DRAFT.name) + '","status_enum_value":"' + str(ChatbotStatus.DRAFT.value) + '","status_repr":"' + repr(ChatbotStatus.DRAFT) + '"},"timestamp":' + str(__import__('time').time() * 1000) + '}\n')
@@ -963,7 +976,8 @@ class ChatbotService:
             KnowledgeSource,
             KnowledgeSource.id == CrawledPage.knowledge_source_id
         ).where(
-            KnowledgeSource.chatbot_id == chatbot_id
+            KnowledgeSource.chatbot_id == chatbot_id,
+            CrawledPage.is_removed == False
         )
         
         result = await db.execute(stmt)
@@ -1160,6 +1174,15 @@ class ChatbotService:
         if not await ChatbotService.has_permission(db, chatbot_id, user, "can_manage_knowledge"):
             raise ForbiddenError("Insufficient permissions to upload files")
 
+        # Enforce file count limit (plan-level)
+        from app.services.billing_service import BillingService
+        file_limit = await BillingService.check_file_upload_limit(db, tenant_id, str(chatbot_id))
+        if file_limit["exceeded"]:
+            raise BadRequestError(
+                f"File upload limit reached. You've used {file_limit['current']}/"
+                f"{file_limit['limit']} files. Please upgrade your plan to upload more."
+            )
+
         # 2. Validate file type
         allowed_extensions = {'.pdf', '.docx', '.txt', '.md'}
         ext = os.path.splitext(file.filename)[1].lower()
@@ -1168,7 +1191,7 @@ class ChatbotService:
 
         # 3. Pre-validate: Can we extract text from this file?
         content = await file.read()
-        
+
         # Calculate content hash for deduplication
         content_hash = hashlib.sha256(content).hexdigest()
         
@@ -1180,6 +1203,19 @@ class ChatbotService:
         existing_file = (await db.execute(stmt)).scalar_one_or_none()
         if existing_file:
             raise BadRequestError(f"A file with the same content has already been uploaded as '{existing_file.filename}'.")
+
+        # Enforce storage limit before extracting/saving
+        storage_limit = await BillingService.check_storage_limit(
+            db,
+            tenant_id,
+            additional_bytes=len(content)
+        )
+        if storage_limit["exceeded"]:
+            raise BadRequestError(
+                f"Storage limit reached. You're using {storage_limit['current_mb']:.2f} MB "
+                f"out of {storage_limit['limit_mb']} MB on the {storage_limit['plan']} plan. "
+                "Please delete files or upgrade your plan."
+            )
 
         extracted_text = await FileService.extract_text(content, file.content_type)
         if not extracted_text:
@@ -1248,68 +1284,79 @@ class ChatbotService:
     async def _process_uploaded_file(ks_id: UUID, file_path: str, mime_type: str, text: Optional[str] = None):
         """Background task to extract text from file and generate embeddings"""
         session_factory = get_session_factory()
-        async with session_factory() as db:
-            try:
-                # Update status
-                await db.execute(
-                    update(KnowledgeSource)
-                    .where(KnowledgeSource.id == ks_id)
-                    .values(status=KnowledgeSourceStatus.PROCESSING)
-                )
-                await db.commit()
-
-                # Extract text if not provided
-                if not text:
-                    text = await FileService.extract_text(file_path, mime_type)
-                
-                if not text:
-                    raise Exception("Failed to extract text from file")
-
-                # Create a "virtual page" for the file content so embedding service can use it
-                # Or we can modify embedding service to handle raw text. 
-                # For now, let's create a CrawledPage entry as it's the expected input for EmbeddingService
-                stmt = select(KnowledgeSource).where(KnowledgeSource.id == ks_id)
-                ks = (await db.execute(stmt)).scalar_one()
-                
-                crawled_page = CrawledPage(
-                    knowledge_source_id=ks_id,
-                    url=f"file://{os.path.basename(file_path)}",
-                    title=os.path.basename(file_path),
-                    content=text
-                )
-                db.add(crawled_page)
-                await db.commit()
-
-                # Run embedding pipeline
-                await EmbeddingService.process_knowledge_source(ks_id)
-
-                # Final update
-                await db.execute(
-                    update(KnowledgeSource)
-                    .where(KnowledgeSource.id == ks_id)
-                    .values(status=KnowledgeSourceStatus.COMPLETED)
-                )
-                await db.commit()
-                logger.success(f"Successfully processed uploaded file for KS: {ks_id}")
-
-            except Exception as e:
-                logger.error(f"Error processing uploaded file {ks_id}: {str(e)}")
-                # Delete the uploaded file from storage if processing fails
+        try:
+            async with session_factory() as db:
                 try:
-                    await FileService.delete_file(file_path)
-                    logger.info(f"Deleted failed upload from storage: {file_path}")
-                except Exception as cleanup_error:
-                    logger.error(f"Failed to cleanup file after error: {cleanup_error}")
-
-                await db.execute(
-                    update(KnowledgeSource)
-                    .where(KnowledgeSource.id == ks_id)
-                    .values(
-                        status=KnowledgeSourceStatus.FAILED,
-                        error_message=f"Processing failed: {str(e)}"
+                    # Update status
+                    await db.execute(
+                        update(KnowledgeSource)
+                        .where(KnowledgeSource.id == ks_id)
+                        .values(status=KnowledgeSourceStatus.PROCESSING)
                     )
-                )
-                await db.commit()
+                    await db.commit()
+
+                    # Extract text if not provided
+                    if not text:
+                        text = await FileService.extract_text(file_path, mime_type)
+                    
+                    if not text:
+                        raise Exception("Failed to extract text from file")
+
+                    # Create a "virtual page" for the file content so embedding service can use it
+                    # Or we can modify embedding service to handle raw text. 
+                    # For now, let's create a CrawledPage entry as it's the expected input for EmbeddingService
+                    stmt = select(KnowledgeSource).where(KnowledgeSource.id == ks_id)
+                    ks = (await db.execute(stmt)).scalar_one()
+                    
+                    crawled_page = CrawledPage(
+                        knowledge_source_id=ks_id,
+                        url=f"file://{os.path.basename(file_path)}",
+                        title=os.path.basename(file_path),
+                        content=text
+                    )
+                    db.add(crawled_page)
+                    await db.commit()
+
+                    # Run embedding pipeline
+                    await EmbeddingService.process_knowledge_source(ks_id)
+
+                    # Final update
+                    await db.execute(
+                        update(KnowledgeSource)
+                        .where(KnowledgeSource.id == ks_id)
+                        .values(status=KnowledgeSourceStatus.COMPLETED)
+                    )
+                    await db.commit()
+                    logger.success(f"Successfully processed uploaded file for KS: {ks_id}")
+
+                except Exception as e:
+                    logger.error(f"Error processing uploaded file {ks_id}: {str(e)}")
+                    await db.rollback()
+                    # Delete the uploaded file from storage if processing fails
+                    try:
+                        await FileService.delete_file(file_path)
+                        logger.info(f"Deleted failed upload from storage: {file_path}")
+                    except Exception as cleanup_error:
+                        logger.error(f"Failed to cleanup file after error: {cleanup_error}")
+
+                    try:
+                        short_error = str(e)
+                        if len(short_error) > 400:
+                            short_error = short_error[:400] + "..."
+                        await db.execute(
+                            update(KnowledgeSource)
+                            .where(KnowledgeSource.id == ks_id)
+                            .values(
+                                status=KnowledgeSourceStatus.FAILED,
+                                error_message=f"Processing failed: {short_error}"
+                            )
+                        )
+                        await db.commit()
+                    except Exception as update_error:
+                        logger.error(f"Failed to mark knowledge source as FAILED: {update_error}")
+                        await db.rollback()
+        except Exception as outer_error:
+            logger.error(f"Upload background task crashed before handling failure for KS {ks_id}: {outer_error}")
 
     @staticmethod
     async def delete_knowledge_source(
@@ -1977,7 +2024,8 @@ class ChatbotService:
 
             # Count and estimate crawled content size (average ~2KB per page) - only from completed sources
             crawled_pages_stmt = select(func.count(CrawledPage.id)).where(
-                CrawledPage.knowledge_source_id.in_(completed_ks_ids)
+                CrawledPage.knowledge_source_id.in_(completed_ks_ids),
+                CrawledPage.is_removed == False
             )
             crawled_pages_count = (await db.execute(crawled_pages_stmt)).scalar() or 0
             breakdown['total_crawled_pages'] = crawled_pages_count

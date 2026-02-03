@@ -364,6 +364,20 @@ class CrawlerService:
                 pages_updated = 0
                 pages_skipped = 0  # Track URLs skipped due to existing in other knowledge sources
                 quota_reached = False  # Track if quota limit was hit
+                pending_added = 0  # Track new/resurrected pages not yet committed for quota enforcement
+
+                # Cache current total pages across all sources for this chatbot (active only)
+                current_total = None
+                if quota_limit is not None:
+                    total_pages_stmt = select(func.count(CrawledPage.id)).join(
+                        KnowledgeSource,
+                        KnowledgeSource.id == CrawledPage.knowledge_source_id
+                    ).where(
+                        KnowledgeSource.chatbot_id == current_ks.chatbot_id,
+                        CrawledPage.is_removed == False
+                    )
+                    total_result = await db.execute(total_pages_stmt)
+                    current_total = total_result.scalar() or 0
                 
                 async for page_data in crawler.crawl():
                     url = page_data['url']
@@ -381,29 +395,22 @@ class CrawlerService:
                         continue
                     
                     # CHECK QUOTA LIMIT BEFORE PROCESSING: Stop if we've reached the quota
-                    # This prevents going over limit by checking BEFORE adding new pages
-                    if quota_limit is not None and url not in existing_pages:
-                        # Count total pages across all sources for this chatbot
-                        total_pages_stmt = select(func.count(CrawledPage.id)).join(
-                            KnowledgeSource,
-                            KnowledgeSource.id == CrawledPage.knowledge_source_id
-                        ).where(
-                            KnowledgeSource.chatbot_id == current_ks.chatbot_id,
-                            CrawledPage.is_removed == False
-                        )
-                        total_result = await db.execute(total_pages_stmt)
-                        current_total = total_result.scalar() or 0
-                        
-                        if current_total >= quota_limit:
+                    # This prevents going over limit by checking BEFORE adding new or resurrected pages
+                    existing_page = existing_pages.get(url)
+                    is_new_or_resurrect = (
+                        existing_page is None or existing_page.is_removed
+                    )
+                    if quota_limit is not None and is_new_or_resurrect:
+                        effective_total = (current_total or 0) + pending_added
+                        if effective_total >= quota_limit:
                             quota_reached = True
                             logger.warning(
-                                f"Quota limit reached! Total pages: {current_total}/{quota_limit}. "
+                                f"Quota limit reached! Total pages: {effective_total}/{quota_limit}. "
                                 f"Stopping crawl and processing what we have."
                             )
                             break  # Stop crawling - don't add this page
                     
-                    if url in existing_pages:
-                        existing_page = existing_pages[url]
+                    if existing_page:
                         
                         # 🔁 RESURRECT if page was previously removed
                         resurrected = False
@@ -427,6 +434,7 @@ class CrawlerService:
                             )
                             
                             if resurrected:
+                                pending_added += 1
                                 logger.info(f"Resurrected page: {url}")
                             else:
                                 logger.info(f"Updated page: {url} (is_product: {is_product})")
@@ -446,6 +454,7 @@ class CrawlerService:
                             product_metadata=product_metadata
                         )
                         db.add(crawled_page)
+                        pending_added += 1
                         pages_added += 1
                         logger.info(f"Added new page: {url} (is_product: {is_product})")
                     
@@ -533,13 +542,14 @@ class CrawlerService:
                 update_values = {
                     'pages_found': ks_total_pages,  # Use KS total for this field
                     # Keep status as CRAWLING - embeddings will set to COMPLETED
-                    # But if quota reached and no pages added, mark as failed
                 }
                 
                 # Add quota warning to error_message if quota was reached (user-facing message)
                 # This will be shown in the frontend
                 if quota_warning:
                     update_values['error_message'] = quota_warning
+                    # Mark as COMPLETED immediately so UI can stop polling
+                    update_values['status'] = KnowledgeSourceStatus.COMPLETED
                 else:
                     # Clear any previous error if crawl was successful
                     update_values['error_message'] = None
@@ -628,7 +638,7 @@ class CrawlerService:
                             .where(KnowledgeSource.id == knowledge_source_id)
                             .values(
                                 status=KnowledgeSourceStatus.COMPLETED,
-                                error_message=None
+                                error_message=quota_warning if quota_warning else None
                             )
                         )
                         await db.commit()
