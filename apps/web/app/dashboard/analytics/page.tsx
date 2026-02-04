@@ -216,11 +216,9 @@ export default function AnalyticsPage() {
   const handleChatbotChange = (value: string) => {
     setSelectedChatbot(value);
     if (value === "all") {
-      router.replace("/dashboard/analytics", undefined, { shallow: true });
+      router.replace("/dashboard/analytics");
     } else {
-      router.replace(`/dashboard/analytics?chatbot_id=${value}`, undefined, {
-        shallow: true,
-      });
+      router.replace(`/dashboard/analytics?chatbot_id=${value}`);
     }
   };
 

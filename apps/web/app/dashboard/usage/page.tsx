@@ -126,9 +126,7 @@ export default function UsagePage() {
     setSelectedChatbot(value);
 
     const queryString = value === "all" ? "" : `?chatbot_id=${value}`;
-    router.replace(`/dashboard/usage${queryString}`, undefined, {
-      shallow: true,
-    });
+    router.replace(`/dashboard/usage${queryString}`);
   };
 
   // Fetch billing and usage data
