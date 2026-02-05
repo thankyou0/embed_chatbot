@@ -132,10 +132,160 @@ COLOR_KEYWORDS = [
 ]
 
 
+def detect_product_gender(product_name: str, url: str, description: str = "") -> Optional[str]:
+    """
+    Generic algorithm to detect the target gender/demographic of a product.
+    
+    Uses a scoring-based approach instead of hardcoded keyword lists.
+    Analyzes: product name, URL path, and description.
+    
+    Returns: 'men', 'women', 'boys', 'girls', 'kids', 'unisex', or None (neutral)
+    """
+    # Combine text sources with different weights
+    name_lower = product_name.lower() if product_name else ""
+    url_lower = url.lower() if url else ""
+    desc_lower = description.lower() if description else ""
+    
+    # Initialize scores for each demographic
+    scores = {
+        'men': 0,
+        'women': 0,
+        'boys': 0,
+        'girls': 0,
+        'kids': 0,
+    }
+    
+    # === LAYER 1: URL CATEGORY PATH (Strong signal) ===
+    # Extract category from URL path patterns like /men-90/, /women/, /category/men/, etc.
+    url_category_patterns = {
+        'men': [r'/men[-_/]', r'/mens[-_/]', r'/male[-_/]', r'/gents[-_/]', r'category[-/]men', r'/him[-_/]'],
+        'women': [r'/women[-_/]', r'/womens[-_/]', r'/female[-_/]', r'/ladies[-_/]', r'category[-/]women', r'/her[-_/]'],
+        'boys': [r'/boys[-_/]', r'/boy[-_/]'],
+        'girls': [r'/girls[-_/]', r'/girl[-_/]'],
+        'kids': [r'/kids[-_/]', r'/children[-_/]', r'/child[-_/]', r'/junior[-_/]', r'/baby[-_/]', r'/infant[-_/]'],
+    }
+    
+    for demographic, patterns in url_category_patterns.items():
+        for pattern in patterns:
+            if re.search(pattern, url_lower):
+                scores[demographic] += 30  # Strong signal from URL category
+                break
+    
+    # === LAYER 2: PRODUCT NAME GENDER INDICATORS (Strongest signal) ===
+    # Direct gender mentions in product name
+    name_patterns = {
+        'men': [
+            r"\bmen'?s?\b", r"\bmale\b", r"\bgent'?s?\b", r"\bgentlemen\b",
+            r"\bfor men\b", r"\bfor him\b", r"\bmasculine\b"
+        ],
+        'women': [
+            r"\bwomen'?s?\b", r"\bfemale\b", r"\bladies?\b", 
+            r"\bfor women\b", r"\bfor her\b", r"\bfeminine\b"
+        ],
+        'boys': [r"\bboys?'?\b", r"\bfor boys?\b"],
+        'girls': [r"\bgirls?'?\b", r"\bfor girls?\b"],
+        'kids': [r"\bkids?\b", r"\bchildren\b", r"\bchild\b", r"\bjunior\b", r"\bbaby\b", r"\binfant\b", r"\btoddler\b"],
+    }
+    
+    for demographic, patterns in name_patterns.items():
+        for pattern in patterns:
+            if re.search(pattern, name_lower):
+                scores[demographic] += 50  # Very strong signal from product name
+                break
+    
+    # === LAYER 3: PRODUCT TYPE INDICATORS (Medium signal) ===
+    # These product types are gender-specific by nature
+    # Use patterns, not just keywords, for flexibility
+    
+    # Women-specific product types (clothing, accessories)
+    women_product_patterns = [
+        r'\b(saree|sari)s?\b',          # Indian traditional
+        r'\b(lehenga|ghagra)s?\b',      # Indian traditional
+        r'\b(salwar|churidar|palazzo)s?\b',  # Bottom wear
+        r'\b(kurti|kurta)s?\b(?!.*\bmen)',  # Kurti (unless "men" mentioned)
+        r'\b(anarkali|sharara)s?\b',    # Indian traditional
+        r'\b(dupatta|chunni)s?\b',      # Accessories
+        r'\b(blouse)s?\b',              # Blouse
+        r'\b(bra|lingerie|panties?)\b', # Innerwear
+        r'\b(mangalsutra|sindoor)\b',   # Jewelry
+        r'\b(gown|frock)s?\b',          # Dresses
+        r'\b(skirt|midi|maxi)s?\b',     # Bottom wear
+        r'\b(bangles?|anklet)s?\b',     # Jewelry
+        r'\bmaternity\b',               # Maternity
+        r'\b(lipstick|mascara|foundation|eyeshadow)\b',  # Makeup
+    ]
+    
+    # Men-specific product types
+    men_product_patterns = [
+        r'\b(sherwani|dhoti|lungi)s?\b',  # Indian traditional
+        r'\b(waistcoat|vest)s?\b',        # Formal wear
+        r'\b(cufflinks?|tie\s*clip)\b',   # Accessories
+        r'\b(necktie|bow\s*tie)s?\b',     # Accessories
+        r'\b(blazer|suit)\b(?!.*\bwomen)', # Formal (unless women mentioned)
+        r'\b(boxers?|briefs?)\b',         # Innerwear
+        r'\bmundu\b',                     # Indian traditional
+    ]
+    
+    for pattern in women_product_patterns:
+        if re.search(pattern, name_lower):
+            scores['women'] += 40
+            break  # Only count once
+            
+    for pattern in men_product_patterns:
+        if re.search(pattern, name_lower):
+            scores['men'] += 40
+            break  # Only count once
+    
+    # === LAYER 4: DESCRIPTION ANALYSIS (Weak signal) ===
+    if desc_lower:
+        desc_patterns = {
+            'men': [r"\bmen\b", r"\bmale\b", r"\bgents\b"],
+            'women': [r"\bwomen\b", r"\bfemale\b", r"\bladies\b"],
+            'boys': [r"\bboys\b"],
+            'girls': [r"\bgirls\b"],
+            'kids': [r"\bkids\b", r"\bchildren\b"],
+        }
+        
+        for demographic, patterns in desc_patterns.items():
+            for pattern in patterns:
+                if re.search(pattern, desc_lower):
+                    scores[demographic] += 10  # Weak signal from description
+                    break
+    
+    # === DETERMINE RESULT ===
+    # Find the highest scoring demographic
+    max_score = max(scores.values())
+    
+    if max_score < 20:
+        # No strong signals - treat as neutral/unisex
+        return None
+    
+    # Get all demographics with the max score
+    top_demographics = [d for d, s in scores.items() if s == max_score]
+    
+    if len(top_demographics) == 1:
+        return top_demographics[0]
+    
+    # If tie between men and women, check for unisex signals
+    if 'men' in top_demographics and 'women' in top_demographics:
+        return 'unisex'
+    
+    # If tie between boys/girls, return 'kids'
+    if 'boys' in top_demographics and 'girls' in top_demographics:
+        return 'kids'
+    
+    # Kids category includes boys/girls
+    if 'kids' in top_demographics:
+        return 'kids'
+    
+    # Default to the first one (arbitrary but consistent)
+    return top_demographics[0]
+
+
 def extract_attribute_filters(message: str) -> Optional[Dict[str, Any]]:
     """
     Extract product attribute filters from user message.
-    Returns dict with filters like 'colors', 'styles', etc.
+    Returns dict with filters like 'colors', 'styles', 'gender', etc.
     """
     if not message:
         return None
@@ -153,6 +303,44 @@ def extract_attribute_filters(message: str) -> Optional[Dict[str, Any]]:
     if found_colors:
         filters['colors'] = found_colors
         logger.info(f"Extracted color filters: {found_colors}")
+    
+    # Extract gender filter
+    # Men's patterns
+    men_patterns = [
+        r"\bmen'?s?\b",        # men, mens, men's
+        r"\bmale\b",          # male
+        r"\bboy'?s?\b",       # boy, boys, boy's
+        r"\bgent'?s?\b",      # gent, gents, gent's
+        r"\bgentlemen\b",     # gentlemen
+        r"\bfor men\b",       # for men
+        r"\bfor him\b",       # for him
+    ]
+    
+    # Women's patterns
+    women_patterns = [
+        r"\bwomen'?s?\b",     # women, womens, women's
+        r"\bfemale\b",        # female
+        r"\bwomen\b",         # women
+        r"\bladies?\b",       # lady, ladies
+        r"\bgirl'?s?\b",      # girl, girls, girl's
+        r"\bfor women\b",     # for women
+        r"\bfor her\b",       # for her
+    ]
+    
+    # Check for gender
+    is_men = any(re.search(pattern, message_lower) for pattern in men_patterns)
+    is_women = any(re.search(pattern, message_lower) for pattern in women_patterns)
+    
+    if is_men and not is_women:
+        filters['gender'] = 'men'
+        logger.info("Extracted gender filter: men")
+    elif is_women and not is_men:
+        filters['gender'] = 'women'
+        logger.info("Extracted gender filter: women")
+    elif is_men and is_women:
+        # Both mentioned - likely unisex or comparing, don't filter
+        filters['gender'] = 'unisex'
+        logger.info("Extracted gender filter: unisex (both mentioned)")
     
     return filters if filters else None
 
@@ -284,18 +472,29 @@ def extract_products_from_chunks(
             logger.debug(f"Skipping non-product URL (policy/contact/etc): {url}")
             continue
         
-        # CRITICAL: Skip collection/listing URLs
-        if is_collection_url(url):
-            logger.debug(f"Skipping collection URL: {url}")
+        # NOTE: Collection/listing URLs are now allowed if they have valid product data
+        # The crawler marks pages as is_product=True when they contain products,
+        # so we trust that flag over URL pattern. Category pages often have product listings
+        # and can provide valuable product information.
+        
+        # QUALITY CHECK: Ensure product has meaningful data (name OR price)
+        # This prevents generic listing pages without actual product details
+        product_name_check = product_data.get("name", "").strip()
+        product_price_check = product_data.get("price")
+        product_images_check = product_data.get("images")
+        
+        # Skip if no name AND no price (likely a pure navigation/listing page)
+        if not product_name_check and not product_price_check:
+            logger.debug(f"Skipping product without name or price: {url}")
             continue
         
-        # Validate URL - ensure it's a proper product URL
+        # Validate URL - ensure it's not just a home page
         if url:
             from urllib.parse import urlparse
             parsed_url = urlparse(url)
             path = parsed_url.path.strip('/')
             
-            # Skip if URL is just the home page or has no product identifier
+            # Skip if URL is just the home page or has no path
             if not path or path in ['', 'index.html', 'home', 'index.php']:
                 logger.debug(f"Skipping product with home page URL: {url}")
                 continue
@@ -370,6 +569,25 @@ def extract_products_from_chunks(
                 logger.debug(f"Skipping product {product_name} - no color match")
                 continue
         
+        # Apply gender filter if specified
+        if attribute_filter and attribute_filter.get('gender'):
+            gender = attribute_filter['gender']
+            if gender != 'unisex':  # Only filter if specific gender requested
+                # Use generic gender detection algorithm
+                product_gender = detect_product_gender(product_name, url, product_data.get('description', ''))
+                
+                if gender == 'men':
+                    # Skip products detected as women's/girls' only
+                    if product_gender in ['women', 'girls']:
+                        logger.debug(f"Skipping product {product_name} - detected as {product_gender}")
+                        continue
+                        
+                elif gender == 'women':
+                    # Skip products detected as men's/boys' only
+                    if product_gender in ['men', 'boys']:
+                        logger.debug(f"Skipping product {product_name} - detected as {product_gender}")
+                        continue
+        
         # Get images from product data - filter duplicates and generic images
         images = product_data.get("images", [])
         # Ensure images is a list
@@ -402,9 +620,19 @@ def extract_products_from_chunks(
                 logger.debug(f"  -> Skipping base64 image")
                 continue
             # Skip generic/placeholder images - be specific to avoid false positives
-            # Only skip if the filename itself contains these words, not the path
-            img_filename = img.split('/')[-1].lower() if '/' in img else img.lower()
-            if any(skip in img_filename for skip in ['placeholder', 'no-image', 'noimage', 'logo.', 'default.', 'blank.']):
+            # Check both full path and filename for problematic patterns
+            img_lower = img.lower()
+            img_filename = img.split('/')[-1].lower() if '/' in img else img_lower
+            
+            # Patterns to skip in the full URL path
+            skip_in_path = ['/logo', '/icon', '/favicon', '/site-logo', '/brand-logo', '/website-logo', 'website/1/logo']
+            # Patterns to skip in the filename specifically
+            skip_in_filename = ['placeholder', 'no-image', 'noimage', 'logo.', 'default.', 'blank.', 'logo?']
+            
+            if any(skip in img_lower for skip in skip_in_path):
+                logger.debug(f"  -> Skipping logo/icon image in path: {img[:80]}")
+                continue
+            if any(skip in img_filename for skip in skip_in_filename):
                 logger.debug(f"  -> Skipping placeholder image: {img_filename}")
                 continue
             # Skip if we've already seen this exact image
@@ -1161,12 +1389,11 @@ class ChatService:
             db.add(user_msg)
             db.add(assistant_msg)
             
-            # Update message counts (only for non-preview chats)
+            # Update message counts (user messages only, excludes preview sessions)
             if not is_preview:
-                # Increment per-chatbot message count
                 chatbot.message_count = (chatbot.message_count or 0) + 1
                 
-                # Get and update global message count
+                # Get and update global message count (user messages only)
                 from app.models.subscription import Subscription
                 sub_stmt = select(Subscription).where(
                     Subscription.tenant_id == chatbot.tenant_id

@@ -13,7 +13,7 @@ from app.models.subscription import (
 from app.models.tenant import Tenant
 from app.models.user import User
 from app.models.chatbot import Chatbot
-from app.models.chat import ChatSession, ChatMessage
+from app.models.chat import ChatSession, ChatMessage, MessageRole
 from app.models.knowledge import KnowledgeSource, CrawledPage, UploadedFile
 from app.schemas.billing import (
     PlanType, BillingCycle, PlanLimits, PlanPricing, PlanFeatures,
@@ -65,7 +65,7 @@ PLAN_CONFIGS = {
             chatbots=10,
             messages_per_month=10000,
             conversations_per_month=5000,
-            knowledge_pages=1000,
+            knowledge_pages=300,
             knowledge_files=100,
             team_members=10,
             api_calls_per_month=50000,
@@ -80,7 +80,7 @@ PLAN_CONFIGS = {
             "10 Chatbots",
             "10,000 messages/month",
             "5,000 conversations/month",
-            "1,000 knowledge pages",
+            "300 knowledge pages",
             "100 file uploads",
             "10 team members",
             "Advanced analytics",
@@ -192,30 +192,20 @@ class BillingService:
         chatbot_ids_result = await db.execute(chatbots_stmt)
         chatbot_ids = [row[0] for row in chatbot_ids_result.all()]
 
-        # Count conversations in period (exclude preview)
+        # Count conversations in period (include previews)
         conversations_result = await db.execute(
             select(func.count(ChatSession.id)).where(
                 and_(
                     ChatSession.chatbot_id.in_(chatbot_ids) if chatbot_ids else False,
                     ChatSession.started_at >= period_start,
-                    ChatSession.started_at < period_end,
-                    ChatSession.is_preview == False
+                    ChatSession.started_at < period_end
                 )
             )
         )
         conversations_count = conversations_result.scalar() or 0
 
-        # Count messages in period (exclude preview sessions)
+        # Count user messages in period (include preview sessions, exclude bot responses)
         if chatbot_ids:
-            preview_sessions_stmt = select(ChatSession.id).where(
-                and_(
-                    ChatSession.chatbot_id.in_(chatbot_ids),
-                    ChatSession.is_preview == True
-                )
-            )
-            preview_session_ids_result = await db.execute(preview_sessions_stmt)
-            preview_session_ids = [row[0] for row in preview_session_ids_result.all()]
-            
             messages_result = await db.execute(
                 select(func.count(ChatMessage.id)).where(
                     and_(
@@ -228,7 +218,7 @@ class BillingService:
                                 )
                             )
                         ),
-                        ~ChatMessage.session_id.in_(preview_session_ids) if preview_session_ids else True
+                        ChatMessage.role == MessageRole.USER.value  # Count only user messages, not bot responses
                     )
                 )
             )

@@ -28,7 +28,7 @@ const signupSchema = z.object({
     .min(3, "Username must be at least 3 characters")
     .regex(
       /^[a-zA-Z0-9_]+$/,
-      "Username can only contain letters, numbers and underscores"
+      "Username can only contain letters, numbers and underscores",
     ),
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
@@ -59,9 +59,9 @@ export default function SignupPage() {
         username: data.username,
         password: data.password,
       });
+      // Keep loading state - navigation will happen via AuthContext
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
-    } finally {
       setIsSubmitting(false);
     }
   };

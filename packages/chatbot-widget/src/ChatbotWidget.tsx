@@ -62,6 +62,17 @@ function ProductCarousel({ products }: { products: ProductInfo[] }) {
     return currency ? `${currency}${price}` : price;
   };
 
+  // Handle image drag start - allows dragging product images to chatbot input
+  const handleImageDragStart = (
+    e: React.DragEvent<HTMLImageElement>,
+    imageUrl: string,
+  ) => {
+    e.stopPropagation(); // Prevent parent link from interfering
+    // Set the image URL as drag data
+    e.dataTransfer.setData("text/plain", imageUrl);
+    e.dataTransfer.effectAllowed = "copy";
+  };
+
   if (!products || products.length === 0) return null;
 
   return (
@@ -95,6 +106,10 @@ function ProductCarousel({ products }: { products: ProductInfo[] }) {
             target="_blank"
             rel="noopener noreferrer"
             className="product-card"
+            onDragStart={(e) => {
+              // Prevent the entire link from being dragged
+              e.preventDefault();
+            }}
           >
             {/* Product Image */}
             {product.image ? (
@@ -103,6 +118,8 @@ function ProductCarousel({ products }: { products: ProductInfo[] }) {
                   src={product.image}
                   alt={product.name}
                   loading="lazy"
+                  draggable="true"
+                  onDragStart={(e) => handleImageDragStart(e, product.image!)}
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
                     target.style.display = "none";
@@ -504,12 +521,133 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
     e.stopPropagation();
     setIsDragging(false);
 
+    // Check for file drops FIRST (higher priority - user uploading from their device)
     const files = e.dataTransfer?.files;
     if (files && files.length > 0) {
       const file = files[0];
-      processImageFile(file);
+      if (file.type.startsWith("image/")) {
+        processImageFile(file);
+        return;
+      }
+    }
+
+    // Check for image URL from drag (e.g., from product carousel)
+    const imageUrl = e.dataTransfer?.getData("text/plain");
+    if (
+      imageUrl &&
+      (imageUrl.startsWith("http://") || imageUrl.startsWith("https://"))
+    ) {
+      // Check if it's an image URL - match various patterns
+      // Common image patterns: .jpg, .png, /image/, image_256, /web/image/, etc.
+      const isImageUrl =
+        imageUrl.match(/\.(jpg|jpeg|png|gif|webp|svg|bmp|tiff?)(\?.*)?$/i) ||
+        imageUrl.includes("/image/") ||
+        imageUrl.includes("/images/") ||
+        imageUrl.includes("/image_") ||
+        imageUrl.includes("/img/") ||
+        imageUrl.includes("/media/") ||
+        imageUrl.includes("/uploads/") ||
+        imageUrl.includes("/product/") ||
+        imageUrl.includes("/cdn/");
+
+      if (isImageUrl) {
+        console.log("Attempting to load image from URL:", imageUrl);
+
+        // Show loading toast
+        setToast("🔄 Loading image...");
+
+        // Try using an Image element first to validate and get the image
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+
+        img.onload = () => {
+          // Create a canvas to convert the image to blob
+          const canvas = document.createElement("canvas");
+          canvas.width = img.naturalWidth;
+          canvas.height = img.naturalHeight;
+          const ctx = canvas.getContext("2d");
+
+          if (ctx) {
+            try {
+              ctx.drawImage(img, 0, 0);
+              canvas.toBlob(
+                (blob) => {
+                  setToast(null); // Clear loading toast
+                  if (blob) {
+                    const file = new File([blob], "product-image.jpg", {
+                      type: "image/jpeg",
+                    });
+                    processImageFile(file);
+                  } else {
+                    setToast(
+                      "❌ Failed to process image. Try saving it first, then upload.",
+                    );
+                    setTimeout(() => setToast(null), 4000);
+                  }
+                },
+                "image/jpeg",
+                0.9,
+              );
+            } catch (canvasError) {
+              // Canvas tainted by CORS - can't extract image data
+              console.error("Canvas tainted by CORS:", canvasError);
+              setToast(
+                "❌ Can't load this image due to website security. Right-click → Save Image, then drag the file.",
+              );
+              setTimeout(() => setToast(null), 5000);
+            }
+          }
+        };
+
+        img.onerror = () => {
+          console.error("Failed to load image with CORS");
+          // Show user-friendly error - CORS prevents loading external images
+          setToast(
+            "❌ Can't load this image directly. Right-click the image → Save Image As, then drag the saved file here.",
+          );
+          setTimeout(() => setToast(null), 5000);
+        };
+
+        img.src = imageUrl;
+        return;
+      } else {
+        // URL is not an image - show helpful feedback
+        console.log("Dropped URL is not an image:", imageUrl);
+        setToast(
+          "💡 That's a link, not an image. To analyze a product, drag its image directly or click the 📎 to upload.",
+        );
+        setTimeout(() => setToast(null), 4000);
+        return;
+      }
     }
   };
+
+  // Prevent browser from navigating when dropping URLs anywhere on the document
+  useEffect(() => {
+    const preventBrowserDrop = (e: DragEvent) => {
+      // Prevent default only if we're dropping a URL that could cause navigation
+      const url = e.dataTransfer?.getData("text/plain") || "";
+      if (url.startsWith("http://") || url.startsWith("https://")) {
+        e.preventDefault();
+      }
+    };
+
+    const preventDragOver = (e: DragEvent) => {
+      // Prevent dragover to allow drop
+      e.preventDefault();
+    };
+
+    // Only attach when chatbot is open to avoid interfering with other page functionality
+    if (isOpen) {
+      document.addEventListener("drop", preventBrowserDrop);
+      document.addEventListener("dragover", preventDragOver);
+    }
+
+    return () => {
+      document.removeEventListener("drop", preventBrowserDrop);
+      document.removeEventListener("dragover", preventDragOver);
+    };
+  }, [isOpen]);
 
   // Add Escape key handler to clear dragging state
   useEffect(() => {

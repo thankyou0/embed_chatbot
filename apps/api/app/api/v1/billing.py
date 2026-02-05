@@ -4,7 +4,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_user
-from app.models.user import User
+from app.core.exceptions import ForbiddenError
+from app.models.user import User, UserRole
 from app.services.billing_service import BillingService
 from app.schemas.billing import (
     BillingOverviewResponse,
@@ -22,7 +23,13 @@ async def get_billing_overview(
 ):
     """
     Get billing overview including subscription, usage, and billing history
+    
+    Only admins can view billing information
     """
+    # Check if user is admin
+    if current_user.role != UserRole.ADMIN:
+        raise ForbiddenError("Only admins can view billing information")
+    
     return await BillingService.get_billing_overview(
         db=db,
         tenant_id=current_user.tenant_id,

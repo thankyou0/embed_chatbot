@@ -4,14 +4,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, and_
 from app.core.database import get_db
 from app.core.dependencies import get_current_user
-from app.models.user import User
+from app.core.exceptions import NotFoundError, ForbiddenError
+from app.models.user import User, UserRole
 from app.models.chatbot import Chatbot
 from app.models.chat import ChatSession, ChatMessage, MessageRole
 from app.models.subscription import Subscription
 from app.models.knowledge import KnowledgeSource, CrawledPage, UploadedFile, QAPair
 from app.schemas.billing import UsageOverviewResponse, ChatbotUsage
 from app.core.logging import get_logger
-from app.core.exceptions import NotFoundError
+from app.core.error_sanitizer import sanitize_error_message
 from datetime import datetime, timezone
 
 logger = get_logger(__name__)
@@ -27,7 +28,26 @@ async def get_usage_overview(
 ):
     """
     Get usage overview including global message count and per-chatbot breakdown
+    
+    Admins can view all usage information.
+    Members can view usage only for chatbots they have analytics permission for.
     """
+    from uuid import UUID
+    from app.services.chatbot_service import ChatbotService
+    
+    # Non-admins must specify a chatbot_id and have analytics permission
+    if current_user.role != UserRole.ADMIN:
+        if not chatbot_id:
+            raise ForbiddenError("Members must specify a chatbot_id to view usage information")
+        
+        # Verify user has analytics permission for this chatbot
+        try:
+            chatbot_uuid = UUID(chatbot_id)
+            if not await ChatbotService.has_permission(db, chatbot_uuid, current_user, "can_view_analytics_billing"):
+                raise ForbiddenError("Insufficient permissions to view usage for this chatbot")
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid chatbot_id format")
+    
     try:
         # Get subscription with global message count
         sub_stmt = select(Subscription).where(
@@ -39,24 +59,38 @@ async def get_usage_overview(
         if not subscription:
             raise NotFoundError("Subscription not found")
         
-        # Get all chatbots for this tenant
-        chatbots_stmt = select(Chatbot).where(
-            and_(
-                Chatbot.tenant_id == current_user.tenant_id,
-                Chatbot.deleted_at.is_(None)
+        # Get chatbots based on user role and permissions
+        if current_user.role == UserRole.ADMIN:
+            # Admins see all chatbots
+            chatbots_stmt = select(Chatbot).where(
+                and_(
+                    Chatbot.tenant_id == current_user.tenant_id,
+                    Chatbot.deleted_at.is_(None)
+                )
             )
-        )
+            # If chatbot_id specified, filter to that chatbot
+            if chatbot_id:
+                chatbots_stmt = chatbots_stmt.where(Chatbot.id == UUID(chatbot_id))
+        else:
+            # Members only see the specific chatbot they requested
+            chatbots_stmt = select(Chatbot).where(
+                and_(
+                    Chatbot.id == UUID(chatbot_id),
+                    Chatbot.tenant_id == current_user.tenant_id,
+                    Chatbot.deleted_at.is_(None)
+                )
+            )
+        
         chatbots_result = await db.execute(chatbots_stmt)
         chatbots = chatbots_result.scalars().all()
         
         # Build per-chatbot usage
         per_chatbot_usage = []
         for chatbot in chatbots:
-            # Count conversations for this chatbot
+            # Count conversations for this chatbot (include previews)
             conv_stmt = select(func.count(ChatSession.id)).where(
                 and_(
-                    ChatSession.chatbot_id == chatbot.id,
-                    ChatSession.is_preview == False
+                    ChatSession.chatbot_id == chatbot.id
                 )
             )
             conv_result = await db.execute(conv_stmt)
@@ -110,11 +144,10 @@ async def get_usage_overview(
                 )
             )
         
-        # Calculate total conversations and storage
+        # Calculate total conversations and storage (include previews)
         total_conv_stmt = select(func.count(ChatSession.id)).where(
             and_(
                 Chatbot.tenant_id == current_user.tenant_id,
-                ChatSession.is_preview == False,
                 Chatbot.deleted_at.is_(None)
             )
         ).select_from(Chatbot).join(ChatSession)
@@ -181,7 +214,11 @@ async def get_usage_overview(
         )
     except Exception as e:
         logger.error(f"Error getting usage overview: {e}", exc_info=True)
-        raise HTTPException(status_code=400, detail=str(e))
+        detail = sanitize_error_message(
+            str(e),
+            fallback="Unable to load usage data. Please try again."
+        )
+        raise HTTPException(status_code=400, detail=detail)
 
 
 @router.get("/chatbot/{chatbot_id}", response_model=ChatbotUsage)
@@ -207,11 +244,10 @@ async def get_chatbot_usage(
         if not chatbot:
             raise HTTPException(status_code=404, detail="Chatbot not found")
         
-        # Count conversations for this chatbot
+        # Count conversations for this chatbot (include previews)
         conv_stmt = select(func.count(ChatSession.id)).where(
             and_(
-                ChatSession.chatbot_id == chatbot.id,
-                ChatSession.is_preview == False
+                ChatSession.chatbot_id == chatbot.id
             )
         )
         conv_result = await db.execute(conv_stmt)
@@ -226,4 +262,8 @@ async def get_chatbot_usage(
         )
     except Exception as e:
         logger.error(f"Error getting chatbot usage: {e}", exc_info=True)
-        raise HTTPException(status_code=400, detail=str(e))
+        detail = sanitize_error_message(
+            str(e),
+            fallback="Unable to load chatbot usage. Please try again."
+        )
+        raise HTTPException(status_code=400, detail=detail)

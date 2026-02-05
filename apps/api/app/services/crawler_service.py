@@ -1,6 +1,8 @@
 import asyncio
 import hashlib
 import urllib.robotparser
+import urllib.parse
+import xml.etree.ElementTree as ET
 from urllib.parse import urljoin, urlparse
 from typing import Set, List, Optional, AsyncGenerator, Dict
 from datetime import datetime, timezone, timedelta
@@ -15,11 +17,212 @@ from app.models.knowledge import (
 )
 from app.core.database import get_session_factory
 from app.core.logging import get_logger
+from app.core.error_sanitizer import sanitize_error_message
 from app.services.embedding_service import EmbeddingService
 from app.services.product_extractor import extract_product_data
 from bs4 import BeautifulSoup
+import re
 
 logger = get_logger(__name__)
+
+# Known JavaScript-heavy e-commerce platforms that require browser rendering
+JS_HEAVY_DOMAINS = [
+    'limeroad.com',
+    'myntra.com', 
+    'ajio.com',
+    'nykaa.com',
+    'meesho.com',
+    'shopsy.in',
+    'tatacliq.com',
+    'jiomart.com',
+    # Add more as discovered
+]
+
+def is_js_heavy_site(url: str) -> bool:
+    """Check if URL belongs to a known JavaScript-heavy e-commerce platform"""
+    parsed = urlparse(url)
+    domain = parsed.netloc.lower()
+    return any(js_domain in domain for js_domain in JS_HEAVY_DOMAINS)
+
+
+async def parse_sitemap(sitemap_url: str, max_urls: int = 500) -> List[str]:
+    """
+    Parse a sitemap.xml file and extract URLs.
+    Supports both regular sitemaps and sitemap index files.
+    
+    Args:
+        sitemap_url: URL to sitemap.xml or sitemap index
+        max_urls: Maximum number of URLs to extract
+        
+    Returns:
+        List of URLs found in the sitemap
+    """
+    urls = []
+    headers = {"User-Agent": "EcomChatbotCrawler/1.0 (Knowledge Base Bot)"}
+    
+    try:
+        async with httpx.AsyncClient(timeout=30.0, follow_redirects=True, headers=headers) as client:
+            response = await client.get(sitemap_url)
+            if response.status_code != 200:
+                logger.warning(f"Sitemap fetch failed with status {response.status_code}: {sitemap_url}")
+                return urls
+            
+            content = response.text
+            
+            # Parse XML
+            try:
+                root = ET.fromstring(content)
+            except ET.ParseError as e:
+                logger.warning(f"Failed to parse sitemap XML: {e}")
+                return urls
+            
+            # Handle namespace
+            ns = {'sm': 'http://www.sitemaps.org/schemas/sitemap/0.9'}
+            
+            # Check if this is a sitemap index (contains other sitemaps)
+            sitemap_refs = root.findall('.//sm:sitemap/sm:loc', ns)
+            if not sitemap_refs:
+                # Try without namespace
+                sitemap_refs = root.findall('.//sitemap/loc')
+            
+            if sitemap_refs:
+                # This is a sitemap index - recursively parse child sitemaps
+                logger.info(f"Found sitemap index with {len(sitemap_refs)} child sitemaps")
+                for sitemap_ref in sitemap_refs[:10]:  # Limit to 10 child sitemaps
+                    child_url = sitemap_ref.text.strip() if sitemap_ref.text else None
+                    if child_url:
+                        child_urls = await parse_sitemap(child_url, max_urls - len(urls))
+                        urls.extend(child_urls)
+                        if len(urls) >= max_urls:
+                            break
+            else:
+                # Regular sitemap - extract URLs
+                url_elements = root.findall('.//sm:url/sm:loc', ns)
+                if not url_elements:
+                    # Try without namespace
+                    url_elements = root.findall('.//url/loc')
+                
+                for url_elem in url_elements:
+                    if url_elem.text:
+                        urls.append(url_elem.text.strip())
+                        if len(urls) >= max_urls:
+                            break
+            
+            logger.info(f"Extracted {len(urls)} URLs from sitemap: {sitemap_url}")
+            
+    except Exception as e:
+        logger.error(f"Error parsing sitemap {sitemap_url}: {e}")
+    
+    return urls
+
+def extract_intelligent_title(html_content: str, url: str, metadata_title: Optional[str]) -> str:
+    """
+    GENERIC title extraction for any website - handles placeholder/JS-rendered titles.
+    
+    Falls back through multiple strategies:
+    1. Use metadata title if it's meaningful (not placeholder)
+    2. Check Open Graph / Twitter meta tags
+    3. Parse <title> tag directly from HTML
+    4. Generate descriptive title from URL path structure
+    5. Use domain name as last resort
+    
+    Works for ANY site - no site-specific logic.
+    """
+    # GENERIC patterns that indicate placeholder/non-meaningful titles
+    # These patterns appear across many JS-heavy e-commerce sites
+    placeholder_patterns = [
+        r'^(product|user|page|home|welcome|index|loading|untitled)$',  # Exact match
+        r'^.{1,2}$',  # Very short (1-2 chars)
+        r'^(please\s*wait|redirecting)',  # Loading states
+        r'^\s*$',  # Empty/whitespace only
+    ]
+    
+    is_placeholder = False
+    if metadata_title:
+        title_lower = metadata_title.lower().strip()
+        
+        # Check if title matches placeholder patterns
+        is_placeholder = any(re.match(pattern, title_lower) for pattern in placeholder_patterns)
+        
+        # Check if title is just the domain name
+        parsed = urlparse(url)
+        domain_name = parsed.netloc.replace('www.', '').split('.')[0].lower()
+        if title_lower == domain_name or title_lower == parsed.netloc.lower():
+            is_placeholder = True
+    
+    # If we have a good metadata title (not placeholder), use it
+    if metadata_title and not is_placeholder:
+        return metadata_title
+    
+    # Try Open Graph / Twitter meta tags
+    try:
+        soup = BeautifulSoup(html_content, 'html.parser')
+        
+        # Check og:title
+        og_title = soup.find('meta', property='og:title')
+        if og_title and og_title.get('content'):
+            title = og_title['content'].strip()
+            # Validate it's not also a placeholder
+            title_lower = title.lower()
+            if title and not any(re.match(pattern, title_lower) for pattern in placeholder_patterns):
+                return title
+        
+        # Check twitter:title
+        twitter_title = soup.find('meta', attrs={'name': 'twitter:title'})
+        if twitter_title and twitter_title.get('content'):
+            title = twitter_title['content'].strip()
+            title_lower = title.lower()
+            if title and not any(re.match(pattern, title_lower) for pattern in placeholder_patterns):
+                return title
+        
+        # Parse <title> tag directly
+        title_tag = soup.find('title')
+        if title_tag and title_tag.string:
+            title = title_tag.string.strip()
+            title_lower = title.lower()
+            if title and not any(re.match(pattern, title_lower) for pattern in placeholder_patterns):
+                return title
+    except Exception as e:
+        logger.debug(f"Error parsing HTML for title: {e}")
+    
+    # Generate title from URL path (generic approach for any site)
+    parsed = urlparse(url)
+    path = parsed.path.strip('/')
+    
+    if path:
+        # Split path and filter out common navigation segments
+        common_segments = ['shop', 'page', 'category', 'products', 'items', 'view', 'detail']
+        segments = [s for s in path.split('/') if s and s.lower() not in common_segments]
+        
+        if segments:
+            # Use last 2-3 meaningful segments for better context
+            relevant_segments = segments[-3:] if len(segments) >= 3 else segments
+            
+            # Clean up URL encoding and separators
+            cleaned_segments = []
+            for seg in relevant_segments:
+                # Decode URL encoding
+                seg = urllib.parse.unquote(seg)
+                # Replace separators with spaces
+                seg = seg.replace('-', ' ').replace('_', ' ')
+                # Remove file extensions
+                seg = re.sub(r'\.\w+$', '', seg)
+                # Remove common ID patterns
+                seg = re.sub(r'\d{5,}', '', seg)  # Remove long numeric IDs
+                seg = seg.strip()
+                if seg:
+                    cleaned_segments.append(seg)
+            
+            if cleaned_segments:
+                # Join segments and capitalize
+                title = ' - '.join(word.strip().title() for word in cleaned_segments if word.strip())
+                if title and len(title) > 3:
+                    return title
+    
+    # Last resort: use domain name
+    domain = parsed.netloc.replace('www.', '').split('.')[0]
+    return domain.title()
+
 
 class WebsiteCrawler:
     def __init__(self, base_url: str):
@@ -159,7 +362,10 @@ class WebsiteCrawler:
                     
                     # Metadata extraction
                     metadata = trafilatura.extract_metadata(html_content)
-                    title = metadata.title if metadata and metadata.title else None
+                    metadata_title = metadata.title if metadata and metadata.title else None
+                    
+                    # Use intelligent title extraction (handles JS-heavy sites)
+                    title = extract_intelligent_title(html_content, url, metadata_title)
                     
                     # Extract contact information from links (phone, email)
                     # These are often in <a> tags and get stripped by trafilatura
@@ -190,7 +396,7 @@ class WebsiteCrawler:
                     # Prepare content for embedding (concatenate with product info if available)
                     # This helps the AI find price/brand info during semantic search
                     content_to_store = extracted
-                    if product_data:
+                    if product_data and extracted:
                         product_summary = "\n\nProduct Information:\n"
                         if product_data.get('name'):
                             product_summary += f"- Name: {product_data.get('name')}\n"
@@ -326,6 +532,9 @@ class CrawlerService:
                     chatbot_existing_urls.add(row)
 
                 # Pre-validate the URL to provide specific feedback to the user
+                is_sitemap_url = base_url.endswith('.xml') or 'sitemap' in base_url.lower()
+                is_js_heavy = is_js_heavy_site(base_url)
+                
                 try:
                     headers = {"User-Agent": "EcomChatbotCrawler/1.0 (Knowledge Base Bot)"}
                     async with httpx.AsyncClient(timeout=10.0, follow_redirects=True, headers=headers) as client:
@@ -338,10 +547,31 @@ class CrawlerService:
                             raise ValueError(f"The website returned an error (Status {response.status_code}). The site might be temporarily down or blocking our request.")
                         
                         ctype = response.headers.get("content-type", "").lower()
-                        if "text/html" not in ctype:
+                        
+                        # Check if it's a sitemap XML
+                        if "xml" in ctype or is_sitemap_url:
+                            logger.info(f"Detected sitemap URL: {base_url}")
+                            is_sitemap_url = True
+                        elif "text/html" not in ctype:
                              # Provide specific message for non-HTML files
                              file_type = ctype.split(';')[0].split('/')[-1].upper() if '/' in ctype else "binary"
                              raise ValueError(f"The URL points to a {file_type} file, not a webpage. We can only crawl HTML websites.")
+                        
+                        # Check for JS-heavy site - show warning to user
+                        if is_js_heavy and not is_sitemap_url:
+                            warning_msg = (
+                                "⚠️ This site uses heavy JavaScript. Product extraction may be limited. "
+                                "For better results, try providing the sitemap URL (e.g., /sitemap.xml)"
+                            )
+                            logger.warning(f"JS-heavy site detected: {base_url}. {warning_msg}")
+                            
+                            # Store warning in knowledge source so frontend can display it
+                            await db.execute(
+                                update(KnowledgeSource)
+                                .where(KnowledgeSource.id == knowledge_source_id)
+                                .values(error_message=warning_msg)
+                            )
+                            await db.commit()
                              
                 except httpx.ConnectError:
                     raise ValueError(f"Could not connect to the domain. Please check if the URL is correct or if the site is online.")
@@ -351,8 +581,25 @@ class CrawlerService:
                     if isinstance(e, ValueError): raise e
                     logger.warning(f"URL pre-check encountered an issue but proceeding: {e}")
 
+                # Handle sitemap URL - parse it and add URLs to crawler queue
+                sitemap_urls = []
+                if is_sitemap_url:
+                    logger.info(f"Parsing sitemap: {base_url}")
+                    sitemap_urls = await parse_sitemap(base_url, max_urls=quota_limit or 500)
+                    if not sitemap_urls:
+                        raise ValueError(f"Could not extract any URLs from the sitemap. Please check if the sitemap is valid.")
+                    logger.info(f"Extracted {len(sitemap_urls)} URLs from sitemap")
+
                 # Start crawling
                 crawler = WebsiteCrawler(base_url)
+                
+                # If we have sitemap URLs, add them to the crawler queue
+                if sitemap_urls:
+                    for sitemap_page_url in sitemap_urls:
+                        if crawler._is_valid_link(sitemap_page_url) or urlparse(sitemap_page_url).netloc == crawler.domain:
+                            if sitemap_page_url not in crawler.queue and sitemap_page_url not in crawler.visited_urls:
+                                crawler.queue.append(sitemap_page_url)
+                    logger.info(f"Added {len(crawler.queue)} URLs from sitemap to crawler queue")
                 
                 # Check robots.txt BEFORE starting the crawl loop
                 if not await crawler.can_fetch(base_url):
@@ -381,6 +628,15 @@ class CrawlerService:
                 
                 async for page_data in crawler.crawl():
                     url = page_data['url']
+                    
+                    # ⚠️ Truncate URL if it exceeds database limit (2048 chars)
+                    # This prevents StringDataRightTruncationError from deeply nested paths
+                    if len(url) > 2048:
+                        logger.warning(
+                            f"URL truncated from {len(url)} to 2048 characters: {url[:100]}...{url[-50:]}"
+                        )
+                        url = url[:2048]
+                    
                     content_hash = hashlib.sha256(page_data['content'].encode()).hexdigest()
                     crawled_urls.add(url)
                     
@@ -584,7 +840,20 @@ class CrawlerService:
                 # Check if we actually crawled any pages (first crawl)
                 if not is_recrawl and len(crawled_urls) == 0:
                     # No pages were found - this is a failure for initial crawl
-                    error_msg = f"No accessible pages were found at this address. The site might be a 'Single Page App' (SPA) or require login/JavaScript, which our simple crawler cannot currently process."
+                    parsed_url = urlparse(base_url)
+                    sitemap_suggestion = f"{parsed_url.scheme}://{parsed_url.netloc}/sitemap.xml"
+                    
+                    if is_js_heavy:
+                        error_msg = (
+                            f"⚠️ No pages could be extracted. This website uses heavy JavaScript that loads content dynamically. "
+                            f"Our crawler cannot execute JavaScript. "
+                            f"\n\n💡 Solution: Try the sitemap URL instead (usually at {sitemap_suggestion})"
+                        )
+                    else:
+                        error_msg = (
+                            f"No accessible pages were found. The site might be a Single Page App (SPA) or require JavaScript. "
+                            f"\n\n💡 Try: {sitemap_suggestion}"
+                        )
                     logger.error(error_msg)
                     
                     # Log activity
@@ -654,6 +923,12 @@ class CrawlerService:
             except Exception as e:
                 error_msg = str(e)
                 logger.error(f"Crawl failed for {base_url}: {error_msg}")
+                public_error = sanitize_error_message(
+                    error_msg,
+                    fallback="Crawl failed due to a temporary error. Please try again."
+                )
+                if not public_error.lower().startswith("crawl"):
+                    public_error = f"Crawl failed: {public_error}"
                 
                 # Update crawl history with error
                 if crawl_history:
@@ -664,7 +939,7 @@ class CrawlerService:
                             .values(
                                 completed_at=datetime.now(timezone.utc),
                                 status=CrawlStatus.FAILED,
-                                error_message=error_msg
+                                error_message=public_error
                             )
                         )
                         await db.commit()
@@ -693,7 +968,7 @@ class CrawlerService:
                             chatbot_id=ks_obj.chatbot_id,
                             user_id=None,
                             activity_type="crawl_failed",
-                            description=f"Crawl failed for {base_url}: {error_msg[:150]}..."
+                            description=f"Crawl failed for {base_url}: {public_error[:150]}..."
                         )
                         db.add(activity)
                         await db.commit()
@@ -704,7 +979,7 @@ class CrawlerService:
                         .where(KnowledgeSource.id == knowledge_source_id)
                         .values(
                             status=KnowledgeSourceStatus.FAILED,
-                            error_message=f"Crawl failed: {error_msg}"
+                            error_message=public_error
                         )
                     )
                     await db.commit()

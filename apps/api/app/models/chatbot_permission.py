@@ -26,7 +26,7 @@ class ChatbotPermission(Base):
     can_manage_knowledge = Column(Boolean, default=False, nullable=False)
     can_manage_appearance = Column(Boolean, default=False, nullable=False)
     can_resolve_queries = Column(Boolean, default=False, nullable=False)
-    can_view_analytics = Column(Boolean, default=False, nullable=False)
+    can_view_analytics_billing = Column(Boolean, default=False, nullable=False)  # Renamed from can_view_analytics
     
     granted_by = Column(Integer, ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)

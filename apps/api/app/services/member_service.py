@@ -38,14 +38,16 @@ class MemberService:
     ) -> MemberResponse:
         """Add a new member to tenant (admin only)"""
         
-        # Verify admin has permission
+        # Verify admin has permission - both org_owner and admins can add members
         if admin_user.role != UserRole.ADMIN:
+            logger.warning(f"Non-admin user {admin_user.email} attempted to add member")
             raise ForbiddenError("Only admins can add members")
         
         # Check if email already exists
         result = await db.execute(select(User).where(User.email == request.email))
         existing_user = result.scalar_one_or_none()
         if existing_user:
+            logger.warning(f"Attempted to add member with existing email: {request.email}")
             raise BadRequestError("Email already registered")
         
         # Determine username
@@ -67,6 +69,7 @@ class MemberService:
         password_expires_at = datetime.now(timezone.utc) + timedelta(hours=request.password_expiry_hours)
         
         # Create new member with temporary password
+        # Note: New members are never org_owner - that's only set for the account creator
         member = User(
             tenant_id=tenant_id,
             email=request.email,
@@ -75,6 +78,7 @@ class MemberService:
             name=request.name,
             role=request.role,
             is_active=True,
+            is_org_owner=False,  # New members are never org owners
             password_expires_at=password_expires_at,
             must_change_password=True,  # Force password change on first login
             invited_by=admin_user.id,
@@ -82,7 +86,9 @@ class MemberService:
         db.add(member)
         await db.flush()  # Get the member.id
         
-        # Assign chatbot permissions if provided
+        logger.info(f"Creating member {request.email} with role {request.role.value}")
+        
+        # Assign chatbot permissions if provided (for 'member' role users)
         if request.chatbot_permissions:
             for perm in request.chatbot_permissions:
                 # Verify chatbot exists and belongs to tenant
@@ -95,7 +101,14 @@ class MemberService:
                 )
                 chatbot = result.scalar_one_or_none()
                 if not chatbot:
+                    logger.warning(f"Chatbot {perm.chatbot_id} not found when assigning permissions")
                     raise BadRequestError(f"Chatbot {perm.chatbot_id} not found")
+                
+                # If resolve_queries is enabled, automatically enable view_analytics_billing
+                can_view_analytics_billing = perm.can_view_analytics_billing
+                if perm.can_resolve_queries:
+                    can_view_analytics_billing = True
+                    logger.debug(f"Auto-enabling can_view_analytics_billing for member {request.email} on chatbot {chatbot.name}")
                 
                 # Create permission
                 permission = ChatbotPermission(
@@ -105,10 +118,11 @@ class MemberService:
                     can_manage_knowledge=perm.can_manage_knowledge,
                     can_manage_appearance=perm.can_manage_appearance,
                     can_resolve_queries=perm.can_resolve_queries,
-                    can_view_analytics=perm.can_view_analytics,
+                    can_view_analytics_billing=can_view_analytics_billing,
                     granted_by=admin_user.id,
                 )
                 db.add(permission)
+                logger.info(f"Assigned permission to chatbot {chatbot.name} for member {request.email}")
         
         await db.commit()
         await db.refresh(member)
@@ -152,6 +166,7 @@ class MemberService:
             name=member.name,
             role=member.role,
             is_active=member.is_active,
+            is_org_owner=member.is_org_owner,  # Include org owner flag
             must_change_password=member.must_change_password,
             password_expires_at=member.password_expires_at,
             invited_by=member.invited_by,
@@ -183,7 +198,7 @@ class MemberService:
                 can_manage_knowledge=perm.can_manage_knowledge,
                 can_manage_appearance=perm.can_manage_appearance,
                 can_resolve_queries=perm.can_resolve_queries,
-                can_view_analytics=perm.can_view_analytics
+                can_view_analytics_billing=perm.can_view_analytics_billing
             )
             for perm, chatbot in rows
         ]
@@ -249,6 +264,7 @@ class MemberService:
         
         # Verify admin has permission
         if admin_user.role != UserRole.ADMIN:
+            logger.warning(f"Non-admin user {admin_user.email} attempted to update member {member_id}")
             raise ForbiddenError("Only admins can update members")
         
         # Cannot update self via this endpoint
@@ -264,12 +280,25 @@ class MemberService:
         if not member:
             raise NotFoundError("Member not found")
         
+        # Prevent non-org-owners from modifying org owner's role
+        if member.is_org_owner and not admin_user.is_org_owner:
+            logger.warning(f"Non-org-owner admin {admin_user.email} attempted to modify org owner {member.email}")
+            raise ForbiddenError("Only the organization owner can modify their own account")
+        
         # Update fields
         if request.name is not None:
             member.name = request.name
         if request.role is not None:
+            # Prevent changing org owner's role
+            if member.is_org_owner:
+                logger.warning(f"Attempted to change role of org owner {member.email}")
+                raise BadRequestError("Cannot change the role of the organization owner")
             member.role = request.role
+            logger.info(f"Updated role of member {member.email} to {request.role.value}")
         if request.is_active is not None:
+            # Prevent deactivating org owner
+            if member.is_org_owner and not request.is_active:
+                raise BadRequestError("Cannot deactivate the organization owner")
             member.is_active = request.is_active
         
         await db.commit()
@@ -374,6 +403,7 @@ class MemberService:
         
         # Verify admin has permission
         if admin_user.role != UserRole.ADMIN:
+            logger.warning(f"Non-admin user {admin_user.email} attempted to update permissions for member {member_id}")
             raise ForbiddenError("Only admins can update permissions")
         
         # Cannot update own permissions via this endpoint
@@ -388,6 +418,18 @@ class MemberService:
         
         if not member:
             raise NotFoundError("Member not found")
+        
+        # Admins have full access - they don't need chatbot-specific permissions
+        if member.role == UserRole.ADMIN:
+            logger.info(f"Skipping chatbot permission update for admin user {member.email} - admins have full access")
+            # For admins, we just clear any existing permissions since they have implicit full access
+            await db.execute(
+                delete(ChatbotPermission).where(ChatbotPermission.user_id == member_id)
+            )
+            await db.commit()
+            await db.refresh(member)
+            permissions = await MemberService._get_member_chatbot_permissions(db, member.id)
+            return MemberService._to_member_response(member, permissions)
         
         # Delete all existing permissions for this member
         await db.execute(
@@ -406,7 +448,14 @@ class MemberService:
             )
             chatbot = result.scalar_one_or_none()
             if not chatbot:
+                logger.warning(f"Chatbot {perm.chatbot_id} not found when updating permissions")
                 raise BadRequestError(f"Chatbot {perm.chatbot_id} not found")
+            
+            # If resolve_queries is enabled, automatically enable view_analytics_billing
+            can_view_analytics_billing = perm.can_view_analytics_billing
+            if perm.can_resolve_queries:
+                can_view_analytics_billing = True
+                logger.debug(f"Auto-enabling can_view_analytics_billing for member {member.email} on chatbot {chatbot.name}")
             
             # Create permission
             permission = ChatbotPermission(
@@ -416,10 +465,11 @@ class MemberService:
                 can_manage_knowledge=perm.can_manage_knowledge,
                 can_manage_appearance=perm.can_manage_appearance,
                 can_resolve_queries=perm.can_resolve_queries,
-                can_view_analytics=perm.can_view_analytics,
+                can_view_analytics_billing=can_view_analytics_billing,
                 granted_by=admin_user.id,
             )
             db.add(permission)
+            logger.info(f"Updated permission for chatbot {chatbot.name} for member {member.email}")
         
         await db.commit()
         await db.refresh(member)
@@ -460,6 +510,7 @@ class MemberService:
         
         # Verify admin has permission
         if admin_user.role != UserRole.ADMIN:
+            logger.warning(f"Non-admin user {admin_user.email} attempted to remove member {member_id}")
             raise ForbiddenError("Only admins can remove members")
         
         # Cannot delete self
@@ -475,6 +526,11 @@ class MemberService:
         if not member:
             raise NotFoundError("Member not found")
         
+        # Prevent deleting the org owner
+        if member.is_org_owner:
+            logger.warning(f"Admin {admin_user.email} attempted to delete org owner {member.email}")
+            raise ForbiddenError("Cannot delete the organization owner. The organization owner account can only be deleted by deleting the entire organization.")
+        
         # Delete member's chatbot permissions first
         await db.execute(
             delete(ChatbotPermission).where(ChatbotPermission.user_id == member_id)
@@ -485,6 +541,8 @@ class MemberService:
         
         await db.delete(member)
         await db.commit()
+        
+        logger.success(f"Member removed: {member_email} from tenant {tenant_id} by {admin_user.email}")
         
         # Log team activity to all chatbots in the tenant
         from app.models.chatbot import ChatbotActivity, Chatbot

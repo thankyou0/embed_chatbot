@@ -1,60 +1,49 @@
 """
-Tier-based usage limits and quota management
+Tier-based usage limits adapter (deprecated).
+
+This module now derives limits from BillingService.PLAN_CONFIGS to ensure
+there is a single source of truth for plan limits.
 """
 from enum import Enum
 from typing import Dict, Any
+
+from app.schemas.billing import PlanType
+from app.services.billing_service import PLAN_CONFIGS
+
 
 class UserTier(str, Enum):
     FREE = "free"
     PRO = "pro"
     ENTERPRISE = "enterprise"
 
-# Tier limits configuration
-TIER_LIMITS = {
-    UserTier.FREE: {
-        'max_chatbots': 1,
-        'max_knowledge_sources': 10,
-        'max_total_crawled_pages': 300,  # Total pages across all sources
-        'max_file_size_mb': 5,
-        'max_files': 3,
-        'max_qa_pairs_per_source': 10,
-        'max_messages_per_month': 100,
-        'max_embeddings': 5000,
-        'allow_auto_recrawl': False,
-        'allow_analytics': False,
-    },
-    UserTier.PRO: {
-        'max_chatbots': 5,
-        'max_knowledge_sources': 50,
-        'max_total_crawled_pages': 10000,
-        'max_file_size_mb': 50,
-        'max_files': 100,
-        'max_qa_pairs_per_source': 100,
-        'max_messages_per_month': 10000,
-        'max_embeddings': 100000,
-        'allow_auto_recrawl': True,
-        'allow_analytics': True,
-    },
-    UserTier.ENTERPRISE: {
-        'max_chatbots': 999999,
-        'max_knowledge_sources': 999999,
-        'max_total_crawled_pages': 999999,
-        'max_file_size_mb': 500,
-        'max_files': 999999,
-        'max_qa_pairs_per_source': 999999,
-        'max_messages_per_month': 999999,
-        'max_embeddings': 999999,
-        'allow_auto_recrawl': True,
-        'allow_analytics': True,
-    }
-}
+
+def _get_plan(tier: str):
+    tier_enum = UserTier(tier.lower())
+    plan_type = PlanType(tier_enum.value)
+    return PLAN_CONFIGS[plan_type]
+
 
 def get_tier_limits(tier: str = "free") -> Dict[str, Any]:
-    """Get limits for a specific tier"""
-    tier_enum = UserTier(tier.lower())
-    return TIER_LIMITS[tier_enum]
+    """Get limits for a specific tier (derived from billing plan configs)."""
+    plan = _get_plan(tier)
+    limits = plan.limits
+    is_paid = plan.name.lower() != "free"
+
+    return {
+        "max_chatbots": limits.chatbots,
+        "max_knowledge_sources": limits.knowledge_pages,  # legacy mapping
+        "max_total_crawled_pages": limits.knowledge_pages,
+        "max_file_size_mb": limits.storage_mb,  # legacy mapping
+        "max_files": limits.knowledge_files,
+        "max_qa_pairs_per_source": limits.knowledge_pages,  # legacy mapping
+        "max_messages_per_month": limits.messages_per_month,
+        "max_embeddings": limits.api_calls_per_month,  # legacy mapping
+        "allow_auto_recrawl": is_paid,
+        "allow_analytics": is_paid,
+    }
+
 
 def get_limit(tier: str, limit_key: str) -> Any:
-    """Get a specific limit value for a tier"""
+    """Get a specific limit value for a tier (derived from billing configs)."""
     limits = get_tier_limits(tier)
     return limits.get(limit_key)

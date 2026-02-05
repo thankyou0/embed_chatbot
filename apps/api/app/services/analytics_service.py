@@ -89,20 +89,17 @@ class AnalyticsService:
         
         period_start = AnalyticsService._get_period_start(period)
         
-        # Build base query for sessions (exclude previews)
-        # NOTE: Preview sessions DO count toward usage/billing but NOT toward analytics metrics
+        # Build base query for sessions (include previews)
+        # NOTE: Preview sessions DO count toward analytics and billing
         query = select(ChatSession).where(
-            and_(
-                ChatSession.started_at >= period_start,
-                ChatSession.is_preview == False  # Exclude preview from analytics
-            )
+            ChatSession.started_at >= period_start
         )
         
         if chatbot_id:
             # Verify access to specific chatbot
             await ChatbotService.get_chatbot(db, tenant_id, chatbot_id, user)
             
-            if not await ChatbotService.has_permission(db, chatbot_id, user, "can_view_analytics"):
+            if not await ChatbotService.has_permission(db, chatbot_id, user, "can_view_analytics_billing"):
                 raise ForbiddenError("Insufficient permissions to view analytics")
                 
             query = query.where(ChatSession.chatbot_id == chatbot_id)
@@ -138,14 +135,22 @@ class AnalyticsService:
         
         session_ids = [s.id for s in sessions]
         
-        # Get all messages for these sessions
+        # Get total user messages count (count only user messages, not bot responses)
+        messages_stmt = select(func.count(ChatMessage.id)).where(
+            and_(
+                ChatMessage.session_id.in_(session_ids),
+                ChatMessage.role == MessageRole.USER.value
+            )
+        )
+        total_messages = (await db.execute(messages_stmt)).scalar() or 0
+        
+        # Get all messages for these sessions for deflection and unanswered rate calculation
         messages_query = select(ChatMessage).where(
             ChatMessage.session_id.in_(session_ids)
         ).order_by(ChatMessage.created_at)
         
         messages_result = await db.execute(messages_query)
         all_messages = messages_result.scalars().all()
-        total_messages = len(all_messages)
         
         # Calculate deflection rate
         # A session is "deflected" if all bot responses have was_answered=true
@@ -221,7 +226,7 @@ class AnalyticsService:
         # Verify access
         await ChatbotService.get_chatbot(db, tenant_id, chatbot_id, user)
         
-        if not await ChatbotService.has_permission(db, chatbot_id, user, "can_view_analytics"):
+        if not await ChatbotService.has_permission(db, chatbot_id, user, "can_view_analytics_billing"):
             raise ForbiddenError("Insufficient permissions to view analytics")
         
         period_start = AnalyticsService._get_period_start(period)
@@ -393,7 +398,7 @@ class AnalyticsService:
         messages_query = select(ChatMessage).where(
             and_(
                 ChatMessage.session_id.in_(session_ids),
-                ChatMessage.role == MessageRole.USER
+                ChatMessage.role == MessageRole.USER.value
             )
         )
         messages_result = await db.execute(messages_query)
@@ -475,7 +480,7 @@ class AnalyticsService:
         user_msg_stmt = select(ChatMessage).where(
             and_(
                 ChatMessage.session_id == session.id,
-                ChatMessage.role == MessageRole.USER,
+                ChatMessage.role == MessageRole.USER.value,
                 ChatMessage.content == message_content
             )
         ).order_by(ChatMessage.created_at.desc()).limit(1)
@@ -488,7 +493,7 @@ class AnalyticsService:
             user_msg_stmt = select(ChatMessage).where(
                 and_(
                     ChatMessage.session_id == session.id,
-                    ChatMessage.role == MessageRole.USER
+                    ChatMessage.role == MessageRole.USER.value
                 )
             ).order_by(ChatMessage.created_at.desc())
             
@@ -507,7 +512,7 @@ class AnalyticsService:
             user_msg_stmt = select(ChatMessage).where(
                 and_(
                     ChatMessage.session_id == session.id,
-                    ChatMessage.role == MessageRole.USER
+                    ChatMessage.role == MessageRole.USER.value
                 )
             ).order_by(ChatMessage.created_at.desc()).limit(1)
             

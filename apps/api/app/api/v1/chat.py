@@ -9,6 +9,7 @@ from app.schemas.appearance import WidgetConfigResponse
 from app.services.chat_service import ChatService
 from app.services.chatbot_service import ChatbotService
 from app.services.analytics_service import AnalyticsService
+from app.core.error_sanitizer import sanitize_error_message
 import time
 import json
 from collections import defaultdict
@@ -92,9 +93,13 @@ async def send_message_stream(
             ):
                 yield f"data: {json.dumps(chunk)}\n\n"
         except Exception as e:
+            public_error = sanitize_error_message(
+                str(e),
+                fallback="Something went wrong. Please try again."
+            )
             error_chunk = {
                 "type": "error",
-                "error": str(e)
+                "error": public_error
             }
             yield f"data: {json.dumps(error_chunk)}\n\n"
     
@@ -126,7 +131,11 @@ async def get_widget_config(
         )
         return config
     except Exception as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        detail = sanitize_error_message(
+            str(e),
+            fallback="Chatbot not found."
+        )
+        raise HTTPException(status_code=404, detail=detail)
 
 
 @router.post("/{chatbot_id}/report", status_code=204)
@@ -156,5 +165,9 @@ async def report_message(
             message_content=request.message_content
         )
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        detail = sanitize_error_message(
+            str(e),
+            fallback="Unable to report the message. Please try again."
+        )
+        raise HTTPException(status_code=400, detail=detail)
 

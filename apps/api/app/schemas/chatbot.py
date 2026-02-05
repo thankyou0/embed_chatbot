@@ -40,7 +40,7 @@ class ChatbotWithPermission(ChatbotResponse):
     can_manage_knowledge: bool = False
     can_manage_appearance: bool = False
     can_resolve_queries: bool = False
-    can_view_analytics: bool = False
+    can_view_analytics_billing: bool = False  # Renamed from can_view_analytics
 
 
 class ChatbotListResponse(BaseModel):
@@ -52,19 +52,18 @@ class ChatbotListResponse(BaseModel):
 
 class PermissionAssign(BaseModel):
     user_id: int
-    permission_level: PermissionLevel
     can_manage_knowledge: bool = False
     can_manage_appearance: bool = False
     can_resolve_queries: bool = False
-    can_view_analytics: bool = False
+    can_view_analytics_billing: bool = False  # Renamed from can_view_analytics
 
 
 class PermissionUpdate(BaseModel):
-    permission_level: PermissionLevel
+    permission_level: Optional[PermissionLevel] = None
     can_manage_knowledge: Optional[bool] = None
     can_manage_appearance: Optional[bool] = None
     can_resolve_queries: Optional[bool] = None
-    can_view_analytics: Optional[bool] = None
+    can_view_analytics_billing: Optional[bool] = None  # Renamed from can_view_analytics
 
 
 class PermissionResponse(BaseModel):
@@ -75,7 +74,7 @@ class PermissionResponse(BaseModel):
     can_manage_knowledge: bool
     can_manage_appearance: bool
     can_resolve_queries: bool
-    can_view_analytics: bool
+    can_view_analytics_billing: bool  # Renamed from can_view_analytics
     granted_by: int
     created_at: datetime
     # Include user info for display

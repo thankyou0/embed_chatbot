@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   BarChart3,
   MessageSquare,
@@ -66,11 +67,14 @@ interface UnansweredQueriesResponse {
 interface ChatbotOption {
   id: string;
   name: string;
+  can_view_analytics_billing?: boolean; // Permission flag
+  permission_level?: string;
 }
 
 export default function AnalyticsPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { user, isAdmin } = useAuth();
   const chatbotIdParam = searchParams.get("chatbot_id");
 
   const [isLoading, setIsLoading] = useState(true);
@@ -80,7 +84,14 @@ export default function AnalyticsPage() {
     useState<UnansweredQueriesResponse | null>(null);
   const [reportedQueries, setReportedQueries] =
     useState<UnansweredQueriesResponse | null>(null);
+  const [previousAnalytics, setPreviousAnalytics] =
+    useState<AnalyticsOverview | null>(null);
+  const [previousUnansweredQueries, setPreviousUnansweredQueries] =
+    useState<UnansweredQueriesResponse | null>(null);
+  const [previousReportedQueries, setPreviousReportedQueries] =
+    useState<UnansweredQueriesResponse | null>(null);
   const [chatbots, setChatbots] = useState<ChatbotOption[]>([]);
+  const [filteredChatbots, setFilteredChatbots] = useState<ChatbotOption[]>([]); // Chatbots filtered by permission
   const [selectedChatbot, setSelectedChatbot] = useState<string>(
     chatbotIdParam || "all",
   );
@@ -108,7 +119,7 @@ export default function AnalyticsPage() {
 
   useEffect(() => {
     if (!isLoading) {
-      fetchAnalytics(false);
+      fetchAnalytics(true);
     }
   }, [selectedChatbot, period]);
 
@@ -123,28 +134,56 @@ export default function AnalyticsPage() {
         { method: "GET" },
       );
       setChatbots(response.chatbots);
+
+      // Filter chatbots for members - only show those with analytics permission
+      if (!isAdmin) {
+        const filtered = response.chatbots.filter(
+          (bot) =>
+            bot.can_view_analytics_billing ||
+            bot.permission_level === "owner" ||
+            bot.permission_level === "admin",
+        );
+        setFilteredChatbots(filtered);
+        console.log(
+          `[Analytics] Member user - filtered to ${filtered.length} chatbots with analytics permission`,
+        );
+
+        // If user only has access to one chatbot, auto-select it
+        if (filtered.length === 1 && selectedChatbot === "all") {
+          setSelectedChatbot(filtered[0].id);
+          router.replace(`/dashboard/analytics?chatbot_id=${filtered[0].id}`);
+        }
+      } else {
+        setFilteredChatbots(response.chatbots);
+      }
     } catch (err) {
-      console.error("Failed to fetch chatbots:", err);
+      console.error("[Analytics] Failed to fetch chatbots:", err);
     }
   };
 
   const fetchAnalytics = async (forceRefresh = false) => {
     const cacheKey = `${selectedChatbot}-${period}`;
 
+    const cached = analyticsCache[cacheKey];
+
     // If we have cached data and NOT a force refresh, use it immediately
-    if (!forceRefresh && analyticsCache[cacheKey]) {
-      const cached = analyticsCache[cacheKey];
+    if (!forceRefresh && cached) {
       setAnalytics(cached.overview);
       setUnansweredQueries(cached.unanswered);
       setReportedQueries(cached.reported);
       return;
     }
 
+    const shouldShowFullLoader = !analytics && !previousAnalytics;
+
     try {
-      if (isLoading) {
+      if (shouldShowFullLoader) {
         setIsLoading(true);
       } else {
         setIsRefreshing(true);
+        setPreviousAnalytics(analytics);
+        setPreviousUnansweredQueries(unansweredQueries);
+        setPreviousReportedQueries(reportedQueries);
       }
       const token = getAccessToken();
       if (!token) return;
@@ -192,6 +231,9 @@ export default function AnalyticsPage() {
       setAnalytics(fetchedAnalytics);
       setUnansweredQueries(fetchedUnanswered);
       setReportedQueries(fetchedReported);
+      setPreviousAnalytics(null);
+      setPreviousUnansweredQueries(null);
+      setPreviousReportedQueries(null);
 
       // Update cache
       setAnalyticsCache((prev) => ({
@@ -205,7 +247,7 @@ export default function AnalyticsPage() {
     } catch (err) {
       console.error("Failed to fetch analytics:", err);
     } finally {
-      if (isLoading) {
+      if (shouldShowFullLoader) {
         setIsLoading(false);
       } else {
         setIsRefreshing(false);
@@ -228,7 +270,7 @@ export default function AnalyticsPage() {
 
   const exportToCSV = () => {
     const currentQueries =
-      queryTab === "missing_info" ? unansweredQueries : reportedQueries;
+      queryTab === "missing_info" ? displayUnanswered : displayReported;
     if (!currentQueries) return;
 
     const csvContent = [
@@ -298,6 +340,10 @@ export default function AnalyticsPage() {
     }
   };
 
+  const displayAnalytics = analytics ?? previousAnalytics;
+  const displayUnanswered = unansweredQueries ?? previousUnansweredQueries;
+  const displayReported = reportedQueries ?? previousReportedQueries;
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -316,8 +362,14 @@ export default function AnalyticsPage() {
               onChange={(e) => handleChatbotChange(e.target.value)}
               className="bg-transparent border-0 focus:ring-0 text-sm h-8 outline-none cursor-pointer min-w-[150px]"
             >
-              <option value="all">All Chatbots</option>
-              {chatbots.map((bot) => (
+              {/* Admins and members with all chatbots' analytics permission can see "All Chatbots" option */}
+              {(isAdmin ||
+                (!isAdmin &&
+                  filteredChatbots.length > 0 &&
+                  filteredChatbots.length === chatbots.length)) && (
+                <option value="all">All Chatbots</option>
+              )}
+              {filteredChatbots.map((bot) => (
                 <option key={bot.id} value={bot.id}>
                   {bot.name}
                 </option>
@@ -350,7 +402,7 @@ export default function AnalyticsPage() {
         </TabsList>
       </Tabs>
 
-      {isLoading && !analytics ? (
+      {isLoading && !displayAnalytics ? (
         <div className="flex items-center justify-center py-24">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
@@ -367,7 +419,7 @@ export default function AnalyticsPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {analytics?.total_sessions || 0}
+                  {displayAnalytics?.total_sessions || 0}
                 </div>
                 <p className="text-xs text-muted-foreground">
                   {getPeriodLabel(period)}
@@ -384,10 +436,10 @@ export default function AnalyticsPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {analytics?.total_messages || 0}
+                  {displayAnalytics?.total_messages || 0}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  User and bot exchanges
+                  User queries only
                 </p>
               </CardContent>
             </Card>
@@ -401,7 +453,7 @@ export default function AnalyticsPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {analytics?.avg_messages_per_session || 0}
+                  {displayAnalytics?.avg_messages_per_session || 0}
                 </div>
                 <p className="text-xs text-muted-foreground">
                   Messages per session
@@ -418,7 +470,7 @@ export default function AnalyticsPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-green-600">
-                  {analytics?.deflection_rate || 0}%
+                  {displayAnalytics?.deflection_rate || 0}%
                 </div>
                 <p className="text-xs text-muted-foreground">
                   Resolved without escalation
@@ -435,7 +487,7 @@ export default function AnalyticsPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-orange-600">
-                  {analytics?.unanswered_rate || 0}%
+                  {displayAnalytics?.unanswered_rate || 0}%
                 </div>
                 <p className="text-xs text-muted-foreground">
                   Low confidence responses
@@ -445,7 +497,7 @@ export default function AnalyticsPage() {
           </div>
 
           {/* Deflection Rate Visualization */}
-          {analytics && (
+          {displayAnalytics && (
             <Card>
               <CardHeader>
                 <CardTitle>Deflection Rate</CardTitle>
@@ -459,17 +511,21 @@ export default function AnalyticsPage() {
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Success Rate</span>
                     <span className="font-medium">
-                      {analytics.deflection_rate}%
+                      {displayAnalytics.deflection_rate}%
                     </span>
                   </div>
-                  <Progress value={analytics.deflection_rate} className="h-2" />
+                  <Progress
+                    value={displayAnalytics.deflection_rate}
+                    className="h-2"
+                  />
                 </div>
                 <p className="text-sm text-muted-foreground">
                   {Math.round(
-                    (analytics.deflection_rate / 100) *
-                      analytics.total_sessions,
+                    (displayAnalytics.deflection_rate / 100) *
+                      displayAnalytics.total_sessions,
                   )}{" "}
-                  of {analytics.total_sessions} sessions resolved successfully
+                  of {displayAnalytics.total_sessions} sessions resolved
+                  successfully
                 </p>
               </CardContent>
             </Card>
@@ -477,7 +533,7 @@ export default function AnalyticsPage() {
 
           {/* Unanswered Queries Section */}
           {selectedChatbot !== "all" &&
-            (unansweredQueries || reportedQueries) && (
+            (displayUnanswered || displayReported) && (
               <Card>
                 <CardHeader>
                   <div className="flex items-center justify-between">
@@ -489,9 +545,9 @@ export default function AnalyticsPage() {
                       </CardDescription>
                     </div>
                     {((queryTab === "missing_info" &&
-                      unansweredQueries?.queries.length) ||
+                      (displayUnanswered?.queries.length ?? 0) > 0) ||
                       (queryTab === "reported" &&
-                        reportedQueries?.queries.length)) && (
+                        (displayReported?.queries.length ?? 0) > 0)) && (
                       <Button variant="outline" size="sm" onClick={exportToCSV}>
                         <Download className="h-4 w-4 mr-2" />
                         Export CSV
@@ -515,14 +571,14 @@ export default function AnalyticsPage() {
                         className="flex items-center gap-2"
                       >
                         <AlertCircle className="h-4 w-4" />
-                        Missing Info ({unansweredQueries?.queries.length || 0})
+                        Missing Info ({displayUnanswered?.queries.length || 0})
                       </TabsTrigger>
                       <TabsTrigger
                         value="reported"
                         className="flex items-center gap-2"
                       >
                         <MessageSquare className="h-4 w-4" />
-                        Reported ({reportedQueries?.queries.length || 0})
+                        Reported ({displayReported?.queries.length || 0})
                       </TabsTrigger>
                     </TabsList>
                   </Tabs>
@@ -530,8 +586,8 @@ export default function AnalyticsPage() {
                   {(() => {
                     const currentQueries =
                       queryTab === "missing_info"
-                        ? unansweredQueries
-                        : reportedQueries;
+                        ? displayUnanswered
+                        : displayReported;
 
                     if (
                       !currentQueries ||

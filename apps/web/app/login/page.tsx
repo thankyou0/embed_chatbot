@@ -49,9 +49,9 @@ export default function LoginPage() {
         email: data.email,
         password: data.password,
       });
+      // Keep loading state - navigation will happen via AuthContext
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
-    } finally {
       setIsSubmitting(false);
     }
   };

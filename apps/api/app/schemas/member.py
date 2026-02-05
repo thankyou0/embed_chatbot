@@ -13,7 +13,7 @@ class ChatbotPermissionAssign(BaseModel):
     can_manage_knowledge: bool = False
     can_manage_appearance: bool = False
     can_resolve_queries: bool = False
-    can_view_analytics: bool = False
+    can_view_analytics_billing: bool = False  # Renamed from can_view_analytics
 
 
 class MemberCreate(BaseModel):
@@ -60,7 +60,7 @@ class MemberChatbotPermissionResponse(BaseModel):
     can_manage_knowledge: bool
     can_manage_appearance: bool
     can_resolve_queries: bool
-    can_view_analytics: bool
+    can_view_analytics_billing: bool  # Renamed from can_view_analytics
 
 
 class MemberResponse(BaseModel):
@@ -72,6 +72,7 @@ class MemberResponse(BaseModel):
     name: Optional[str]
     role: UserRole
     is_active: bool
+    is_org_owner: bool = False  # New field to indicate if user is org owner
     must_change_password: bool = False
     password_expires_at: Optional[datetime] = None
     invited_by: Optional[int] = None

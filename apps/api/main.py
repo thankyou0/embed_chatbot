@@ -11,6 +11,7 @@ from pathlib import Path
 from app.core.config import settings
 from app.core.logging import get_logger, setup_uvicorn_logging
 from app.core.exceptions import APIException
+from app.core.error_sanitizer import sanitize_error_message
 from app.core.database import check_database_connection
 from app.api.v1.router import api_router
 from sqlalchemy.exc import SQLAlchemyError, OperationalError, IntegrityError
@@ -145,13 +146,15 @@ async def api_exception_handler(request: Request, exc: APIException):
     """Handle custom API exceptions with clean logging."""
     source = f"{exc.source_file}:{exc.source_line}"
     logger.error(f"{exc.message}")
+    safe_error = sanitize_error_message(exc.message, fallback="An error occurred")
+    safe_detail = sanitize_error_message(exc.short_detail, fallback=safe_error)
     
     return JSONResponse(
         status_code=exc.status_code,
         content={
             "success": False,
-            "error": exc.message,
-            "detail": exc.short_detail,
+            "error": safe_error,
+            "detail": safe_detail,
             "source": source,
         },
         headers=exc.headers,
@@ -173,10 +176,11 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
     
     logger.error(f"{exc.detail}")
     
+    safe_detail = sanitize_error_message(str(exc.detail), fallback="An error occurred")
     response_content = {
         "success": False,
-        "error": exc.detail,
-        "detail": str(exc.detail),
+        "error": safe_detail,
+        "detail": safe_detail,
     }
     if source:
         response_content["source"] = source
@@ -292,10 +296,14 @@ async def general_exception_handler(request: Request, exc: Exception):
     else:
         logger.error(f"Unexpected: {str(exc)[:100]}")
     
+    public_detail = sanitize_error_message(
+        str(exc),
+        fallback="An unexpected error occurred"
+    )
     response_content = {
         "success": False,
         "error": "Internal Server Error",
-        "detail": str(exc) if settings.API_HOST == "0.0.0.0" else "An unexpected error occurred",
+        "detail": public_detail,
     }
     if source:
         response_content["source"] = source

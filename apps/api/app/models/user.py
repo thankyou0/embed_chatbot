@@ -23,6 +23,9 @@ class User(Base):
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     
+    # Org owner flag - only one user per tenant can be the org owner (account creator)
+    is_org_owner = Column(Boolean, default=False, nullable=False)
+    
     # Temporary password fields
     password_expires_at = Column(DateTime(timezone=True), nullable=True)  # When temp password expires
     must_change_password = Column(Boolean, default=False, nullable=False)  # Force password change on login

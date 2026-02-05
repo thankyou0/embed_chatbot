@@ -67,6 +67,7 @@ import {
 import { apiRequestWithAuth } from "@/lib/api";
 import { getAccessToken } from "@/lib/auth";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
 import { ChatbotWidgetPreview } from "@/components/chatbot/WidgetPreview";
 import { ChatbotTeamSettings } from "@/components/dashboard/ChatbotTeamSettings";
 import { CrawlSourcePanel } from "@/components/dashboard/CrawlSourcePanel";
@@ -83,6 +84,11 @@ interface ChatbotDetail {
   created_at: string;
   updated_at: string;
   permission_level: "owner" | "admin" | "editor" | "viewer";
+  // Granular permissions
+  can_manage_knowledge: boolean;
+  can_manage_appearance: boolean;
+  can_resolve_queries: boolean;
+  can_view_analytics_billing: boolean;
 }
 
 interface KnowledgeSource {
@@ -181,6 +187,7 @@ export default function ChatbotDetailPage() {
   const params = useParams();
   const router = useRouter();
   const chatbotId = params.chatbotId as string;
+  const { isAdmin, isOrgOwner } = useAuth();
 
   const [chatbot, setChatbot] = useState<ChatbotDetail | null>(null);
   const [knowledgeSources, setKnowledgeSources] = useState<KnowledgeSource[]>(
@@ -195,6 +202,9 @@ export default function ChatbotDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("overview");
   const [knowledgeTab, setKnowledgeTab] = useState("crawl");
+  const [navigationTarget, setNavigationTarget] = useState<
+    "analytics" | "usage" | null
+  >(null);
 
   // Knowledge base state
   const [isAddKnowledgeOpen, setIsAddKnowledgeOpen] = useState(false);
@@ -500,7 +510,9 @@ export default function ChatbotDetailPage() {
       setIsPolling(true);
       setPollingStartTime(Date.now());
     } else if (!isPolling && hasCrawlingSources && pollingTimedOut) {
-      console.log("⏱️ Polling disabled after timeout; waiting for manual refresh");
+      console.log(
+        "⏱️ Polling disabled after timeout; waiting for manual refresh",
+      );
     }
   }, [knowledgeSources, manuallyStartedCrawl, isPolling, pollingTimedOut]);
 
@@ -1184,6 +1196,32 @@ export default function ChatbotDetailPage() {
   const canEdit = ["owner", "admin", "editor"].includes(
     chatbot.permission_level,
   );
+  const accountTypeLabel = isOrgOwner
+    ? "Org Owner"
+    : isAdmin
+      ? "Admin"
+      : "Member";
+
+  // Permission-based visibility
+  const canViewKnowledge =
+    chatbot.can_manage_knowledge ||
+    chatbot.permission_level === "owner" ||
+    chatbot.permission_level === "admin";
+  const canViewAppearance =
+    chatbot.can_manage_appearance ||
+    chatbot.permission_level === "owner" ||
+    chatbot.permission_level === "admin";
+  const canViewSettings =
+    chatbot.permission_level === "owner" ||
+    chatbot.permission_level === "admin";
+  const canResolveQueries =
+    chatbot.can_resolve_queries ||
+    chatbot.permission_level === "owner" ||
+    chatbot.permission_level === "admin";
+  const canViewAnalyticsBilling =
+    chatbot.can_view_analytics_billing ||
+    chatbot.permission_level === "owner" ||
+    chatbot.permission_level === "admin";
 
   // Helper function to extract QA pairs from knowledge sources
   const getQAPairs = (): QAPair[] => {
@@ -1272,8 +1310,8 @@ export default function ChatbotDetailPage() {
             >
               {chatbot.status.charAt(0).toUpperCase() + chatbot.status.slice(1)}
             </Badge>
-            <Badge variant="outline" className="capitalize">
-              {chatbot.permission_level}
+            <Badge variant="outline" className="text-xs">
+              {accountTypeLabel}
             </Badge>
           </div>
           {chatbot.description && (
@@ -1295,28 +1333,61 @@ export default function ChatbotDetailPage() {
         }}
         className="w-full"
       >
-        <TabsList className="grid w-full grid-cols-5 lg:w-auto">
-          <TabsTrigger value="overview" className="flex items-center gap-2">
-            <BarChart3 className="h-4 w-4" />
-            <span className="hidden sm:inline">Overview</span>
-          </TabsTrigger>
-          <TabsTrigger value="knowledge" className="flex items-center gap-2">
-            <Database className="h-4 w-4" />
-            <span className="hidden sm:inline">Add Knowledge</span>
-          </TabsTrigger>
-          <TabsTrigger value="appearance" className="flex items-center gap-2">
-            <Palette className="h-4 w-4" />
-            <span className="hidden sm:inline">Appearance</span>
-          </TabsTrigger>
-          <TabsTrigger value="install" className="flex items-center gap-2">
-            <Code className="h-4 w-4" />
-            <span className="hidden sm:inline">Install</span>
-          </TabsTrigger>
-          <TabsTrigger value="settings" className="flex items-center gap-2">
-            <Settings className="h-4 w-4" />
-            <span className="hidden sm:inline">Settings</span>
-          </TabsTrigger>
-        </TabsList>
+        {/* Calculate visible tabs for grid columns */}
+        {(() => {
+          const visibleTabs = [
+            true, // Overview always visible
+            canViewKnowledge, // Knowledge
+            canViewAppearance, // Appearance
+            true, // Install always visible
+            canViewSettings, // Settings
+          ].filter(Boolean).length;
+
+          return (
+            <TabsList
+              className={`grid w-full lg:w-auto`}
+              style={{
+                gridTemplateColumns: `repeat(${visibleTabs}, minmax(0, 1fr))`,
+              }}
+            >
+              <TabsTrigger value="overview" className="flex items-center gap-2">
+                <BarChart3 className="h-4 w-4" />
+                <span className="hidden sm:inline">Overview</span>
+              </TabsTrigger>
+              {canViewKnowledge && (
+                <TabsTrigger
+                  value="knowledge"
+                  className="flex items-center gap-2"
+                >
+                  <Database className="h-4 w-4" />
+                  <span className="hidden sm:inline">Add Knowledge</span>
+                </TabsTrigger>
+              )}
+              {canViewAppearance && (
+                <TabsTrigger
+                  value="appearance"
+                  className="flex items-center gap-2"
+                >
+                  <Palette className="h-4 w-4" />
+                  <span className="hidden sm:inline">Appearance</span>
+                </TabsTrigger>
+              )}
+              <TabsTrigger value="install" className="flex items-center gap-2">
+                <Code className="h-4 w-4" />
+                <span className="hidden sm:inline">Install</span>
+              </TabsTrigger>
+              {canViewSettings && (
+                <TabsTrigger
+                  value="settings"
+                  className="flex items-center gap-2"
+                >
+                  <Settings className="h-4 w-4" />
+                  <span className="hidden sm:inline">Settings</span>
+                </TabsTrigger>
+              )}
+            </TabsList>
+          );
+        })()}
 
         {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-6">
@@ -1398,11 +1469,20 @@ export default function ChatbotDetailPage() {
               <div className="grid gap-4 md:grid-cols-2">
                 <Button
                   variant="outline"
-                  className="h-auto flex-col items-start p-4"
-                  onClick={() =>
-                    router.push(`/dashboard/analytics?chatbot_id=${chatbotId}`)
-                  }
+                  className={cn(
+                    "h-auto flex-col items-start p-4 relative overflow-hidden",
+                    navigationTarget === "analytics" &&
+                      "bg-accent/40 ring-1 ring-primary/30",
+                  )}
+                  disabled={navigationTarget !== null}
+                  onClick={() => {
+                    setNavigationTarget("analytics");
+                    router.push(`/dashboard/analytics?chatbot_id=${chatbotId}`);
+                  }}
                 >
+                  {navigationTarget === "analytics" && (
+                    <div className="loading-shimmer" aria-hidden="true" />
+                  )}
                   <BarChart3 className="h-5 w-5 mb-2" />
                   <div className="text-left">
                     <div className="font-semibold">View Analytics</div>
@@ -1413,11 +1493,20 @@ export default function ChatbotDetailPage() {
                 </Button>
                 <Button
                   variant="outline"
-                  className="h-auto flex-col items-start p-4"
-                  onClick={() =>
-                    router.push(`/dashboard/usage?chatbot_id=${chatbotId}`)
-                  }
+                  className={cn(
+                    "h-auto flex-col items-start p-4 relative overflow-hidden",
+                    navigationTarget === "usage" &&
+                      "bg-accent/40 ring-1 ring-primary/30",
+                  )}
+                  disabled={navigationTarget !== null}
+                  onClick={() => {
+                    setNavigationTarget("usage");
+                    router.push(`/dashboard/usage?chatbot_id=${chatbotId}`);
+                  }}
                 >
+                  {navigationTarget === "usage" && (
+                    <div className="loading-shimmer" aria-hidden="true" />
+                  )}
                   <TrendingUp className="h-5 w-5 mb-2" />
                   <div className="text-left">
                     <div className="font-semibold">Show Usage</div>

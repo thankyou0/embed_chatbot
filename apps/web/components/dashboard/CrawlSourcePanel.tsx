@@ -139,10 +139,6 @@ export function CrawlSourcePanel({
             variant={getStatusBadgeVariant(source.status)}
             className="capitalize font-normal"
           >
-            {(source.status === "processing" ||
-              source.status === "crawling") && (
-              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-            )}
             {source.status === "failed" && (
               <AlertCircle className="h-3 w-3 mr-1" />
             )}

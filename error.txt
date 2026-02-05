@@ -4,11 +4,6 @@ should avoid mentioning "context" --> The price of the Moissanite Oval Diamond S
 
 Team member activity not showing in recent activity
 
-The bubble should now appear in the correct position with your custom colors the moment the page loads, without any jump or default settings flashing.
-
-
-preview widget conversation count should not be counted in stats.
-
 
 deletion of crawling site's embedding isn't actually deleting that info pls check.
 
@@ -55,21 +50,8 @@ One option to consider is the DOUBLE RING GOLDEN METAL WALL CLOCK, which has a l
 
 
 
-
 Outfit Analysis: Unfortunately, I'm a text-based AI and cannot view images. However, I can guide you through a process to find a suitable jewelry ring.
 
 
 
-on Downgrading the plans, how to manage limits.
-
-
-on deleting chatbot, make sure it deletes everthing related to that particular chatbot's (knowledge base, analytics data, usage data, team member access data from db )
-
-
-
-
-Crawl failed for https://www.nexertechnology.com/: HuggingFace API error: Server error '504 Gateway Time-out' for url 'https://router.huggingface.co/hf-inference/models/sentence-transformers/all-MiniLM...
-
-3/2/2026, 6:24:00 pm
-
-Embedding generation failed: HuggingFace API error: Server error '504 Gateway Time-out' for url 'https://router.huggingface.co/hf-inference/models/sentence-transformers/all-MiniLM-L6-v2/pipeline/feature-extraction' For more infor...
+i don't know about on Downgrading the plans, how to manage limits bec it's possible that user has used things for enterprise now to downgrade to free plans, in terms of free plans, it's crossing the limits. so how to handle this case. should be show error msg for downgrading about delete resources or is there any better way to do it . Remember not implement it in code, just give me best suggestion idea about sources and msg limit handle.

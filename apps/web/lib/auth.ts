@@ -12,6 +12,7 @@ export interface User {
   name?: string;
   role: "admin" | "user";
   is_active: boolean;
+  is_org_owner: boolean; // Whether user is the organization owner (account creator)
   must_change_password: boolean;
   password_expires_at: string | null;
   created_at: string;

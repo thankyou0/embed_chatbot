@@ -20,6 +20,7 @@ interface AuthContextType {
   tenant: Tenant | null;
   loading: boolean;
   isAdmin: boolean;
+  isOrgOwner: boolean; // Whether user is the organization owner
   mustChangePassword: boolean;
   signup: (data: SignupData) => Promise<void>;
   login: (data: LoginData) => Promise<void>;
@@ -38,6 +39,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   const isAdmin = user?.role === "admin";
+  const isOrgOwner = user?.is_org_owner ?? false; // Check if user is org owner
   const mustChangePassword = user?.must_change_password ?? false;
 
   const refreshUser = async () => {
@@ -112,6 +114,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         tenant,
         loading,
         isAdmin,
+        isOrgOwner,
         mustChangePassword,
         signup: handleSignup,
         login: handleLogin,

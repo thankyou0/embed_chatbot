@@ -10,6 +10,7 @@ import httpx
 import trafilatura
 from bs4 import BeautifulSoup
 from app.services.product_extractor import extract_product_data
+from app.core.error_sanitizer import sanitize_error_message
 
 router = APIRouter()
 
@@ -160,7 +161,11 @@ async def crawl_single_page(url: str) -> dict:
         except HTTPException:
             raise
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Error crawling {url}: {str(e)}")
+            detail = sanitize_error_message(
+                str(e),
+                fallback="Unable to preview this page. Please try again."
+            )
+            raise HTTPException(status_code=500, detail=detail)
 
 @router.post("/preview", response_model=CrawlPreviewResponse)
 async def preview_crawl(request: CrawlPreviewRequest):
@@ -234,5 +239,11 @@ async def preview_crawl(request: CrawlPreviewRequest):
             product_data=page_data.get('product_data')
         )
         
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        detail = sanitize_error_message(
+            str(e),
+            fallback="Unable to preview this page. Please try again."
+        )
+        raise HTTPException(status_code=500, detail=detail)

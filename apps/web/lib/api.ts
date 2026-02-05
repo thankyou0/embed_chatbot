@@ -1,7 +1,19 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
 export interface ApiError {
-  detail: string
+  detail?: string
+  error?: string
+  message?: string
+}
+
+function getSafeErrorMessage(error: ApiError, status: number): string {
+  const fallback = "Something went wrong. Please try again."
+
+  if (status >= 500) {
+    return error.error || fallback
+  }
+
+  return error.detail || error.error || error.message || fallback
 }
 
 export async function apiRequest<T>(
@@ -22,7 +34,8 @@ export async function apiRequest<T>(
     const error: ApiError = await response.json().catch(() => ({
       detail: 'An error occurred',
     }))
-    throw new Error(error.detail || `HTTP error! status: ${response.status}`)
+    const message = getSafeErrorMessage(error, response.status)
+    throw new Error(message)
   }
 
   // Handle 204 No Content

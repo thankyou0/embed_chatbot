@@ -156,10 +156,11 @@ class ProductDataExtractor:
             logger.debug(f"Page {self.url} is a non-product page (policy/contact/etc), skipping")
             return None
         
-        # SECOND: Check if this is a collection/listing page - reject immediately
-        if self._is_collection_page():
-            logger.debug(f"Page {self.url} is a collection/listing page, not a product")
-            return None
+        # SECOND: Check if this is a collection/listing page
+        # We'll still try to extract product data, but apply stricter validation
+        is_collection = self._is_collection_page()
+        if is_collection:
+            logger.debug(f"Page {self.url} appears to be a collection/listing page - applying strict validation")
         
         product_data = {
             'name': None,
@@ -216,9 +217,23 @@ class ProductDataExtractor:
                 self.extraction_sources.append('price-heuristic')
         
         # Threshold: 30+ points = likely a product page
-        if self.confidence_score < 30:
-            logger.debug(f"Page {self.url} is not a product (score: {self.confidence_score})")
+        # For collection/listing pages, require higher confidence (50+) to avoid false positives
+        min_confidence = 50 if is_collection else 30
+        
+        if self.confidence_score < min_confidence:
+            logger.debug(f"Page {self.url} is not a product (score: {self.confidence_score}, required: {min_confidence}, is_collection: {is_collection})")
             return None
+        
+        # Additional validation for collection pages: must have concrete product details
+        if is_collection:
+            # Collection pages must have at least name AND (price OR images) to be valid
+            has_name = bool(product_data.get('name', '').strip())
+            has_price = bool(product_data.get('price'))
+            has_images = bool(product_data.get('images'))
+            
+            if not (has_name and (has_price or has_images)):
+                logger.debug(f"Collection page {self.url} lacks concrete product details (name: {has_name}, price: {has_price}, images: {has_images})")
+                return None
         
         # Clean up the data
         product_data = self._clean_product_data(product_data)

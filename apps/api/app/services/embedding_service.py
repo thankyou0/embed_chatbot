@@ -9,6 +9,7 @@ from app.models.knowledge import KnowledgeSource, CrawledPage, Embedding, Knowle
 from app.core.database import get_session_factory
 from app.core.config import settings
 from app.core.logging import get_logger
+from app.core.error_sanitizer import sanitize_error_message
 
 logger = get_logger(__name__)
 
@@ -29,10 +30,11 @@ def get_hf_client() -> InferenceClient:
     return _hf_client
 
 
-async def get_embeddings_from_api(texts: List[str]) -> List[List[float]]:
+async def get_embeddings_from_api(texts: List[str], max_retries: int = 3) -> List[List[float]]:
     """
     Get embeddings from HuggingFace Inference API using the official SDK.
     Uses the sentence-transformers/all-MiniLM-L6-v2 model which produces 384-dimensional embeddings.
+    Implements exponential backoff for 504 Gateway Timeout errors.
     """
     client = get_hf_client()
     model = settings.EMBEDDING_MODEL
@@ -40,41 +42,63 @@ async def get_embeddings_from_api(texts: List[str]) -> List[List[float]]:
     # Run in thread pool since huggingface_hub is synchronous
     loop = asyncio.get_event_loop()
     
-    try:
-        # Use feature_extraction for sentence-transformers models
-        result = await loop.run_in_executor(
-            None,
-            lambda: client.feature_extraction(
-                text=texts,
-                model=model
+    # Retry delays in seconds (exponential backoff)
+    retry_delays = [5, 15, 30]
+    
+    for attempt in range(max_retries):
+        try:
+            # Use feature_extraction for sentence-transformers models
+            result = await loop.run_in_executor(
+                None,
+                lambda: client.feature_extraction(
+                    text=texts,
+                    model=model
+                )
             )
-        )
-        
-        # Handle the result format
-        import numpy as np
-        embeddings = []
-        
-        # result can be a list of embeddings or nested arrays
-        for item in result:
-            if isinstance(item, list) and len(item) > 0:
-                if isinstance(item[0], list):
-                    # Token-level embeddings - perform mean pooling
-                    token_embeddings = np.array(item)
-                    pooled = np.mean(token_embeddings, axis=0).tolist()
-                    embeddings.append(pooled)
+            
+            # Handle the result format
+            import numpy as np
+            embeddings = []
+            
+            # result can be a list of embeddings or nested arrays
+            for item in result:
+                if isinstance(item, list) and len(item) > 0:
+                    if isinstance(item[0], list):
+                        # Token-level embeddings - perform mean pooling
+                        token_embeddings = np.array(item)
+                        pooled = np.mean(token_embeddings, axis=0).tolist()
+                        embeddings.append(pooled)
+                    else:
+                        # Already pooled embedding
+                        embeddings.append(item)
                 else:
-                    # Already pooled embedding
-                    embeddings.append(item)
-            else:
-                # Single embedding vector
-                embeddings.append(list(item) if hasattr(item, '__iter__') else [item])
-        
-        logger.info(f"Successfully got {len(embeddings)} embeddings from HuggingFace")
-        return embeddings
-        
-    except Exception as e:
-        logger.error(f"HuggingFace API error: {e}")
-        raise Exception(f"HuggingFace API error: {str(e)}")
+                    # Single embedding vector
+                    embeddings.append(list(item) if hasattr(item, '__iter__') else [item])
+            
+            logger.info(f"Successfully got {len(embeddings)} embeddings from HuggingFace")
+            return embeddings
+            
+        except Exception as e:
+            error_str = str(e).lower()
+            is_timeout = any(keyword in error_str for keyword in ['504', 'gateway timeout', 'timeout', 'timed out'])
+            
+            # If it's a timeout and we have retries left, wait and retry
+            if is_timeout and attempt < max_retries - 1:
+                delay = retry_delays[attempt]
+                logger.warning(f"HuggingFace API timeout (attempt {attempt + 1}/{max_retries}). Retrying in {delay}s...")
+                await asyncio.sleep(delay)
+                continue
+            
+            # If we're out of retries or it's not a timeout, raise the error
+            logger.error(f"HuggingFace API error: {e}")
+            public_message = sanitize_error_message(
+                str(e),
+                fallback="Embedding service is temporarily unavailable. Please try again shortly."
+            )
+            raise Exception(public_message)
+    
+    # Should never reach here, but just in case
+    raise Exception("Failed to generate embeddings after all retries")
 
 
 async def get_single_embedding(text: str) -> List[float]:
@@ -361,9 +385,13 @@ class EmbeddingService:
                 logger.success(f"Successfully processed and stored {total_stored} embeddings for KS: {ks.id}")
 
             except Exception as e:
-                error_msg = str(e)
-                logger.error(f"Error in embedding pipeline for KS {knowledge_source_id}: {error_msg}")
+                raw_error = str(e)
+                logger.error(f"Error in embedding pipeline for KS {knowledge_source_id}: {raw_error}")
                 await db.rollback()
+                public_error = sanitize_error_message(
+                    raw_error,
+                    fallback="Embedding generation failed. Please try again."
+                )
                 
                 # Update status to FAILED with error message
                 try:
@@ -377,7 +405,7 @@ class EmbeddingService:
                         .where(KnowledgeSource.id == knowledge_source_id)
                         .values(
                             status=KnowledgeSourceStatus.FAILED,
-                            error_message=f"Embedding generation failed: {error_msg}"
+                            error_message=public_error
                         )
                     )
                     await db.commit()
@@ -385,7 +413,7 @@ class EmbeddingService:
                     # Log activity for the error
                     if ks_for_error:
                         from app.models.chatbot import ChatbotActivity
-                        short_error = error_msg[:200] + "..." if len(error_msg) > 200 else error_msg
+                        short_error = public_error[:200] + "..." if len(public_error) > 200 else public_error
                         activity = ChatbotActivity(
                             chatbot_id=ks_for_error.chatbot_id,
                             user_id=None,  # System action

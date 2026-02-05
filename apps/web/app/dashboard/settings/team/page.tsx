@@ -45,16 +45,25 @@ interface Member {
   name: string | null;
   role: "admin" | "user";
   is_active: boolean;
+  is_org_owner: boolean;  // Whether user is the organization owner
   created_at: string;
-  chatbot_permissions?: { chatbot_id: string; chatbot_name: string }[];
+  chatbot_permissions?: { 
+    chatbot_id: string; 
+    chatbot_name: string;
+    can_manage_knowledge: boolean;
+    can_manage_appearance: boolean;
+    can_resolve_queries: boolean;
+    can_view_analytics_billing: boolean;
+  }[];
 }
 
 export default function TeamPage() {
-  const { user, isAdmin, loading: authLoading } = useAuth();
+  const { user, isAdmin, isOrgOwner, loading: authLoading } = useAuth();
   const router = useRouter();
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
 
   // Add Member State
   const [showAddModal, setShowAddModal] = useState(false);
@@ -113,6 +122,8 @@ export default function TeamPage() {
   const handleAddMember = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setError("");
+    setSuccessMessage("");
     try {
       const token = getAccessToken();
       if (!token) throw new Error("No access token");
@@ -128,6 +139,8 @@ export default function TeamPage() {
         }),
       });
 
+      setSuccessMessage(`Member ${newMember.email} added successfully`);
+      console.log(`[Team] Successfully added member: ${newMember.email} with role: ${newMember.role}`);
       setShowAddModal(false);
       setNewMember({
         email: "",
@@ -138,13 +151,21 @@ export default function TeamPage() {
       });
       fetchData();
     } catch (err: any) {
-      alert(err.message || "Failed to add member");
+      console.error(`[Team] Failed to add member ${newMember.email}:`, err);
+      setError(err.message || "Failed to add member");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleRemoveMember = async (memberId: number) => {
+  const handleRemoveMember = async (memberId: number, memberEmail: string, memberIsOrgOwner: boolean) => {
+    // Prevent removing org owner
+    if (memberIsOrgOwner) {
+      setError("Cannot remove the organization owner. The organization owner account can only be deleted by deleting the entire organization.");
+      console.warn(`[Team] Attempted to remove org owner: ${memberEmail}`);
+      return;
+    }
+    
     if (
       !confirm(
         "Are you sure you want to remove this member? This will remove their access to all chatbots.",
@@ -152,6 +173,8 @@ export default function TeamPage() {
     )
       return;
 
+    setError("");
+    setSuccessMessage("");
     try {
       const token = getAccessToken();
       if (!token) throw new Error("No access token");
@@ -160,9 +183,12 @@ export default function TeamPage() {
         method: "DELETE",
       });
 
+      setSuccessMessage(`Member ${memberEmail} removed successfully`);
+      console.log(`[Team] Successfully removed member: ${memberEmail}`);
       fetchData();
     } catch (err: any) {
-      alert(err.message || "Failed to remove member");
+      console.error(`[Team] Failed to remove member ${memberEmail}:`, err);
+      setError(err.message || "Failed to remove member");
     }
   };
 
@@ -198,6 +224,13 @@ export default function TeamPage() {
         </div>
       )}
 
+      {successMessage && (
+        <div className="bg-green-50 text-green-600 p-4 rounded-lg flex items-center gap-2">
+          <Check className="h-5 w-5" />
+          {successMessage}
+        </div>
+      )}
+
       <div className="grid gap-4">
         {members.map((member) => (
           <Card key={member.id}>
@@ -208,10 +241,20 @@ export default function TeamPage() {
                 </div>
                 <div>
                   <div className="font-medium flex items-center gap-2">
-                    {member.name || "No Name"}
-                    {member.role === "admin" && (
-                      <Badge variant="secondary" className="text-xs">
-                        Org Admin
+                    {member.name || member.email.split("@")[0] || "No Name"}
+                    {member.is_org_owner && (
+                      <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-700">
+                        Org Owner
+                      </Badge>
+                    )}
+                    {!member.is_org_owner && member.role === "admin" && (
+                      <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700">
+                        Admin
+                      </Badge>
+                    )}
+                    {member.role === "user" && (
+                      <Badge variant="outline" className="text-xs">
+                        Member
                       </Badge>
                     )}
                   </div>
@@ -241,7 +284,7 @@ export default function TeamPage() {
                   </div>
                 </div>
 
-                {member.id !== user?.id && (
+                {member.id !== user?.id && !member.is_org_owner && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="icon">
@@ -252,7 +295,7 @@ export default function TeamPage() {
                       <DropdownMenuLabel>Actions</DropdownMenuLabel>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
-                        onClick={() => handleRemoveMember(member.id)}
+                        onClick={() => handleRemoveMember(member.id, member.email, member.is_org_owner)}
                         className="text-red-600"
                       >
                         <Trash2 className="h-4 w-4 mr-2" />
@@ -260,6 +303,9 @@ export default function TeamPage() {
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
+                )}
+                {member.is_org_owner && member.id !== user?.id && (
+                  <div className="w-10 h-10" />
                 )}
               </div>
             </CardContent>
@@ -270,7 +316,7 @@ export default function TeamPage() {
       {/* Custom Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-md w-full shadow-xl">
+          <div className="bg-card rounded-lg max-w-md w-full shadow-2xl">
             <div className="p-6 border-b flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-semibold">
@@ -326,14 +372,15 @@ export default function TeamPage() {
                     })
                   }
                 >
-                  <option value="user">Member (Assigned access only)</option>
+                  <option value="user">Member (Chatbot-specific access only)</option>
                   <option value="admin">
                     Admin (Full organization access)
                   </option>
                 </select>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Admins can see and manage all chatbots. Members only see
-                  chatbots they are assigned to.
+                  {newMember.role === "admin" 
+                    ? "Admins have full access to all chatbots, can create new chatbots, manage team members, and access all features. They cannot remove the organization owner."
+                    : "Members can only access specific chatbots they are assigned to. They cannot create chatbots or manage team members. Use chatbot-level permissions to control what they can do with each assigned chatbot."}
                 </p>
               </div>
 

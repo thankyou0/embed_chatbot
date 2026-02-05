@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   TrendingUp,
   MessageSquare,
@@ -105,26 +106,39 @@ interface BillingOverview {
 interface ChatbotOption {
   id: string;
   name: string;
+  can_view_analytics_billing?: boolean;
+  permission_level?: string;
 }
 
 export default function UsagePage() {
   const searchParams = useSearchParams();
   const chatbotIdParam = searchParams.get("chatbot_id");
   const router = useRouter();
+  const { user, isAdmin } = useAuth();
 
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [billingData, setBillingData] = useState<BillingOverview | null>(null);
   const [chatbots, setChatbots] = useState<ChatbotOption[]>([]);
+  const [filteredChatbots, setFilteredChatbots] = useState<ChatbotOption[]>([]);
   const [perBotUsage, setPerBotUsage] = useState<ChatbotUsageData[]>([]);
+  const [previousBotStats, setPreviousBotStats] =
+    useState<ChatbotUsageData | null>(null);
   const [selectedChatbot, setSelectedChatbot] = useState<string>(
     chatbotIdParam || "all",
   );
   const [error, setError] = useState<string | null>(null);
 
   const handleChatbotSelection = (value: string) => {
-    setSelectedChatbot(value);
+    // Store current bot stats before changing
+    if (selectedChatbot !== "all" && perBotUsage.length > 0) {
+      const current = perBotUsage.find((u) => u.chatbot_id === selectedChatbot);
+      if (current) {
+        setPreviousBotStats(current);
+      }
+    }
 
+    setSelectedChatbot(value);
     const queryString = value === "all" ? "" : `?chatbot_id=${value}`;
     router.replace(`/dashboard/usage${queryString}`);
   };
@@ -160,6 +174,7 @@ export default function UsagePage() {
         method: "GET",
       });
       setPerBotUsage(usageResp.per_chatbot_usage || []);
+      setPreviousBotStats(null); // Clear previous stats once new data arrives
 
       setError(null);
     } catch (err: any) {
@@ -187,6 +202,22 @@ export default function UsagePage() {
       );
 
       setChatbots(response.chatbots);
+
+      // For non-admins, filter to only chatbots they have analytics/billing permission for
+      if (!isAdmin) {
+        const filtered = response.chatbots.filter(
+          (bot) =>
+            bot.can_view_analytics_billing === true ||
+            bot.permission_level === "full_access",
+        );
+        setFilteredChatbots(filtered);
+        // If no chatbots available, set first filtered one as selected
+        if (filtered.length > 0 && selectedChatbot === "all") {
+          setSelectedChatbot(filtered[0].id);
+        }
+      } else {
+        setFilteredChatbots(response.chatbots);
+      }
     } catch (err) {
       console.error("Failed to fetch chatbots:", err);
     }
@@ -275,7 +306,8 @@ export default function UsagePage() {
 
   const currentBotStats =
     selectedChatbot !== "all"
-      ? perBotUsage.find((u) => u.chatbot_id === selectedChatbot)
+      ? perBotUsage.find((u) => u.chatbot_id === selectedChatbot) ||
+        previousBotStats
       : null;
 
   // Use bot-specific usage for progress bars if a bot is selected
@@ -328,17 +360,29 @@ export default function UsagePage() {
               onChange={(e) => handleChatbotSelection(e.target.value)}
               className="bg-transparent border-0 focus:ring-0 text-sm h-8 outline-none cursor-pointer min-w-[200px]"
             >
-              <option value="all">All Chatbots (Total Usage)</option>
-              {chatbots.map((bot) => (
+              {(isAdmin ||
+                (!isAdmin &&
+                  filteredChatbots.length > 0 &&
+                  filteredChatbots.length === chatbots.length)) && (
+                <option value="all">All Chatbots (Total Usage)</option>
+              )}
+              {filteredChatbots.map((bot) => (
                 <option key={bot.id} value={bot.id}>
                   {bot.name}
                 </option>
               ))}
             </select>
           </div>
-          <Button onClick={() => fetchData(false)} variant="outline" size="icon">
+          <Button
+            onClick={() => fetchData(false)}
+            variant="outline"
+            size="icon"
+          >
             <RefreshCcw
-              className={cn("h-4 w-4", (isLoading || isRefreshing) && "animate-spin")}
+              className={cn(
+                "h-4 w-4",
+                (isLoading || isRefreshing) && "animate-spin",
+              )}
             />
           </Button>
         </div>

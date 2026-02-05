@@ -59,11 +59,12 @@ from app.services.file_service import FileService
 from app.services.embedding_service import EmbeddingService
 from app.services.scheduler_service import SchedulerService
 from app.core.database import get_session_factory
-from app.core.tier_limits import get_limit
+from app.core.error_sanitizer import sanitize_error_message
 from fastapi import BackgroundTasks, UploadFile
 from sqlalchemy import select, update, delete, func, text, bindparam
 from sqlalchemy.orm import selectinload
 import os
+import shutil
 import io
 import aiofiles
 from pathlib import Path
@@ -85,7 +86,16 @@ class ChatbotService:
         user: User,
         request: ChatbotCreate
     ) -> ChatbotWithPermission:
-        """Create a new chatbot"""
+        """Create a new chatbot
+        
+        Only admins and org owners can create chatbots.
+        Regular members cannot create chatbots.
+        """
+        # Check if user has permission to create chatbots
+        if user.role != UserRole.ADMIN:
+            logger.warning(f"[Chatbot] Member {user.email} attempted to create chatbot but lacks permission")
+            raise ForbiddenError("Only admins can create chatbots")
+        
         # Enforce chatbot limit based on plan
         billing_overview = await BillingService.get_billing_overview(
             db=db,
@@ -133,7 +143,7 @@ class ChatbotService:
             can_manage_knowledge=True,
             can_manage_appearance=True,
             can_resolve_queries=True,
-            can_view_analytics=True,
+            can_view_analytics_billing=True,
             granted_by=user.id,
         )
         db.add(permission)
@@ -168,7 +178,7 @@ class ChatbotService:
         # Admin sees all chatbots in tenant
         if user.role == UserRole.ADMIN:
             result = await db.execute(
-                select(Chatbot)
+                select(Chatbot).options(selectinload(Chatbot.appearance))
                 .where(
                     Chatbot.tenant_id == tenant_id,
                     Chatbot.deleted_at.is_(None),
@@ -196,19 +206,29 @@ class ChatbotService:
                         "can_manage_knowledge": permission.can_manage_knowledge,
                         "can_manage_appearance": permission.can_manage_appearance,
                         "can_resolve_queries": permission.can_resolve_queries,
-                        "can_view_analytics": permission.can_view_analytics
+                        "can_view_analytics_billing": permission.can_view_analytics_billing
                     }
+                    if perm_level == PermissionLevel.CUSTOM:
+                        perm_level = ChatbotService._derive_permission_level_from_flags(
+                            permission.can_manage_knowledge,
+                            permission.can_manage_appearance,
+                            permission.can_resolve_queries,
+                            permission.can_view_analytics_billing
+                        )
                 else:
                     perm_level = PermissionLevel.ADMIN
                     flags = {
                         "can_manage_knowledge": True,
                         "can_manage_appearance": True,
                         "can_resolve_queries": True,
-                        "can_view_analytics": True
+                        "can_view_analytics_billing": True
                     }
                 
+                base_data = ChatbotResponse.model_validate(chatbot).model_dump()
+                if chatbot.appearance and chatbot.appearance.welcome_message is not None:
+                    base_data["welcome_message"] = chatbot.appearance.welcome_message
                 chatbot_list.append(ChatbotWithPermission(
-                    **ChatbotResponse.model_validate(chatbot).model_dump(),
+                    **base_data,
                     permission_level=perm_level,
                     **flags
                 ))
@@ -217,7 +237,7 @@ class ChatbotService:
         
         # Regular users only see chatbots they have explicit permission for
         result = await db.execute(
-            select(Chatbot, ChatbotPermission)
+            select(Chatbot, ChatbotPermission).options(selectinload(Chatbot.appearance))
             .join(ChatbotPermission, Chatbot.id == ChatbotPermission.chatbot_id)
             .where(
                 Chatbot.tenant_id == tenant_id,
@@ -228,17 +248,28 @@ class ChatbotService:
         )
         rows = result.all()
         
-        return [
-            ChatbotWithPermission(
-                **ChatbotResponse.model_validate(chatbot).model_dump(),
-                permission_level=permission.permission_level,
+        chatbot_results = []
+        for chatbot, permission in rows:
+            perm_level = permission.permission_level
+            if perm_level == PermissionLevel.CUSTOM:
+                perm_level = ChatbotService._derive_permission_level_from_flags(
+                    permission.can_manage_knowledge,
+                    permission.can_manage_appearance,
+                    permission.can_resolve_queries,
+                    permission.can_view_analytics_billing
+                )
+            base_data = ChatbotResponse.model_validate(chatbot).model_dump()
+            if chatbot.appearance and chatbot.appearance.welcome_message is not None:
+                base_data["welcome_message"] = chatbot.appearance.welcome_message
+            chatbot_results.append(ChatbotWithPermission(
+                **base_data,
+                permission_level=perm_level,
                 can_manage_knowledge=permission.can_manage_knowledge,
                 can_manage_appearance=permission.can_manage_appearance,
                 can_resolve_queries=permission.can_resolve_queries,
-                can_view_analytics=permission.can_view_analytics
-            )
-            for chatbot, permission in rows
-        ]
+                can_view_analytics_billing=permission.can_view_analytics_billing
+            ))
+        return chatbot_results
     
     @staticmethod
     async def get_chatbot(
@@ -250,7 +281,7 @@ class ChatbotService:
         """Get a specific chatbot"""
         
         result = await db.execute(
-            select(Chatbot)
+            select(Chatbot).options(selectinload(Chatbot.appearance))
             .where(
                 Chatbot.id == chatbot_id,
                 Chatbot.tenant_id == tenant_id,
@@ -273,7 +304,7 @@ class ChatbotService:
                 "can_manage_knowledge": permission.can_manage_knowledge if permission else True,
                 "can_manage_appearance": permission.can_manage_appearance if permission else True,
                 "can_resolve_queries": permission.can_resolve_queries if permission else True,
-                "can_view_analytics": permission.can_view_analytics if permission else True,
+                "can_view_analytics_billing": permission.can_view_analytics_billing if permission else True,
             }
         else:
             perm_level = permission.permission_level
@@ -281,11 +312,22 @@ class ChatbotService:
                 "can_manage_knowledge": permission.can_manage_knowledge,
                 "can_manage_appearance": permission.can_manage_appearance,
                 "can_resolve_queries": permission.can_resolve_queries,
-                "can_view_analytics": permission.can_view_analytics,
+                "can_view_analytics_billing": permission.can_view_analytics_billing,
             }
 
+        if permission and perm_level == PermissionLevel.CUSTOM:
+            perm_level = ChatbotService._derive_permission_level_from_flags(
+                permission.can_manage_knowledge,
+                permission.can_manage_appearance,
+                permission.can_resolve_queries,
+                permission.can_view_analytics_billing
+            )
+
+        base_data = ChatbotResponse.model_validate(chatbot).model_dump()
+        if chatbot.appearance and chatbot.appearance.welcome_message is not None:
+            base_data["welcome_message"] = chatbot.appearance.welcome_message
         return ChatbotWithPermission(
-            **ChatbotResponse.model_validate(chatbot).model_dump(),
+            **base_data,
             permission_level=perm_level,
             **flags
         )
@@ -380,14 +422,111 @@ class ChatbotService:
         permission_level = await ChatbotService._get_permission_level(db, chatbot_id, user)
         if permission_level != PermissionLevel.OWNER and user.role != UserRole.ADMIN:
             raise ForbiddenError("Only OWNER or tenant ADMIN can delete this chatbot")
-        
-        chatbot.deleted_at = datetime.now(timezone.utc)
-        chatbot.status = ChatbotStatus.PAUSED
+
+        # Collect file paths for cleanup before deleting DB records
+        file_stmt = select(UploadedFile.file_path).join(
+            KnowledgeSource,
+            KnowledgeSource.id == UploadedFile.knowledge_source_id
+        ).where(KnowledgeSource.chatbot_id == chatbot_id)
+        file_result = await db.execute(file_stmt)
+        file_paths = [row[0] for row in file_result.fetchall() if row and row[0]]
+
+        avatar_stmt = select(ChatbotAppearance.avatar_url).where(
+            ChatbotAppearance.chatbot_id == chatbot_id
+        )
+        avatar_result = await db.execute(avatar_stmt)
+        avatar_url = avatar_result.scalar_one_or_none()
+
+        # Delete stored files (S3/Supabase or local)
+        for path in file_paths:
+            try:
+                await FileService.delete_file(path)
+            except Exception as e:
+                logger.error(f"Failed to delete file {path}: {e}")
+
+        if avatar_url:
+            try:
+                avatar_path = avatar_url.lstrip("/") if avatar_url.startswith("/") else avatar_url
+                await FileService.delete_file(avatar_path)
+            except Exception as e:
+                logger.error(f"Failed to delete avatar {avatar_url}: {e}")
+
+        # Build subqueries for related records
+        ks_ids_subq = select(KnowledgeSource.id).where(
+            KnowledgeSource.chatbot_id == chatbot_id
+        )
+        session_ids_subq = select(ChatSession.id).where(
+            ChatSession.chatbot_id == chatbot_id
+        )
+
+        # Delete analytics data (sessions + messages)
+        await db.execute(delete(ChatMessage).where(ChatMessage.session_id.in_(session_ids_subq)))
+        await db.execute(delete(ChatSession).where(ChatSession.chatbot_id == chatbot_id))
+
+        # Delete knowledge base data
+        await db.execute(delete(Embedding).where(Embedding.chatbot_id == chatbot_id))
+        await db.execute(delete(CrawlHistory).where(CrawlHistory.knowledge_source_id.in_(ks_ids_subq)))
+        await db.execute(delete(CrawlSchedule).where(CrawlSchedule.knowledge_source_id.in_(ks_ids_subq)))
+        await db.execute(delete(CrawledPage).where(CrawledPage.knowledge_source_id.in_(ks_ids_subq)))
+        await db.execute(delete(UploadedFile).where(UploadedFile.knowledge_source_id.in_(ks_ids_subq)))
+        await db.execute(delete(QAPair).where(QAPair.knowledge_source_id.in_(ks_ids_subq)))
+        await db.execute(delete(KnowledgeSource).where(KnowledgeSource.chatbot_id == chatbot_id))
+
+        # Delete team access + activity + appearance
+        await db.execute(delete(ChatbotPermission).where(ChatbotPermission.chatbot_id == chatbot_id))
+        await db.execute(delete(ChatbotActivity).where(ChatbotActivity.chatbot_id == chatbot_id))
+        await db.execute(delete(ChatbotAppearance).where(ChatbotAppearance.chatbot_id == chatbot_id))
+
+        # Delete the chatbot itself
+        await db.execute(delete(Chatbot).where(Chatbot.id == chatbot_id))
         await db.commit()
-        
+
+        # Remove local upload directory if present
+        upload_dir = os.path.join("uploads", str(tenant_id), str(chatbot_id))
+        if os.path.isdir(upload_dir):
+            try:
+                shutil.rmtree(upload_dir)
+            except Exception as e:
+                logger.error(f"Failed to remove upload dir {upload_dir}: {e}")
+
         logger.success(f"Chatbot deleted: {chatbot.name}")
     
     # ============== Permission Management ==============
+
+    @staticmethod
+    def _derive_permission_level_from_flags(
+        can_manage_knowledge: bool,
+        can_manage_appearance: bool,
+        can_resolve_queries: bool,
+        can_view_analytics_billing: bool,
+    ) -> PermissionLevel:
+        """
+        Derive a non-custom permission level from granular flags.
+        We keep OWNER/ADMIN explicit elsewhere; this is for member assignments.
+        """
+        if can_manage_knowledge or can_manage_appearance or can_resolve_queries:
+            return PermissionLevel.EDITOR
+        if can_view_analytics_billing:
+            return PermissionLevel.VIEWER
+        return PermissionLevel.VIEWER
+
+    @staticmethod
+    def _format_permission_summary(
+        can_manage_knowledge: bool,
+        can_manage_appearance: bool,
+        can_resolve_queries: bool,
+        can_view_analytics_billing: bool,
+    ) -> str:
+        parts = []
+        if can_manage_knowledge:
+            parts.append("Manage Knowledge")
+        if can_manage_appearance:
+            parts.append("Manage Appearance")
+        if can_resolve_queries:
+            parts.append("Resolve Queries")
+        if can_view_analytics_billing:
+            parts.append("View Analytics & Billing")
+        return ", ".join(parts) if parts else "No permissions"
     
     @staticmethod
     async def assign_permission(
@@ -423,21 +562,8 @@ class ChatbotService:
         if not can_assign:
             raise ForbiddenError("You need OWNER or ADMIN permission to assign permissions")
         
-        # Default flags based on level if not provided (custom is handled separately)
-        if request.permission_level == PermissionLevel.ADMIN:
-            request.can_manage_knowledge = True
-            request.can_manage_appearance = True
-            request.can_resolve_queries = True
-            request.can_view_analytics = True
-        elif request.permission_level == PermissionLevel.EDITOR:
-            request.can_manage_knowledge = True
-            request.can_resolve_queries = True
-            request.can_view_analytics = True
-        elif request.permission_level == PermissionLevel.VIEWER:
-            request.can_manage_knowledge = False
-            request.can_manage_appearance = False
-            request.can_resolve_queries = False
-            request.can_view_analytics = True
+        # Use only granular flags provided by the request
+        # No longer set default values based on permission_level
 
         # Verify target user exists and belongs to same tenant
         result = await db.execute(
@@ -460,22 +586,38 @@ class ChatbotService:
         existing_permission = result.scalar_one_or_none()
         
         if existing_permission:
-            # Update existing permission
-            existing_permission.permission_level = request.permission_level
+            # Update existing permission with granular flags only
             existing_permission.can_manage_knowledge = request.can_manage_knowledge
             existing_permission.can_manage_appearance = request.can_manage_appearance
             existing_permission.can_resolve_queries = request.can_resolve_queries
-            existing_permission.can_view_analytics = request.can_view_analytics
+            existing_permission.can_view_analytics_billing = request.can_view_analytics_billing
+            if existing_permission.permission_level != PermissionLevel.OWNER:
+                existing_permission.permission_level = ChatbotService._derive_permission_level_from_flags(
+                    request.can_manage_knowledge,
+                    request.can_manage_appearance,
+                    request.can_resolve_queries,
+                    request.can_view_analytics_billing
+                )
             existing_permission.granted_by = user.id
             await db.commit()
             await db.refresh(existing_permission)
             
+            permission_summary = ChatbotService._format_permission_summary(
+                existing_permission.can_manage_knowledge,
+                existing_permission.can_manage_appearance,
+                existing_permission.can_resolve_queries,
+                existing_permission.can_view_analytics_billing
+            )
+
             # Log activity
             activity = ChatbotActivity(
                 chatbot_id=chatbot_id,
                 user_id=user.id,
                 activity_type="permission_updated",
-                description=f"Permission updated for user {target_user.email} to {request.permission_level.value} by {user.email}"
+                description=(
+                    f"Permissions updated for user {target_user.email} by {user.email}: "
+                    f"{permission_summary}"
+                )
             )
             db.add(activity)
             await db.commit()
@@ -490,7 +632,7 @@ class ChatbotService:
                 can_manage_knowledge=existing_permission.can_manage_knowledge,
                 can_manage_appearance=existing_permission.can_manage_appearance,
                 can_resolve_queries=existing_permission.can_resolve_queries,
-                can_view_analytics=existing_permission.can_view_analytics,
+                can_view_analytics_billing=existing_permission.can_view_analytics_billing,
                 granted_by=existing_permission.granted_by,
                 created_at=existing_permission.created_at,
                 user_email=target_user.email,
@@ -498,26 +640,42 @@ class ChatbotService:
             )
         
         # Create new permission
+        permission_level = ChatbotService._derive_permission_level_from_flags(
+            request.can_manage_knowledge,
+            request.can_manage_appearance,
+            request.can_resolve_queries,
+            request.can_view_analytics_billing
+        )
         permission = ChatbotPermission(
             user_id=request.user_id,
             chatbot_id=chatbot_id,
-            permission_level=request.permission_level,
+            permission_level=permission_level,
             can_manage_knowledge=request.can_manage_knowledge,
             can_manage_appearance=request.can_manage_appearance,
             can_resolve_queries=request.can_resolve_queries,
-            can_view_analytics=request.can_view_analytics,
+            can_view_analytics_billing=request.can_view_analytics_billing,
             granted_by=user.id,
         )
         db.add(permission)
         await db.commit()
         await db.refresh(permission)
         
+        permission_summary = ChatbotService._format_permission_summary(
+            permission.can_manage_knowledge,
+            permission.can_manage_appearance,
+            permission.can_resolve_queries,
+            permission.can_view_analytics_billing
+        )
+
         # Log activity
         activity = ChatbotActivity(
             chatbot_id=chatbot_id,
             user_id=user.id,
             activity_type="permission_granted",
-            description=f"Permission granted to user {target_user.email} as {request.permission_level.value} by {user.email}"
+            description=(
+                f"Permissions granted to user {target_user.email} by {user.email}: "
+                f"{permission_summary}"
+            )
         )
         db.add(activity)
         await db.commit()
@@ -532,7 +690,7 @@ class ChatbotService:
             can_manage_knowledge=permission.can_manage_knowledge,
             can_manage_appearance=permission.can_manage_appearance,
             can_resolve_queries=permission.can_resolve_queries,
-            can_view_analytics=permission.can_view_analytics,
+            can_view_analytics_billing=permission.can_view_analytics_billing,
             granted_by=permission.granted_by,
             created_at=permission.created_at,
             user_email=target_user.email,
@@ -576,24 +734,34 @@ class ChatbotService:
         )
         rows = result.all()
         
-        return [
-            PermissionResponse(
-                id=perm.id,
-                user_id=perm.user_id,
-                chatbot_id=perm.chatbot_id,
-                permission_level=perm.permission_level,
-                can_manage_knowledge=perm.can_manage_knowledge,
-                can_manage_appearance=perm.can_manage_appearance,
-                can_resolve_queries=perm.can_resolve_queries,
-                can_view_analytics=perm.can_view_analytics,
-                granted_by=perm.granted_by,
-                created_at=perm.created_at,
-                user_email=target_user.email,
-                user_username=target_user.username,
-                user_name=target_user.name,
+        response_list = []
+        for perm, target_user in rows:
+            perm_level = perm.permission_level
+            if perm_level == PermissionLevel.CUSTOM:
+                perm_level = ChatbotService._derive_permission_level_from_flags(
+                    perm.can_manage_knowledge,
+                    perm.can_manage_appearance,
+                    perm.can_resolve_queries,
+                    perm.can_view_analytics_billing
+                )
+            response_list.append(
+                PermissionResponse(
+                    id=perm.id,
+                    user_id=perm.user_id,
+                    chatbot_id=perm.chatbot_id,
+                    permission_level=perm_level,
+                    can_manage_knowledge=perm.can_manage_knowledge,
+                    can_manage_appearance=perm.can_manage_appearance,
+                    can_resolve_queries=perm.can_resolve_queries,
+                    can_view_analytics_billing=perm.can_view_analytics_billing,
+                    granted_by=perm.granted_by,
+                    created_at=perm.created_at,
+                    user_email=target_user.email,
+                    user_username=target_user.username,
+                    user_name=target_user.name,
+                )
             )
-            for perm, target_user in rows
-        ]
+        return response_list
     
     @staticmethod
     async def remove_permission(
@@ -649,6 +817,13 @@ class ChatbotService:
         # Cannot remove OWNER's permission
         if permission.permission_level == PermissionLevel.OWNER:
             raise BadRequestError("Cannot remove OWNER permission. Transfer ownership first.")
+
+        permission_summary = ChatbotService._format_permission_summary(
+            permission.can_manage_knowledge,
+            permission.can_manage_appearance,
+            permission.can_resolve_queries,
+            permission.can_view_analytics_billing
+        )
         
         await db.delete(permission)
         await db.commit()
@@ -658,7 +833,10 @@ class ChatbotService:
             chatbot_id=chatbot_id,
             user_id=user.id,
             activity_type="permission_removed",
-            description=f"Permission removed for user {target_email} by {user.email}"
+            description=(
+                f"Permissions removed for user {target_email} by {user.email}: "
+                f"{permission_summary}"
+            )
         )
         db.add(activity)
         await db.commit()
@@ -718,7 +896,15 @@ class ChatbotService:
         """Get user's permission level for a chatbot"""
         permission = await ChatbotService._get_permission_record(db, chatbot_id, user)
         if permission:
-            return permission.permission_level
+            perm_level = permission.permission_level
+            if perm_level == PermissionLevel.CUSTOM:
+                return ChatbotService._derive_permission_level_from_flags(
+                    permission.can_manage_knowledge,
+                    permission.can_manage_appearance,
+                    permission.can_resolve_queries,
+                    permission.can_view_analytics_billing
+                )
+            return perm_level
         
         if user.role == UserRole.ADMIN:
             return PermissionLevel.ADMIN
@@ -885,6 +1071,10 @@ class ChatbotService:
             if old_value != value:
                 changed_fields.append(field)
             setattr(appearance, field, value)
+
+        # Keep chatbot welcome_message in sync with appearance updates
+        if "welcome_message" in update_data:
+            chatbot.welcome_message = update_data["welcome_message"]
         
         # Update timestamp
         appearance.updated_at = datetime.now(timezone.utc)
@@ -943,6 +1133,7 @@ class ChatbotService:
             logger.info(f"Created default appearance for chatbot {chatbot_id}")
         
         # Convert to widget config response (position as string)
+        # Note: welcome_message is kept in sync via chatbot.welcome_message when appearance is updated
         return WidgetConfigResponse(
             display_name=chatbot.name,
             primary_color=appearance.primary_color,
@@ -951,7 +1142,7 @@ class ChatbotService:
             position=appearance.position.value if isinstance(appearance.position, WidgetPosition) else str(appearance.position),
             offset_x=appearance.offset_x,
             offset_y=appearance.offset_y,
-            welcome_message=appearance.welcome_message,
+            welcome_message=chatbot.welcome_message,
             initial_suggestions=appearance.initial_suggestions or [],
             show_branding=appearance.show_branding,
             is_paused=chatbot.status == ChatbotStatus.PAUSED,
@@ -1340,7 +1531,11 @@ class ChatbotService:
                         logger.error(f"Failed to cleanup file after error: {cleanup_error}")
 
                     try:
-                        short_error = str(e)
+                        raw_error = str(e)
+                        short_error = sanitize_error_message(
+                            raw_error,
+                            fallback="Processing failed. Please try again."
+                        )
                         if len(short_error) > 400:
                             short_error = short_error[:400] + "..."
                         await db.execute(
@@ -1348,7 +1543,7 @@ class ChatbotService:
                             .where(KnowledgeSource.id == ks_id)
                             .values(
                                 status=KnowledgeSourceStatus.FAILED,
-                                error_message=f"Processing failed: {short_error}"
+                                error_message=short_error
                             )
                         )
                         await db.commit()
@@ -1968,7 +2163,7 @@ class ChatbotService:
         # Verify access and analytics permission
         await ChatbotService.get_chatbot(db, tenant_id, chatbot_id, user)
         
-        if not await ChatbotService.has_permission(db, chatbot_id, user, "can_view_analytics"):
+        if not await ChatbotService.has_permission(db, chatbot_id, user, "can_view_analytics_billing"):
             raise ForbiddenError("Insufficient permissions to view analytics")
 
         # 1. Total Conversations (Sessions with actual messages, excluding previews)
@@ -1980,7 +2175,7 @@ class ChatbotService:
                     ChatSession.is_preview == False
                 )
             )
-        ).where(ChatMessage.role == MessageRole.USER)
+        ).where(ChatMessage.role == MessageRole.USER.value)
         sessions_count = (await db.execute(sessions_with_messages_stmt)).scalar() or 0
 
         # 2. Knowledge Sources
@@ -2079,7 +2274,7 @@ class ChatbotService:
         # For now, we'll aggregate from chat_sessions and chat_messages
         # In a real app, you'd have an analytics_events table
         
-        query = select(ChatSession).where(ChatSession.is_preview == False)
+        query = select(ChatSession)
         if chatbot_id:
             # Verify access to specific chatbot
             await ChatbotService.get_chatbot(db, tenant_id, chatbot_id, user)
@@ -2102,7 +2297,12 @@ class ChatbotService:
                 avg_messages_per_session=0.0
             )
 
-        messages_stmt = select(func.count(ChatMessage.id)).where(ChatMessage.session_id.in_(session_ids))
+        messages_stmt = select(func.count(ChatMessage.id)).where(
+            and_(
+                ChatMessage.session_id.in_(session_ids),
+                ChatMessage.role == MessageRole.USER.value
+            )
+        )
         total_messages = (await db.execute(messages_stmt)).scalar() or 0
         
         avg_msgs = total_messages / total_sessions if total_sessions > 0 else 0

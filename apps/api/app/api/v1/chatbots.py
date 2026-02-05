@@ -581,7 +581,18 @@ async def get_all_analytics_overview(
     current_user: User = Depends(get_current_user),
     current_tenant: Tenant = Depends(get_current_tenant),
 ):
-    """Get analytics overview for all chatbots or a specific one"""
+    """Get analytics overview for all chatbots or a specific one
+    
+    Only admins can view analytics overview for all chatbots.
+    Members must specify a chatbot_id and must have analytics permission for that chatbot.
+    """
+    from app.models.user import UserRole
+    from app.core.exceptions import ForbiddenError
+    
+    # If no chatbot_id specified, only admins can access
+    if not chatbot_id and current_user.role != UserRole.ADMIN:
+        raise ForbiddenError("Only admins can view analytics for all chatbots. Please specify a chatbot_id.")
+    
     return await AnalyticsService.get_analytics_overview(
         db=db,
         tenant_id=current_tenant.id,
