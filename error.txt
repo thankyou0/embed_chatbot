@@ -1,0 +1,100 @@
+anyone can copy widget script and run it 
+
+should avoid mentioning "context" --> The price of the Moissanite Oval Diamond Solitaire Silver Ring is not mentioned in the provided context.
+
+Team member activity not showing in recent activity
+
+
+deletion of crawling site's embedding isn't actually deleting that info pls check.
+
+
+(function () {
+  const script = document.createElement("script");
+  script.src = "https://ecom-chatbot-widget-3fhmc.ondigitalocean.app/widget.umd.js";
+  script.async = true;
+
+  script.onload = function () {
+    window.ChatbotWidget.init({
+      chatbotId: "071cee9c-f83c-4005-ac79-f9ed58cea228",
+      apiUrl: "https://ecom-chatbot-api-8bwdf.ondigitalocean.app"
+    });
+  };
+
+  document.head.appendChild(script);
+})();
+
+
+
+
+how can i grow my bussiness
+Growing Your Business requires a combination of strategies. At Kriyanta, we believe in empowering artisans and bringing meaningful creations into people's lives. To grow your business, you might consider unique handmade products like our home decor and gifting items, which can help you stand out in the market.
+How do I find unique products to sell in my business?
+What are some effective marketing strategies for a small business?
+
+Not helpful
+how can i compete with kriyanta?
+To compete with Kriyanta, you could focus on creating unique and high-quality handmade products that tell a story and bring tradition to life with a modern touch. At Kriyanta, we believe every creation should carry a story, a soul, and a smile, so you might consider emphasizing the heritage and craftsmanship behind your products. Additionally, you could explore customized items and personalized gifts to differentiate your brand and appeal to customers looking for one-of-a-kind creations.
+
+
+still 'hi' msg is considered as an 'missing info'.
+
+suggestions --> 
+What is your brother's favorite color
+What is your budget for the gift
+Does your brother have a preferred clock style
+
+
+IT'S RED. (missing info)
+Red Clock Options: We have a few clock options that feature the color red, but unfortunately, none of our current clock products are primarily red. However, we do have clocks with golden or metallic finishes that might complement a red accent wall or decor.
+One option to consider is the DOUBLE RING GOLDEN METAL WALL CLOCK, which has a luxurious golden finish.
+
+
+
+Outfit Analysis: Unfortunately, I'm a text-based AI and cannot view images. However, I can guide you through a process to find a suitable jewelry ring.
+
+
+
+i don't know about on Downgrading the plans, how to manage limits bec it's possible that user has used things for enterprise now to downgrade to free plans, in terms of free plans, it's crossing the limits. so how to handle this case. should be show error msg for downgrading about delete resources or is there any better way to do it . Remember not implement it in code, just give me best suggestion idea about sources and msg limit handle.
+
+
+
+
+10:29:46 [o] DEBUG    | Skipping duplicate product name: Exclusive Look by Pankh
+
+              -> app/services/chat_service.py:535
+
+10:29:46 [o] DEBUG    | Skipping duplicate product name: Exclusive Look by Pankh
+
+              -> app/services/chat_service.py:535
+
+10:29:46 [o] DEBUG    | Skipping duplicate product name: Exclusive Look by Sthitha
+
+              -> app/services/chat_service.py:535
+
+10:29:46 [o] DEBUG    | Skipping duplicate product name: Exclusive Look by Sthitha
+
+              -> app/services/chat_service.py:535
+
+10:29:46 [o] DEBUG    | Skipping duplicate product name: Exclusive Look by Pankh
+
+              -> app/services/chat_service.py:535
+
+10:29:46 [o] DEBUG    | Skipping duplicate product name: Exclusive Look by Pankh
+
+              -> app/services/chat_service.py:535
+
+10:29:46 [o] DEBUG    | Skipping duplicate product name: Exclusive Look by Sthitha
+
+              -> app/services/chat_service.py:535
+
+10:29:46 [o] DEBUG    | Skipping duplicate product name: Exclusive Look by Sthitha
+
+              -> app/services/chat_service.py:535
+
+10:29:46 [o] DEBUG    | Skipping duplicate product name: Exclusive Look by Pankh
+
+              -> app/services/chat_service.py:535
+
+10:29:46 [o] DEBUG    | Skipping duplicate product name: Exclusive Look by Pankh
+
+recent activity deletion

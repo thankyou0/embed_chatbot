@@ -1,0 +1,44 @@
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+env
+venv
+.venv
+ENV
+*.egg-info
+dist
+build
+.pytest_cache
+.coverage
+htmlcov
+.mypy_cache
+
+# Environment
+.env
+.env.*
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store
+
+# Logs
+*.log
+
+# Uploads (mounted as volume)
+uploads/*
+!uploads/.gitkeep
+
+# Alembic
+alembic/versions/__pycache__
+
+# Testing
+tests
+pytest.ini

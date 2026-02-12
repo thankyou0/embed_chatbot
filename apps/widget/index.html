@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chatbot Widget</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/index.tsx"></script>
+    <script>
+      // Example usage for local development
+      window.onload = () => {
+        if (window.ChatbotWidget) {
+          window.ChatbotWidget.init({
+            chatbotId: "325606cb-3e80-4815-8190-20afe12537e0", // Replace with a test chatbot ID
+            position: "bottom-left",
+            offsetX: 20,
+            offsetY: 20,
+            primaryColor: "#1a73e8",
+            headerText: "Hello Chatbot",
+            welcomeMessage: "Hi there!",
+            initialSuggestions: ["What are your features?", "How much does it cost?"],
+            avatarUrl: "https://i.pravatar.cc/300"
+          });
+        }
+      };
+    </script>
+  </body>
+</html>
+

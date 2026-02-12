@@ -1,0 +1,250 @@
+# # ============================================
+# # Docker Compose - Local Development
+# # ============================================
+# # Usage: docker-compose up -d
+# # ============================================
+
+# version: '3.8'
+
+# services:
+#   # PostgreSQL Database with pgvector
+#   postgres:
+#     image: pgvector/pgvector:pg16
+#     container_name: chatbot_postgres
+#     environment:
+#       POSTGRES_USER: postgres
+#       POSTGRES_PASSWORD: post
+#       POSTGRES_DB: embed_chatbot
+#     ports:
+#       - "5432:5432"
+#     volumes:
+#       - postgres_data:/var/lib/postgresql/data
+#     healthcheck:
+#       test: ["CMD-SHELL", "pg_isready -U postgres"]
+#       interval: 10s
+#       timeout: 5s
+#       retries: 5
+#     networks:
+#       - chatbot_network
+
+#   # FastAPI Backend (Development with hot reload)
+#   api:
+#     build:
+#       context: .
+#       dockerfile: apps/api/Dockerfile
+#       target: development
+#     container_name: chatbot_api
+#     ports:
+#       - "8000:8000"
+#     env_file:
+#       - .env
+#     volumes:
+#       # Mount source code for hot reload
+#       - ./apps/api:/app
+#       # Persist uploads
+#       - api_uploads:/app/uploads
+#     environment:
+#       - DATABASE_URL=postgresql+asyncpg://postgres:post@postgres:5432/embed_chatbot
+#       - CORS_ORIGINS=["http://localhost:3000","http://localhost:3001","http://localhost:3005","http://127.0.0.1:3000","http://127.0.0.1:3001","http://127.0.0.1:3005"]
+#     depends_on:
+#       postgres:
+#         condition: service_healthy
+#     networks:
+#       - chatbot_network
+#     restart: unless-stopped
+
+#   # Next.js Web Dashboard (Development)
+#   web:
+#     build:
+#       context: .
+#       dockerfile: apps/web/Dockerfile
+#       target: development
+#     container_name: chatbot_web
+#     ports:
+#       - "3000:3000"
+#     volumes:
+#       # Mount entire workspace for hot reload
+#       - .:/app
+#       # Preserve node_modules from container build (these take precedence)
+#       - web_root_node_modules:/app/node_modules
+#       - web_app_node_modules:/app/apps/web/node_modules
+#       - web_widget_node_modules:/app/apps/widget/node_modules
+#       - web_shared_node_modules:/app/packages/shared/node_modules
+#       - web_ui_node_modules:/app/packages/ui/node_modules
+#       - web_next:/app/apps/web/.next
+#     environment:
+#       - NEXT_PUBLIC_API_URL=http://localhost:8000
+#       - CI=true
+#     depends_on:
+#       - api
+#     networks:
+#       - chatbot_network
+#     restart: unless-stopped
+
+#   # Preact Widget (Development)
+#   widget:
+#     build:
+#       context: .
+#       dockerfile: apps/widget/Dockerfile
+#       target: development
+#     container_name: chatbot_widget
+#     ports:
+#       - "3001:3001"
+#     volumes:
+#       # Mount entire workspace for hot reload
+#       - .:/app
+#       # Preserve node_modules from container build (these take precedence)
+#       - widget_root_node_modules:/app/node_modules
+#       - widget_app_node_modules:/app/apps/widget/node_modules
+#       - widget_web_node_modules:/app/apps/web/node_modules
+#       - widget_shared_node_modules:/app/packages/shared/node_modules
+#       - widget_ui_node_modules:/app/packages/ui/node_modules
+#     environment:
+#       - VITE_PUBLIC_API_URL=http://localhost:8000
+#       - CI=true
+#     depends_on:
+#       - api
+#     networks:
+#       - chatbot_network
+#     restart: unless-stopped
+
+# volumes:
+#   postgres_data:
+#   api_uploads:
+#   web_root_node_modules:
+#   web_app_node_modules:
+#   web_widget_node_modules:
+#   web_shared_node_modules:
+#   web_ui_node_modules:
+#   web_next:
+#   widget_root_node_modules:
+#   widget_app_node_modules:
+#   widget_web_node_modules:
+#   widget_shared_node_modules:
+#   widget_ui_node_modules:
+
+# networks:
+#   chatbot_network:
+#     driver: bridge
+
+# ============================================
+# Docker Compose - Local Development
+# ============================================
+# Usage: docker-compose up -d
+# ============================================
+version: "3.8"
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: chatbot_postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: post
+      POSTGRES_DB: embed_chatbot
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - chatbot_network
+
+  redis:
+    image: redis:7-alpine
+    container_name: chatbot_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - chatbot_network
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: development
+    container_name: chatbot_api
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      - ./apps/api:/app
+      - api_uploads:/app/uploads
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:post@postgres:5432/embed_chatbot
+      REDIS_URL: redis://redis:6379/0
+      CORS_ORIGINS: '["http://localhost:3000","http://localhost:3001","*","http://127.0.0.1:3000","http://127.0.0.1:3001","http://127.0.0.1:3005"]'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - chatbot_network
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      target: development
+    container_name: chatbot_web
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./apps/web:/app/apps/web
+      - ./packages:/app/packages
+      # Preserve node_modules from build
+      - web_node_modules:/app/apps/web/node_modules
+      - root_node_modules:/app/node_modules
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+    depends_on:
+      - api
+    networks:
+      - chatbot_network
+
+  widget:
+    build:
+      context: .
+      dockerfile: apps/widget/Dockerfile
+      target: development
+    container_name: chatbot_widget
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./apps/widget:/app/apps/widget
+      - ./packages:/app/packages
+      # Preserve node_modules from build
+      - widget_node_modules:/app/apps/widget/node_modules
+      - root_node_modules:/app/node_modules
+    environment:
+      VITE_PUBLIC_API_URL: http://localhost:8000
+    depends_on:
+      - api
+    networks:
+      - chatbot_network
+
+volumes:
+  postgres_data:
+  redis_data:
+  api_uploads:
+  # Add these volumes to preserve node_modules
+  web_node_modules:
+  widget_node_modules:
+  root_node_modules:
+
+networks:
+  chatbot_network:
+    driver: bridge
