@@ -31,6 +31,7 @@ from app.schemas.chatbot import (
     ChatbotStatsResponse,
     KnowledgeSourceBreakdown,
     RecentActivity,
+    RecentActivityListResponse,
     AnalyticsOverviewResponse,
 )
 from app.schemas.appearance import (
@@ -61,15 +62,15 @@ from app.services.scheduler_service import SchedulerService
 from app.core.database import get_session_factory
 from app.core.error_sanitizer import sanitize_error_message
 from fastapi import BackgroundTasks, UploadFile
-from sqlalchemy import select, update, delete, func, text, bindparam
+from sqlalchemy import select, update, delete, func, text, bindparam, and_
 from sqlalchemy.orm import selectinload
 import os
 import shutil
 import io
+import csv
 import aiofiles
 from pathlib import Path
 import pandas as pd
-import io
 import hashlib
 
 logger = get_logger(__name__)
@@ -1154,20 +1155,34 @@ class ChatbotService:
     @staticmethod
     async def get_remaining_page_quota(db: AsyncSession, chatbot_id: UUID, user: User) -> dict:
         """
-        Calculate remaining crawl page quota for a chatbot based on tenant's subscription.
+        Calculate remaining crawl page quota for a tenant based on subscription.
         Returns dict with total_limit, used, and remaining pages.
+        NOTE: This is TENANT-WIDE, not per-chatbot. All chatbots share the same quota.
         """
         # Get billing overview for the tenant
         billing_overview = await BillingService.get_billing_overview(db, user.tenant_id, user)
         total_limit = billing_overview.current_plan.limits.knowledge_pages
         user_tier = billing_overview.subscription.plan_type
         
-        # Count existing crawled pages for this chatbot (across all knowledge sources)
+        # Get all chatbot IDs for this tenant
+        chatbot_stmt = select(Chatbot.id).where(Chatbot.tenant_id == user.tenant_id)
+        chatbot_result = await db.execute(chatbot_stmt)
+        chatbot_ids = [row[0] for row in chatbot_result.fetchall()]
+        
+        if not chatbot_ids:
+            return {
+                'total_limit': total_limit,
+                'used': 0,
+                'remaining': total_limit,
+                'tier': user_tier
+            }
+        
+        # Count existing crawled pages ACROSS ALL CHATBOTS (tenant-wide quota)
         stmt = select(func.count(CrawledPage.id)).join(
             KnowledgeSource,
             KnowledgeSource.id == CrawledPage.knowledge_source_id
         ).where(
-            KnowledgeSource.chatbot_id == chatbot_id,
+            KnowledgeSource.chatbot_id.in_(chatbot_ids),
             CrawledPage.is_removed == False
         )
         
@@ -2160,11 +2175,12 @@ class ChatbotService:
         user: User
     ) -> ChatbotStatsResponse:
         """Get overview statistics for a specific chatbot"""
-        # Verify access and analytics permission
-        await ChatbotService.get_chatbot(db, tenant_id, chatbot_id, user)
-        
-        if not await ChatbotService.has_permission(db, chatbot_id, user, "can_view_analytics_billing"):
-            raise ForbiddenError("Insufficient permissions to view analytics")
+        await ChatbotService._ensure_analytics_access(
+            db=db,
+            tenant_id=tenant_id,
+            chatbot_id=chatbot_id,
+            user=user,
+        )
 
         # 1. Total Conversations (Sessions with actual messages, excluding previews)
         # Only count sessions that have at least one user message
@@ -2235,24 +2251,14 @@ class ChatbotService:
             total_kb_size += qa_pairs_count * 500  # Estimate 500 bytes per QA pair
 
         # 3. Recent Activity (Knowledge, Status, Team, Permission changes)
-        activity = []
-        # Fetch all recent activities for this chatbot (team, permission, knowledge, status, etc.)
-        activity_stmt = select(ChatbotActivity).where(ChatbotActivity.chatbot_id == chatbot_id).order_by(ChatbotActivity.created_at.desc()).limit(15)
+        activity_stmt = (
+            select(ChatbotActivity)
+            .where(ChatbotActivity.chatbot_id == chatbot_id)
+            .order_by(ChatbotActivity.created_at.desc())
+            .limit(15)
+        )
         db_activities = (await db.execute(activity_stmt)).scalars().all()
-
-        for db_act in db_activities:
-            # Map backend activity_type to frontend expected type if needed
-            frontend_type = db_act.activity_type
-            # Optionally, you could map/normalize here if needed
-            activity.append(RecentActivity(
-                id=db_act.id,
-                type=frontend_type,
-                description=db_act.description,
-                created_at=db_act.created_at
-            ))
-
-        # Sort combined activity by date (should already be sorted, but for safety)
-        activity.sort(key=lambda x: x.created_at, reverse=True)
+        activity = ChatbotService._map_recent_activities(db_activities)
 
         return ChatbotStatsResponse(
             total_conversations=sessions_count,
@@ -2262,6 +2268,121 @@ class ChatbotService:
             knowledge_breakdown=KnowledgeSourceBreakdown(**breakdown),
             recent_activity=activity[:15]
         )
+
+    @staticmethod
+    async def _ensure_analytics_access(
+        db: AsyncSession,
+        tenant_id: int,
+        chatbot_id: UUID,
+        user: User,
+    ) -> None:
+        # Verify access and analytics permission
+        await ChatbotService.get_chatbot(db, tenant_id, chatbot_id, user)
+
+        if not await ChatbotService.has_permission(db, chatbot_id, user, "can_view_analytics_billing"):
+            raise ForbiddenError("Insufficient permissions to view analytics")
+
+    @staticmethod
+    def _map_recent_activities(db_activities: List[ChatbotActivity]) -> List[RecentActivity]:
+        activity = []
+        for db_act in db_activities:
+            # Map backend activity_type to frontend expected type if needed
+            frontend_type = db_act.activity_type
+            activity.append(RecentActivity(
+                id=db_act.id,
+                type=frontend_type,
+                description=db_act.description,
+                created_at=db_act.created_at
+            ))
+
+        activity.sort(key=lambda x: x.created_at, reverse=True)
+        return activity
+
+    @staticmethod
+    async def get_recent_activity(
+        db: AsyncSession,
+        tenant_id: int,
+        chatbot_id: UUID,
+        user: User,
+        page: int = 1,
+        page_size: int = 15,
+    ) -> RecentActivityListResponse:
+        """Get paginated recent activity for a chatbot."""
+        await ChatbotService._ensure_analytics_access(
+            db=db,
+            tenant_id=tenant_id,
+            chatbot_id=chatbot_id,
+            user=user,
+        )
+
+        if page < 1:
+            raise BadRequestError("Page must be greater than or equal to 1")
+        if page_size < 1 or page_size > 100:
+            raise BadRequestError("Page size must be between 1 and 100")
+
+        total_stmt = select(func.count(ChatbotActivity.id)).where(
+            ChatbotActivity.chatbot_id == chatbot_id
+        )
+        total = (await db.execute(total_stmt)).scalar() or 0
+        total_pages = (total + page_size - 1) // page_size if total > 0 else 0
+
+        if total_pages > 0 and page > total_pages:
+            page = total_pages
+
+        offset = (page - 1) * page_size
+        activity_stmt = (
+            select(ChatbotActivity)
+            .where(ChatbotActivity.chatbot_id == chatbot_id)
+            .order_by(ChatbotActivity.created_at.desc())
+            .offset(offset)
+            .limit(page_size)
+        )
+        db_activities = (await db.execute(activity_stmt)).scalars().all()
+        activities = ChatbotService._map_recent_activities(db_activities)
+
+        return RecentActivityListResponse(
+            activities=activities,
+            total=total,
+            page=page,
+            page_size=page_size,
+            total_pages=total_pages,
+        )
+
+    @staticmethod
+    async def export_recent_activity_csv(
+        db: AsyncSession,
+        tenant_id: int,
+        chatbot_id: UUID,
+        user: User,
+    ) -> str:
+        """Export all chatbot activities as CSV."""
+        await ChatbotService._ensure_analytics_access(
+            db=db,
+            tenant_id=tenant_id,
+            chatbot_id=chatbot_id,
+            user=user,
+        )
+
+        activity_stmt = (
+            select(ChatbotActivity)
+            .where(ChatbotActivity.chatbot_id == chatbot_id)
+            .order_by(ChatbotActivity.created_at.desc())
+        )
+        db_activities = (await db.execute(activity_stmt)).scalars().all()
+
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(["id", "type", "description", "created_at"])
+
+        for db_act in db_activities:
+            writer.writerow([
+                str(db_act.id),
+                db_act.activity_type,
+                db_act.description,
+                db_act.created_at.isoformat() if db_act.created_at else "",
+            ])
+
+        return output.getvalue()
 
     @staticmethod
     async def get_analytics_overview(

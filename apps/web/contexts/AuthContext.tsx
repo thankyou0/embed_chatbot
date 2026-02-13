@@ -1,6 +1,12 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+} from "react";
 import { useRouter, usePathname } from "next/navigation";
 import {
   User,
@@ -10,6 +16,8 @@ import {
   getMe,
   logout as authLogout,
   changePassword as authChangePassword,
+  getAccessToken,
+  getRefreshToken,
   SignupData,
   LoginData,
   ChangePasswordData,
@@ -42,16 +50,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isOrgOwner = user?.is_org_owner ?? false; // Check if user is org owner
   const mustChangePassword = user?.must_change_password ?? false;
 
-  const refreshUser = async () => {
+  const refreshUser = useCallback(async () => {
+    // Skip if no tokens exist at all
+    const hasAccess = !!getAccessToken();
+    const hasRefresh = !!getRefreshToken();
+    if (!hasAccess && !hasRefresh) {
+      setUser(null);
+      setTenant(null);
+      return;
+    }
+
     try {
       const data = await getMe();
       setUser(data.user);
       setTenant(data.tenant);
     } catch (error) {
+      // Both access and refresh tokens failed — clear state
       setUser(null);
       setTenant(null);
     }
-  };
+  }, []);
 
   useEffect(() => {
     refreshUser().finally(() => setLoading(false));

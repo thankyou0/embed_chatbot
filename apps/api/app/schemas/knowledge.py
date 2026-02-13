@@ -158,3 +158,26 @@ class CrawlHistoryResponse(BaseModel):
 class TriggerCrawlResponse(BaseModel):
     message: str
     crawl_history_id: UUID
+
+
+class KnowledgeFailureLog(BaseModel):
+    knowledge_source_id: UUID
+    tenant_id: int
+    tenant_name: str
+    chatbot_id: UUID
+    chatbot_name: str
+    source_type: KnowledgeSourceType
+    source_url: Optional[str] = None
+    status: KnowledgeSourceStatus
+    severity: str  # "error" or "warning"
+    message: str
+    pages_found: int
+    created_at: datetime
+    updated_at: datetime
+    last_crawl_status: Optional[CrawlStatus] = None
+    last_crawl_completed_at: Optional[datetime] = None
+
+
+class KnowledgeFailureLogListResponse(BaseModel):
+    incidents: List[KnowledgeFailureLog]
+    total: int

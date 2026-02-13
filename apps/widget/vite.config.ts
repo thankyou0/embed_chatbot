@@ -118,6 +118,11 @@ export default defineConfig({
     "process.env.NODE_ENV": JSON.stringify(process.env.NODE_ENV),
   },
   optimizeDeps: {
-    include: ["preact", "preact/jsx-runtime", "@chatbot/chatbot-widget"],
+    include: [
+      "preact",
+      "preact/jsx-runtime",
+      "marked",
+      "@chatbot/chatbot-widget",
+    ],
   },
 });

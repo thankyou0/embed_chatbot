@@ -22,6 +22,7 @@ import {
   TrendingUp,
   Tag,
   ChevronLeft,
+  Wrench,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -38,30 +39,42 @@ const navigation = [
     href: "/dashboard/chatbots",
     icon: MessageSquare,
     requiresAdmin: false,
+    requiresKnowledgePermission: false,
   },
   {
     name: "Analytics",
     href: "/dashboard/analytics",
     icon: BarChart3,
     requiresAdmin: false,
+    requiresKnowledgePermission: false,
   }, // Members see filtered view
   {
     name: "Usage & Billing",
     href: "/dashboard/usage",
     icon: TrendingUp,
     requiresAdmin: false,
+    requiresKnowledgePermission: false,
   }, // Members see filtered view
   {
     name: "Pricing",
     href: "/dashboard/pricing",
     icon: Tag,
     requiresAdmin: true,
+    requiresKnowledgePermission: false,
   }, // Only admins
+  {
+    name: "Developer Logs",
+    href: "/dashboard/developer",
+    icon: Wrench,
+    requiresAdmin: false,
+    requiresKnowledgePermission: true,
+  },
   {
     name: "Settings",
     href: "/dashboard/settings",
     icon: Settings,
     requiresAdmin: true,
+    requiresKnowledgePermission: false,
   }, // Only admins (includes team management)
 ];
 
@@ -76,6 +89,7 @@ interface SidebarProps {
 export function Sidebar({ isCollapsed = false, setIsCollapsed }: SidebarProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [hasAnalyticsPermission, setHasAnalyticsPermission] = useState(false);
+  const [hasKnowledgePermission, setHasKnowledgePermission] = useState(false);
   const [pendingHref, setPendingHref] = useState<string | null>(null);
   const pathname = usePathname();
   const { user, tenant, logout, isAdmin } = useAuth();
@@ -85,11 +99,12 @@ export function Sidebar({ isCollapsed = false, setIsCollapsed }: SidebarProps) {
   const chatbotIdMatch = pathname.match(/\/dashboard\/chatbots\/([^\/]+)/);
   const currentChatbotId = chatbotIdMatch ? chatbotIdMatch[1] : null;
 
-  // Check if user has analytics permission on any chatbot
+  // Check if user has analytics/knowledge permissions on any chatbot
   useEffect(() => {
-    const checkAnalyticsPermission = async () => {
+    const checkPermissions = async () => {
       if (isAdmin) {
         setHasAnalyticsPermission(true);
+        setHasKnowledgePermission(true);
         return;
       }
 
@@ -111,13 +126,23 @@ export function Sidebar({ isCollapsed = false, setIsCollapsed }: SidebarProps) {
             bot.permission_level === "admin",
         );
         setHasAnalyticsPermission(hasPermission);
+
+        const hasKnowledge = response.chatbots.some(
+          (bot) =>
+            bot.can_manage_knowledge === true ||
+            bot.permission_level === "owner" ||
+            bot.permission_level === "admin" ||
+            bot.permission_level === "editor",
+        );
+        setHasKnowledgePermission(hasKnowledge);
       } catch (err) {
         console.error("Failed to check analytics permission:", err);
         setHasAnalyticsPermission(false);
+        setHasKnowledgePermission(false);
       }
     };
 
-    checkAnalyticsPermission();
+    checkPermissions();
   }, [isAdmin]);
 
   useEffect(() => {
@@ -200,6 +225,13 @@ export function Sidebar({ isCollapsed = false, setIsCollapsed }: SidebarProps) {
                   !hasAnalyticsPermission
                 ) {
                   return false; // Hide analytics/billing if user lacks permission
+                }
+                if (
+                  item.requiresKnowledgePermission &&
+                  !isAdmin &&
+                  !hasKnowledgePermission
+                ) {
+                  return false;
                 }
                 return true;
               })

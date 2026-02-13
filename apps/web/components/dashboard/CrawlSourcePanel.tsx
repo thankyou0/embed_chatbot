@@ -10,6 +10,8 @@ import {
   AlertCircle,
   Clock,
   Tag,
+  StopCircle,
+  AlertTriangle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -42,6 +44,7 @@ interface CrawlSourcePanelProps {
   onSchedule: () => void;
   onDeleteSelected: () => void;
   isBulkDeleting: boolean;
+  onStopCrawl?: (sourceId: string) => Promise<void>;
 }
 
 export function CrawlSourcePanel({
@@ -52,8 +55,14 @@ export function CrawlSourcePanel({
   onSchedule,
   onDeleteSelected,
   isBulkDeleting,
+  onStopCrawl,
 }: CrawlSourcePanelProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isStopping, setIsStopping] = useState(false);
+
+  const isActiveCrawl = ["pending", "processing", "crawling"].includes(
+    source.status?.toLowerCase(),
+  );
 
   // Pages belonging to this panel
   const panelPageIds = pages.map((p) => p.id);
@@ -142,6 +151,7 @@ export function CrawlSourcePanel({
             {source.status === "failed" && (
               <AlertCircle className="h-3 w-3 mr-1" />
             )}
+            {isActiveCrawl && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
             {source.status}
           </Badge>
           <Badge variant="outline" className="text-xs font-normal">
@@ -149,6 +159,29 @@ export function CrawlSourcePanel({
           </Badge>
         </div>
         <div className="flex items-center gap-2 shrink-0">
+          {isActiveCrawl && onStopCrawl && (
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={async () => {
+                setIsStopping(true);
+                try {
+                  await onStopCrawl(source.id);
+                } finally {
+                  setIsStopping(false);
+                }
+              }}
+              disabled={isStopping}
+              className="h-8 text-xs"
+            >
+              {isStopping ? (
+                <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+              ) : (
+                <StopCircle className="h-3.5 w-3.5 mr-1.5" />
+              )}
+              {isStopping ? "Stopping..." : "Stop Crawl"}
+            </Button>
+          )}
           {source.updated_at && (
             <div className="hidden md:flex items-center gap-1.5 text-xs text-muted-foreground mr-2">
               <Clock className="h-3 w-3" />
@@ -173,7 +206,27 @@ export function CrawlSourcePanel({
         <div className="px-4 py-2 bg-red-50 border-t border-red-100">
           <div className="flex items-start gap-2 text-sm text-red-700">
             <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
-            <p className="line-clamp-2">{source.error_message}</p>
+            <p className="whitespace-pre-line">{source.error_message}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Show warning message (JS-heavy, quota, stopped) for completed sources */}
+      {source.status === "completed" && source.error_message && (
+        <div className="px-4 py-2 bg-amber-50 border-t border-amber-100">
+          <div className="flex items-start gap-2 text-sm text-amber-800">
+            <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+            <p className="whitespace-pre-line">{source.error_message}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Show info message during active crawl (JS-heavy detection, sitemap usage) */}
+      {isActiveCrawl && source.error_message && (
+        <div className="px-4 py-2 bg-blue-50 border-t border-blue-100">
+          <div className="flex items-start gap-2 text-sm text-blue-700">
+            <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+            <p className="whitespace-pre-line">{source.error_message}</p>
           </div>
         </div>
       )}

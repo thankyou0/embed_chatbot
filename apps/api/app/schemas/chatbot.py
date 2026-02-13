@@ -148,5 +148,13 @@ class ChatbotStatsResponse(BaseModel):
     knowledge_breakdown: KnowledgeSourceBreakdown
     recent_activity: List[RecentActivity]
 
+
+class RecentActivityListResponse(BaseModel):
+    activities: List[RecentActivity]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
+
 # Analytics moved to app.schemas.analytics
 from app.schemas.analytics import AnalyticsOverviewResponse

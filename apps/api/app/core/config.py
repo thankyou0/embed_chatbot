@@ -89,7 +89,7 @@ class Settings(BaseSettings):
     # Also supports HUGGINGFACE_API_KEY for backward compatibility
     HF_API_KEY: Optional[str] = None
     HUGGINGFACE_API_KEY: Optional[str] = None
-    EMBEDDING_MODEL: str = "sentence-transformers/all-MiniLM-L6-v2"
+    EMBEDDING_MODEL: str = "BAAI/bge-small-en-v1.5"
 
     # Email configuration
     SMTP_HOST: str = "smtp.gmail.com"
@@ -107,6 +107,11 @@ class Settings(BaseSettings):
 
     # Redis (distributed rate limiting + query caching)
     REDIS_URL: Optional[str] = None  # e.g. redis://redis:6379/0
+
+    # Sentry (error tracking)
+    SENTRY_DSN: Optional[str] = None
+    SENTRY_ENVIRONMENT: str = "development"
+    SENTRY_TRACES_SAMPLE_RATE: float = 0.1
 
     # S3 Compatible Storage (Supabase, DigitalOcean, etc.)
     S3_ACCESS_KEY_ID: Optional[str] = None

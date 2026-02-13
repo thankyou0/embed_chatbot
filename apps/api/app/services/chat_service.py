@@ -22,6 +22,7 @@ from app.schemas.chat import (
     ImageAnalysisResult,
     ProductInfo,
 )
+from app.services.cache_service import get_cached_response, cache_response
 
 logger = get_logger(__name__)
 
@@ -218,10 +219,200 @@ COLOR_KEYWORDS = [
 ]
 
 
+def detect_product_gender(
+    product_name: str, url: str, description: str = ""
+) -> Optional[str]:
+    """
+    Generic algorithm to detect the target gender/demographic of a product.
+
+    Uses a scoring-based approach instead of hardcoded keyword lists.
+    Analyzes: product name, URL path, and description.
+
+    Returns: 'men', 'women', 'boys', 'girls', 'kids', 'unisex', or None (neutral)
+    """
+    # Combine text sources with different weights
+    name_lower = product_name.lower() if product_name else ""
+    url_lower = url.lower() if url else ""
+    desc_lower = description.lower() if description else ""
+
+    # Initialize scores for each demographic
+    scores = {
+        "men": 0,
+        "women": 0,
+        "boys": 0,
+        "girls": 0,
+        "kids": 0,
+    }
+
+    # === LAYER 1: URL CATEGORY PATH (Strong signal) ===
+    # Extract category from URL path patterns like /men-90/, /women/, /category/men/, etc.
+    url_category_patterns = {
+        "men": [
+            r"/men[-_/]",
+            r"/mens[-_/]",
+            r"/male[-_/]",
+            r"/gents[-_/]",
+            r"category[-/]men",
+            r"/him[-_/]",
+        ],
+        "women": [
+            r"/women[-_/]",
+            r"/womens[-_/]",
+            r"/female[-_/]",
+            r"/ladies[-_/]",
+            r"category[-/]women",
+            r"/her[-_/]",
+        ],
+        "boys": [r"/boys[-_/]", r"/boy[-_/]"],
+        "girls": [r"/girls[-_/]", r"/girl[-_/]"],
+        "kids": [
+            r"/kids[-_/]",
+            r"/children[-_/]",
+            r"/child[-_/]",
+            r"/junior[-_/]",
+            r"/baby[-_/]",
+            r"/infant[-_/]",
+        ],
+    }
+
+    for demographic, patterns in url_category_patterns.items():
+        for pattern in patterns:
+            if re.search(pattern, url_lower):
+                scores[demographic] += 30  # Strong signal from URL category
+                break
+
+    # === LAYER 2: PRODUCT NAME GENDER INDICATORS (Strongest signal) ===
+    # Direct gender mentions in product name
+    name_patterns = {
+        "men": [
+            r"\bmen'?s?\b",
+            r"\bmale\b",
+            r"\bgent'?s?\b",
+            r"\bgentlemen\b",
+            r"\bfor men\b",
+            r"\bfor him\b",
+            r"\bmasculine\b",
+        ],
+        "women": [
+            r"\bwomen'?s?\b",
+            r"\bfemale\b",
+            r"\bladies?\b",
+            r"\bfor women\b",
+            r"\bfor her\b",
+            r"\bfeminine\b",
+        ],
+        "boys": [r"\bboys?'?\b", r"\bfor boys?\b"],
+        "girls": [r"\bgirls?'?\b", r"\bfor girls?\b"],
+        "kids": [
+            r"\bkids?\b",
+            r"\bchildren\b",
+            r"\bchild\b",
+            r"\bjunior\b",
+            r"\bbaby\b",
+            r"\binfant\b",
+            r"\btoddler\b",
+        ],
+    }
+
+    for demographic, patterns in name_patterns.items():
+        for pattern in patterns:
+            if re.search(pattern, name_lower):
+                scores[demographic] += 50  # Very strong signal from product name
+                break
+
+    # === LAYER 3: PRODUCT TYPE INDICATORS (Medium signal) ===
+    # These product types are gender-specific by nature
+    # Use patterns, not just keywords, for flexibility
+
+    # Women-specific product types (clothing, accessories)
+    women_product_patterns = [
+        r"\b(saree|sari)s?\b",  # Indian traditional
+        r"\b(lehenga|ghagra)s?\b",  # Indian traditional
+        r"\b(salwar|churidar|palazzo)s?\b",  # Bottom wear
+        r"\b(kurti|kurta)s?\b(?!.*\bmen)",  # Kurti (unless "men" mentioned)
+        r"\b(anarkali|sharara)s?\b",  # Indian traditional
+        r"\b(dupatta|chunni)s?\b",  # Accessories
+        r"\b(blouse)s?\b",  # Blouse
+        r"\b(bra|lingerie|panties?)\b",  # Innerwear
+        r"\b(mangalsutra|sindoor)\b",  # Jewelry
+        r"\b(gown|frock)s?\b",  # Dresses
+        r"\b(skirt|midi|maxi)s?\b",  # Bottom wear
+        r"\b(bangles?|anklet)s?\b",  # Jewelry
+        r"\bmaternity\b",  # Maternity
+        r"\b(lipstick|mascara|foundation|eyeshadow)\b",  # Makeup
+    ]
+
+    # Men-specific product types
+    men_product_patterns = [
+        r"\b(sherwani|dhoti|lungi)s?\b",  # Indian traditional
+        r"\b(waistcoat|vest)s?\b",  # Formal wear
+        r"\b(cufflinks?|tie\s*clip)\b",  # Accessories
+        r"\b(necktie|bow\s*tie)s?\b",  # Accessories
+        r"\b(blazer|suit)\b(?!.*\bwomen)",  # Formal (unless women mentioned)
+        r"\b(boxers?|briefs?)\b",  # Innerwear
+        r"\bmundu\b",  # Indian traditional
+    ]
+
+    for pattern in women_product_patterns:
+        if re.search(pattern, name_lower):
+            scores["women"] += 40
+            break  # Only count once
+
+    for pattern in men_product_patterns:
+        if re.search(pattern, name_lower):
+            scores["men"] += 40
+            break  # Only count once
+
+    # === LAYER 4: DESCRIPTION ANALYSIS (Weak signal) ===
+    if desc_lower:
+        desc_patterns = {
+            "men": [r"\bmen\b", r"\bmale\b", r"\bgents\b"],
+            "women": [r"\bwomen\b", r"\bfemale\b", r"\bladies\b"],
+            "boys": [r"\bboys\b"],
+            "girls": [r"\bgirls\b"],
+            "kids": [r"\bkids\b", r"\bchildren\b"],
+        }
+
+        for demographic, patterns in desc_patterns.items():
+            for pattern in patterns:
+                if re.search(pattern, desc_lower):
+                    scores[demographic] += 10  # Weak signal from description
+                    break
+
+    # === DETERMINE RESULT ===
+    # Find the highest scoring demographic
+    max_score = max(scores.values())
+
+    if max_score < 20:
+        # No strong signals - treat as neutral/unisex
+        return None
+
+    # Get all demographics with the max score
+    top_demographics = [d for d, s in scores.items() if s == max_score]
+
+    if len(top_demographics) == 1:
+        return top_demographics[0]
+
+    # If tie between men and women, check for unisex signals
+    if "men" in top_demographics and "women" in top_demographics:
+        return "unisex"
+
+    # If tie between boys/girls, return 'kids'
+    if "boys" in top_demographics and "girls" in top_demographics:
+        return "kids"
+
+    # Kids category includes boys/girls
+    if "kids" in top_demographics:
+        return "kids"
+
+    # Default to the first one (arbitrary but consistent)
+    return top_demographics[0]
+
+
 def extract_attribute_filters(message: str) -> Optional[Dict[str, Any]]:
     """
     Extract product attribute filters from user message.
-    Returns dict with filters like 'colors', 'styles', etc.
+    Returns dict with filters like 'colors', 'styles', 'gender', etc.
     """
     if not message:
         return None
@@ -239,6 +430,44 @@ def extract_attribute_filters(message: str) -> Optional[Dict[str, Any]]:
     if found_colors:
         filters["colors"] = found_colors
         logger.info(f"Extracted color filters: {found_colors}")
+
+    # Extract gender filter
+    # Men's patterns
+    men_patterns = [
+        r"\bmen'?s?\b",  # men, mens, men's
+        r"\bmale\b",  # male
+        r"\bboy'?s?\b",  # boy, boys, boy's
+        r"\bgent'?s?\b",  # gent, gents, gent's
+        r"\bgentlemen\b",  # gentlemen
+        r"\bfor men\b",  # for men
+        r"\bfor him\b",  # for him
+    ]
+
+    # Women's patterns
+    women_patterns = [
+        r"\bwomen'?s?\b",  # women, womens, women's
+        r"\bfemale\b",  # female
+        r"\bwomen\b",  # women
+        r"\bladies?\b",  # lady, ladies
+        r"\bgirl'?s?\b",  # girl, girls, girl's
+        r"\bfor women\b",  # for women
+        r"\bfor her\b",  # for her
+    ]
+
+    # Check for gender
+    is_men = any(re.search(pattern, message_lower) for pattern in men_patterns)
+    is_women = any(re.search(pattern, message_lower) for pattern in women_patterns)
+
+    if is_men and not is_women:
+        filters["gender"] = "men"
+        logger.info("Extracted gender filter: men")
+    elif is_women and not is_men:
+        filters["gender"] = "women"
+        logger.info("Extracted gender filter: women")
+    elif is_men and is_women:
+        # Both mentioned - likely unisex or comparing, don't filter
+        filters["gender"] = "unisex"
+        logger.info("Extracted gender filter: unisex (both mentioned)")
 
     return filters if filters else None
 
@@ -370,19 +599,31 @@ def extract_products_from_chunks(
             logger.debug(f"Skipping non-product URL (policy/contact/etc): {url}")
             continue
 
-        # CRITICAL: Skip collection/listing URLs
-        if is_collection_url(url):
-            logger.debug(f"Skipping collection URL: {url}")
+        # NOTE: Collection/listing URLs are now allowed if they have valid product data
+        # The crawler marks pages as is_product=True when they contain products,
+        # so we trust that flag over URL pattern. Category pages often have product listings
+        # and can provide valuable product information.
+
+        # QUALITY CHECK: Ensure product has meaningful data (name OR price)
+        # This prevents generic listing pages without actual product details
+        # Note: .get("key", "") can return None if key exists with None value, so use `or ""`
+        product_name_check = (product_data.get("name") or "").strip()
+        product_price_check = product_data.get("price")
+        product_images_check = product_data.get("images")
+
+        # Skip if no name AND no price (likely a pure navigation/listing page)
+        if not product_name_check and not product_price_check:
+            logger.debug(f"Skipping product without name or price: {url}")
             continue
 
-        # Validate URL - ensure it's a proper product URL
+        # Validate URL - ensure it's not just a home page
         if url:
             from urllib.parse import urlparse
 
             parsed_url = urlparse(url)
             path = parsed_url.path.strip("/")
 
-            # Skip if URL is just the home page or has no product identifier
+            # Skip if URL is just the home page or has no path
             if not path or path in ["", "index.html", "home", "index.php"]:
                 logger.debug(f"Skipping product with home page URL: {url}")
                 continue
@@ -391,8 +632,8 @@ def extract_products_from_chunks(
         # the URL check above is sufficient. No need for strict URL pattern matching.
 
         # Get product name - use product data name, fall back to page title
-        product_name = product_data.get("name") or ""
-        page_title = meta.get("title", "")
+        product_name = (product_data.get("name") or "").strip()
+        page_title = (meta.get("title") or "").strip()
 
         # If product name is too short or generic, use page title instead
         generic_brand_names = ["rozzby", "store", "shop", "products", "home"]
@@ -463,7 +704,7 @@ def extract_products_from_chunks(
         # Apply color/attribute filter if specified
         if attribute_filter and attribute_filter.get("colors"):
             # Check if product name, description or content contains the color
-            product_text = f"{product_name} {product_data.get('description', '')} {emb.content}".lower()
+            product_text = f"{product_name} {product_data.get('description') or ''} {emb.content}".lower()
             color_match = False
             for color in attribute_filter["colors"]:
                 if color in product_text:
@@ -472,6 +713,31 @@ def extract_products_from_chunks(
             if not color_match:
                 logger.debug(f"Skipping product {product_name} - no color match")
                 continue
+
+        # Apply gender filter if specified
+        if attribute_filter and attribute_filter.get("gender"):
+            gender = attribute_filter["gender"]
+            if gender != "unisex":  # Only filter if specific gender requested
+                # Use generic gender detection algorithm
+                product_gender = detect_product_gender(
+                    product_name, url, product_data.get("description") or ""
+                )
+
+                if gender == "men":
+                    # Skip products detected as women's/girls' only
+                    if product_gender in ["women", "girls"]:
+                        logger.debug(
+                            f"Skipping product {product_name} - detected as {product_gender}"
+                        )
+                        continue
+
+                elif gender == "women":
+                    # Skip products detected as men's/boys' only
+                    if product_gender in ["men", "boys"]:
+                        logger.debug(
+                            f"Skipping product {product_name} - detected as {product_gender}"
+                        )
+                        continue
 
         # Get images from product data - filter duplicates and generic images
         images = product_data.get("images", [])
@@ -510,19 +776,35 @@ def extract_products_from_chunks(
                 logger.debug(f"  -> Skipping base64 image")
                 continue
             # Skip generic/placeholder images - be specific to avoid false positives
-            # Only skip if the filename itself contains these words, not the path
-            img_filename = img.split("/")[-1].lower() if "/" in img else img.lower()
-            if any(
-                skip in img_filename
-                for skip in [
-                    "placeholder",
-                    "no-image",
-                    "noimage",
-                    "logo.",
-                    "default.",
-                    "blank.",
-                ]
-            ):
+            # Check both full path and filename for problematic patterns
+            img_lower = img.lower()
+            img_filename = img.split("/")[-1].lower() if "/" in img else img_lower
+
+            # Patterns to skip in the full URL path
+            skip_in_path = [
+                "/logo",
+                "/icon",
+                "/favicon",
+                "/site-logo",
+                "/brand-logo",
+                "/website-logo",
+                "website/1/logo",
+            ]
+            # Patterns to skip in the filename specifically
+            skip_in_filename = [
+                "placeholder",
+                "no-image",
+                "noimage",
+                "logo.",
+                "default.",
+                "blank.",
+                "logo?",
+            ]
+
+            if any(skip in img_lower for skip in skip_in_path):
+                logger.debug(f"  -> Skipping logo/icon image in path: {img[:80]}")
+                continue
+            if any(skip in img_filename for skip in skip_in_filename):
                 logger.debug(f"  -> Skipping placeholder image: {img_filename}")
                 continue
             # Skip if we've already seen this exact image
@@ -576,7 +858,510 @@ def extract_products_from_chunks(
         if len(products) >= limit:
             break
 
+    # ── Fallback: if no structured products found, try extracting from chunk content ──
+    # This handles sites where the crawler couldn't extract JSON-LD/structured product data,
+    # but the page content still has product-like information (prices, names, URLs).
+    if not products:
+        logger.info(
+            "No structured products found, attempting content-based fallback extraction"
+        )
+        from urllib.parse import urlparse
+
+        seen_fallback_urls = set()
+        for chunk in chunks:
+            emb = chunk.get("embedding")
+            if not emb:
+                continue
+
+            meta = emb.metadata_json or {}
+            url = meta.get("url", "")
+            page_title = (meta.get("title") or "").strip()
+
+            if not url or url in seen_fallback_urls:
+                continue
+
+            # Skip non-product URLs
+            if is_non_product_url(url):
+                continue
+
+            # Skip home pages
+            parsed_url = urlparse(url)
+            path = parsed_url.path.strip("/")
+            if not path or path in ["", "index.html", "home", "index.php"]:
+                continue
+
+            # Check if chunk content has price indicators
+            content = (emb.content or "").lower()
+            has_price = bool(
+                re.search(
+                    r"(?:₹|rs\.?|inr|\$|€|£)\s*[\d,]+(?:\.\d{2})?",
+                    content,
+                    re.IGNORECASE,
+                )
+            )
+            has_product_keywords = any(
+                kw in content
+                for kw in [
+                    "add to cart",
+                    "buy now",
+                    "add to bag",
+                    "in stock",
+                    "out of stock",
+                ]
+            )
+
+            if not has_price and not has_product_keywords:
+                continue
+
+            # Extract price from content
+            price_match = re.search(
+                r"(?:₹|rs\.?|inr)\s*([\d,]+(?:\.\d{2})?)", content, re.IGNORECASE
+            )
+            if not price_match:
+                price_match = re.search(
+                    r"(?:\$|€|£)\s*([\d,]+(?:\.\d{2})?)", content, re.IGNORECASE
+                )
+            price_str = price_match.group(0).strip() if price_match else None
+
+            # Use page title as product name
+            product_name = page_title
+            if " - " in product_name:
+                product_name = product_name.split(" - ")[0].strip()
+            elif " | " in product_name:
+                product_name = product_name.split(" | ")[0].strip()
+
+            if not product_name or len(product_name) < 3:
+                continue
+
+            # Skip duplicates
+            name_key = product_name.lower().strip()
+            if name_key in seen_names:
+                continue
+
+            product = ProductInfo(
+                name=product_name,
+                url=url,
+                price=price_str,
+                currency=None,
+                image=None,
+                brand=None,
+                rating=None,
+                review_count=None,
+            )
+            products.append(product)
+            seen_fallback_urls.add(url)
+            seen_names.add(name_key)
+
+            if len(products) >= limit:
+                break
+
+        if products:
+            logger.info(
+                f"Fallback extraction found {len(products)} products from chunk content"
+            )
+
     return products
+
+
+def _sanitize_display_name(raw_name: str) -> str:
+    """
+    Sanitize chatbot display name for use in LLM prompts and responses.
+
+    Handles generalized cases:
+    - Literal 'undefined', 'null', 'none', empty → fallback to 'our services'
+    - URLs → extract clean brand/domain name (e.g., 'https://ramrajcotton.in/' → 'Ramrajcotton')
+    - Normal names → returned as-is
+    """
+    if not raw_name:
+        return "our services"
+
+    name = raw_name.strip()
+
+    # Reject common invalid literal values (case-insensitive)
+    if name.lower() in ("undefined", "null", "none", "n/a", "nan", ""):
+        return "our services"
+
+    # Detect if name is a URL
+    if re.match(r"^https?://", name, re.IGNORECASE):
+        try:
+            from urllib.parse import urlparse
+
+            parsed = urlparse(name)
+            domain = parsed.hostname or ""
+            # Remove 'www.' prefix
+            domain = re.sub(r"^www\.", "", domain)
+            if not domain:
+                return "our services"
+
+            # Split domain into parts
+            parts = domain.split(".")
+            # Known TLDs to strip from the end
+            tlds = {
+                "com",
+                "org",
+                "net",
+                "io",
+                "dev",
+                "co",
+                "in",
+                "uk",
+                "us",
+                "ca",
+                "au",
+                "de",
+                "fr",
+                "jp",
+                "store",
+                "shop",
+                "app",
+                "ai",
+                "info",
+                "biz",
+                "me",
+                "xyz",
+                "tech",
+                "online",
+                "site",
+                "website",
+                "page",
+            }
+            while len(parts) > 1 and parts[-1].lower() in tlds:
+                parts.pop()
+
+            # Join remaining parts and split by common word-separators
+            base = "-".join(parts)
+            words = re.split(r"[-_.]", base)
+            # Title case each word
+            brand_name = " ".join(w.capitalize() for w in words if w)
+            return brand_name if brand_name else "our services"
+        except Exception:
+            return "our services"
+
+    return name
+
+
+def _url_to_domain(url: str) -> str:
+    """Extract clean domain from a URL for display. Returns '' if not a URL."""
+    match = re.match(r"^https?://(?:www\.)?([^/]+)", url, re.IGNORECASE)
+    return match.group(1) if match else ""
+
+
+def _extract_content_words(text: str) -> set:
+    """
+    Extract meaningful content words from text, stripping stop words.
+    Generalized approach — works for any domain.
+    """
+    stop_words = {
+        "the",
+        "a",
+        "an",
+        "is",
+        "are",
+        "was",
+        "were",
+        "be",
+        "been",
+        "being",
+        "what",
+        "do",
+        "does",
+        "did",
+        "you",
+        "have",
+        "has",
+        "had",
+        "tell",
+        "me",
+        "show",
+        "want",
+        "need",
+        "about",
+        "any",
+        "can",
+        "could",
+        "i",
+        "my",
+        "your",
+        "we",
+        "our",
+        "they",
+        "their",
+        "he",
+        "she",
+        "in",
+        "on",
+        "for",
+        "with",
+        "to",
+        "of",
+        "at",
+        "by",
+        "from",
+        "up",
+        "and",
+        "or",
+        "but",
+        "not",
+        "no",
+        "so",
+        "if",
+        "just",
+        "also",
+        "it",
+        "this",
+        "that",
+        "these",
+        "those",
+        "them",
+        "there",
+        "would",
+        "should",
+        "will",
+        "shall",
+        "may",
+        "might",
+        "some",
+        "all",
+        "each",
+        "every",
+        "much",
+        "many",
+        "very",
+        "too",
+        "get",
+        "got",
+        "go",
+        "going",
+        "come",
+        "take",
+        "make",
+        "know",
+        "please",
+        "thanks",
+        "thank",
+        "yes",
+        "no",
+        "ok",
+        "okay",
+        "hi",
+        "hello",
+        "hey",
+        "how",
+        "well",
+        "like",
+        "look",
+        "looking",
+    }
+    words = set(re.findall(r"\b[a-z]+\b", text.lower()))
+    return words - stop_words
+
+
+def _has_referential_language(message: str) -> bool:
+    """
+    Generalized detection of referential/anaphoric language that needs prior context.
+    Uses regex patterns to catch pronouns, demonstratives, and relative references.
+    """
+    message_lower = message.lower().strip()
+
+    # Referential pronouns and demonstratives (object/subject references)
+    referential_patterns = [
+        r"\bit\b",
+        r"\bthat\b",
+        r"\bthis\b",
+        r"\bthese\b",
+        r"\bthose\b",
+        r"\bthem\b",
+        r"\bthey\b",
+        r"\bhis\b",
+        r"\bher\b",
+        r"\bits\b",
+        r"\bthe one\b",
+        r"\bthe ones\b",
+        r"\bthe same\b",
+    ]
+
+    # Comparative / continuation references
+    continuation_patterns = [
+        r"\bmore\b",
+        r"\bless\b",
+        r"\balso\b",
+        r"\btoo\b",
+        r"\beither\b",
+        r"\bother\b",
+        r"\banother\b",
+        r"\bsame\b",
+        r"\bsimilar\b",
+        r"\bcompare\b",
+        r"\bdifference\b",
+        r"\bversus\b",
+        r"\bvs\b",
+        r"\bcheaper\b",
+        r"\bexpensive\b",
+        r"\bbetter\b",
+        r"\bworse\b",
+        r"\bbigger\b",
+        r"\bsmaller\b",
+        r"\blarger\b",
+    ]
+
+    for pattern in referential_patterns + continuation_patterns:
+        if re.search(pattern, message_lower):
+            return True
+
+    return False
+
+
+def _is_greeting(message: str) -> bool:
+    """Check if the message is a greeting. Generalized."""
+    return bool(
+        re.match(
+            r"^\s*(hi+|hello+|hey+|heya*|good\s+(morning|afternoon|evening|night)|"
+            r"howdy|what\'?s\s+up|sup|yo+|greetings?)\s*[!.?,]*\s*$",
+            message.lower().strip(),
+        )
+    )
+
+
+def _is_short_ambiguous(message: str) -> bool:
+    """
+    Detect short ambiguous messages that are likely follow-ups.
+    E.g. "size 8?", "in blue", "for men", "under $50"
+    """
+    words = message.strip().split()
+    return len(words) <= 4
+
+
+def _compute_topic_overlap(msg_a: str, msg_b: str) -> float:
+    """
+    Compute semantic word overlap ratio between two messages.
+    Returns 0.0 (no overlap) to 1.0 (full overlap).
+    """
+    words_a = _extract_content_words(msg_a)
+    words_b = _extract_content_words(msg_b)
+
+    if not words_a or not words_b:
+        return 0.0
+
+    overlap = len(words_a & words_b)
+    return overlap / max(len(words_a), 1)
+
+
+def enrich_query_with_context(
+    current_message: str,
+    history: List[ChatMessage],
+    summary: str,
+    max_context_length: int = 300,
+) -> str:
+    """
+    Generalized query enrichment for RAG retrieval.
+
+    Decision tree (priority order):
+    1. Greetings -> as-is (no retrieval context needed)
+    2. No history -> as-is (nothing to enrich with)
+    3. Has referential language (pronouns, comparatives) -> ALWAYS enrich with context
+    4. Short ambiguous (<=4 words, no clear subject) -> enrich with context
+    5. Complete new topic (low word overlap with recent history) -> as-is
+    6. Everything else with history -> light context from summary
+
+    KEY PRINCIPLE: Check for references FIRST, before checking if it
+    "looks standalone". "I want to buy it for my brother" has "it" -> needs context,
+    regardless of length or structure.
+    """
+    current_lower = current_message.lower().strip()
+
+    # --- CASE 1: Greetings -> always as-is ---
+    if _is_greeting(current_message):
+        logger.debug("🎯 Query Enrichment: GREETING -> as-is")
+        return current_message
+
+    # --- CASE 2: No history -> as-is (first message) ---
+    if not history or len(history) == 0:
+        logger.debug("🎯 Query Enrichment: NO HISTORY -> as-is")
+        return current_message
+
+    # Gather recent messages for context
+    last_user_msg = None
+    last_bot_msg = None
+    for h in reversed(history):
+        if h.role == MessageRole.USER and last_user_msg is None:
+            last_user_msg = h.content
+        elif h.role == MessageRole.ASSISTANT and last_bot_msg is None:
+            last_bot_msg = h.content
+        if last_user_msg and last_bot_msg:
+            break
+
+    # --- CASE 3: Referential language detected -> MUST enrich ---
+    # This catches: "buy it", "tell me more about that", "cheaper ones",
+    # "for my brother" (when there's prior context about products), etc.
+    if _has_referential_language(current_message):
+        context = _build_context_string(last_user_msg, last_bot_msg, max_context_length)
+        if context:
+            enriched = f"{context}. {current_message}"
+            logger.debug(
+                f"🎯 Query Enrichment: REFERENTIAL -> enriched ({len(context)} chars)"
+            )
+            return enriched
+
+    # --- CASE 4: Short ambiguous query -> likely follow-up ---
+    if _is_short_ambiguous(current_message):
+        # Only enrich if there's actual prior conversation context
+        context = _build_context_string(last_user_msg, last_bot_msg, max_context_length)
+        if context:
+            enriched = f"{context}. {current_message}"
+            logger.debug(
+                f"🎯 Query Enrichment: SHORT AMBIGUOUS -> enriched ({len(context)} chars)"
+            )
+            return enriched
+
+    # --- CASE 5: Check if it's a new topic (low overlap with recent history) ---
+    if last_user_msg:
+        overlap = _compute_topic_overlap(current_message, last_user_msg)
+        if overlap < 0.15:
+            # New topic — don't pollute with old context
+            logger.debug(
+                f"🎯 Query Enrichment: NEW TOPIC (overlap={overlap:.2f}) -> as-is"
+            )
+            return current_message
+
+    # --- CASE 6: Moderate overlap — add light summary context ---
+    if summary and len(summary.strip()) > 10:
+        recent_summary = summary[-200:].strip()
+        enriched = f"{recent_summary} {current_message}"
+        logger.debug(
+            f"🎯 Query Enrichment: CONTEXTUAL -> light summary ({len(recent_summary)} chars)"
+        )
+        return enriched
+
+    # --- Default: as-is ---
+    logger.debug("🎯 Query Enrichment: DEFAULT -> as-is")
+    return current_message
+
+
+def _build_context_string(
+    last_user_msg: Optional[str], last_bot_msg: Optional[str], max_length: int = 300
+) -> str:
+    """
+    Build a concise context string from recent conversation history.
+    Prioritizes the user's last question, with a snippet of the bot's response.
+    """
+    parts = []
+
+    if last_user_msg:
+        # Truncate to keep embedding input manageable
+        parts.append(last_user_msg[:200].strip())
+
+    if last_bot_msg:
+        # Take first meaningful portion of bot response (usually the key info)
+        # Strip HTML tags for cleaner embedding input
+        clean_bot = re.sub(r"<[^>]+>", " ", last_bot_msg)
+        clean_bot = re.sub(r"\s+", " ", clean_bot).strip()
+        parts.append(clean_bot[:150])
+
+    context = " ".join(parts)
+    if len(context) > max_length:
+        context = context[:max_length]
+
+    return context
 
 
 class ChatService:
@@ -788,8 +1573,9 @@ class ChatService:
 
             # Check if chatbot is paused (and not in preview mode)
             if not is_preview and chatbot.status == ChatbotStatus.PAUSED:
+                paused_display = _sanitize_display_name(chatbot.name)
                 paused_message = (
-                    f"🚧 {chatbot.name} is currently offline for maintenance. "
+                    f"🚧 {paused_display} is currently offline for maintenance. "
                     "Please check back later. We appreciate your patience!"
                 )
 
@@ -897,12 +1683,76 @@ class ChatService:
 
             text_content = effective_message or message or "What is this?"
 
+            # --- 3.5. Check query cache (skip for image queries) ---
+            cache_hit = None
+            if not image_bytes and text_content:
+                try:
+                    cache_hit = await get_cached_response(str(chatbot_id), text_content)
+                except Exception as e:
+                    logger.debug(f"Cache lookup error (non-fatal): {e}")
+
+            if cache_hit:
+                # Stream cached response directly
+                logger.info(
+                    f"Cache HIT — returning cached response for: {text_content[:60]}"
+                )
+                yield {"type": "content", "content": cache_hit["content"]}
+
+                # Save messages to DB (even cached responses should be tracked)
+                from sqlalchemy import func
+
+                user_msg = ChatMessage(
+                    session_id=session.id,
+                    role=MessageRole.USER,
+                    content=text_content,
+                    metadata_json={"cached": True},
+                )
+                assistant_msg = ChatMessage(
+                    session_id=session.id,
+                    role=MessageRole.ASSISTANT,
+                    content=cache_hit["content"],
+                    metadata_json={
+                        "cached": True,
+                        "suggestions": cache_hit.get("suggestions", []),
+                    },
+                )
+                db.add(user_msg)
+                db.add(assistant_msg)
+                session.last_message_at = func.now()
+
+                if not is_preview:
+                    chatbot.message_count = (chatbot.message_count or 0) + 1
+
+                await db.commit()
+
+                yield {
+                    "type": "done",
+                    "sources": cache_hit.get("sources", []),
+                    "suggestions": cache_hit.get("suggestions", [])[:2],
+                    "products": cache_hit.get("products", []),
+                    "image_analysis": None,
+                }
+                return
+
             # --- 4. Get chat history and summary ---
             history = await ChatService.get_history(db, session.id, limit=6)
             summary = session.conversation_summary or ""
 
-            # --- 5. Retrieve relevant context using RAG ---
-            query_embedding = await get_single_embedding(text_content)
+            # --- 5. Smart Query Enrichment for Better Retrieval ---
+            # Intelligently add context for follow-ups while keeping standalone queries clean
+            enriched_query = enrich_query_with_context(
+                current_message=text_content,
+                history=history,
+                summary=summary,
+                max_context_length=250,
+            )
+
+            logger.debug(f"Original query: {text_content[:100]}")
+            if enriched_query != text_content:
+                logger.debug(f"Enriched query: {enriched_query[:150]}")
+
+            # --- 6. Retrieve relevant context using RAG ---
+            query_embedding = await get_single_embedding(enriched_query)
 
             # Text-based retrieval
             stmt = (
@@ -1007,28 +1857,55 @@ class ChatService:
             )
             sources_count = len(top_chunks)
 
-            # --- Early out-of-scope detection ---
-            # Check if this is a greeting (should always be answered)
-            greeting_patterns = [
-                r"^\s*(hi+|hello+|hey+|heya*|good\s+(morning|afternoon|evening)|howdy|what\'?s\s+up)\s*[!.?]*\s*$",
-            ]
-            is_greeting = any(
-                re.match(p, text_content.lower().strip()) for p in greeting_patterns
-            )
+            # --- Extract filters for product searching ---
+            # We do this before product extraction to apply filters correctly
+            price_filter = extract_price_filter(text_content)
+            attribute_filter = extract_attribute_filters(text_content)
 
-            # Very low retrieval confidence + not a greeting = likely out-of-scope
-            # We still let the LLM handle it, but this flag helps with post-processing
-            is_likely_out_of_scope = (
-                retrieval_confidence < 0.35 and not is_greeting and sources_count > 0
-            )
-
-            # Log for debugging
-            if is_likely_out_of_scope:
-                logger.info(
-                    f"Low retrieval confidence ({retrieval_confidence:.2f}) for query: {text_content[:100]}"
+            # --- Extract products EARLY (before building system prompt) ---
+            # This allows us to tell the LLM accurately if products exist
+            products = []
+            if (
+                is_product_query(text_content)
+                or is_product_query(enriched_query)
+                or (image_attrs is not None)
+            ):
+                products = extract_products_from_chunks(
+                    combined_results[:30],
+                    limit=10,
+                    price_filter=price_filter,
+                    attribute_filter=attribute_filter,
                 )
+                logger.info(f"Found {len(products)} products for product query")
 
-            # --- 6. Build system prompt with context ---
+            # --- Early out-of-scope detection ---
+            is_greeting = _is_greeting(text_content)
+
+            # Interpret low retrieval confidence more intelligently:
+            # - For product queries with products found → NOT out of scope (product pages retrieved successfully)
+            # - For general queries with low confidence → likely out of scope
+            is_product_request = is_product_query(text_content) or is_product_query(
+                enriched_query
+            )
+            if is_product_request and len(products) > 0:
+                # Product pages were found and extracted → DON'T consider out of scope
+                is_likely_out_of_scope = False
+                logger.debug(
+                    f"Product query with {len(products)} products → treating as IN SCOPE"
+                )
+            else:
+                # Non-product query or no products found → apply confidence threshold
+                is_likely_out_of_scope = (
+                    retrieval_confidence < 0.35
+                    and not is_greeting
+                    and sources_count > 0
+                )
+                if is_likely_out_of_scope:
+                    logger.info(
+                        f"Low retrieval confidence ({retrieval_confidence:.2f}) for query: {text_content[:100]}"
+                    )
+
+            # --- 7. Build system prompt with context ---
             context_text = ""
             if top_chunks:
                 context_text = "Relevant information from knowledge base:\n\n"
@@ -1037,13 +1914,14 @@ class ChatService:
                     title = meta.get("title", "Untitled")
                     url = meta.get("url", "")
                     content = c["embedding"].content[:500]
-                    context_text += (
-                        f"[Source {i}] Title: {title}\nURL: {url}\n{content}\n\n"
-                    )
+                    # Add product indicator if this chunk has product data
+                    is_product_chunk = meta.get("is_product", False)
+                    product_marker = " [PRODUCT PAGE]" if is_product_chunk else ""
+                    context_text += f"[Source {i}]{product_marker} Title: {title}\nURL: {url}\n{content}\n\n"
 
-            # Extract filters
-            price_filter = extract_price_filter(text_content)
-            attribute_filter = extract_attribute_filters(text_content)
+                # If products were extracted, add explicit note
+                if len(products) > 0:
+                    context_text += f"\n✅ IMPORTANT: {len(products)} product(s) matching the query have been found and will be shown in the carousel.\n"
 
             # Build context strings
             image_context = ""
@@ -1063,39 +1941,74 @@ class ChatService:
             price_context = ""
             if price_filter:
                 if "max_price" in price_filter and "min_price" in price_filter:
-                    price_context = f"\n\nPrice Filter: Between {price_filter['min_price']} and {price_filter['max_price']}"
+                    price_context = f"\n\nPrice Filter Applied: Showing products between {price_filter['min_price']} and {price_filter['max_price']}"
                 elif "max_price" in price_filter:
-                    price_context = (
-                        f"\n\nPrice Filter: Under {price_filter['max_price']}"
-                    )
+                    price_context = f"\n\nPrice Filter Applied: Showing products under {price_filter['max_price']}"
                 elif "min_price" in price_filter:
-                    price_context = (
-                        f"\n\nPrice Filter: Above {price_filter['min_price']}"
-                    )
+                    price_context = f"\n\nPrice Filter Applied: Showing products above {price_filter['min_price']}"
+
+                # If products exist and filter applied, LLM should acknowledge the filter
+                if len(products) > 0:
+                    price_context += f" ({len(products)} products match)"
 
             attribute_context = ""
             if attribute_filter:
                 if "color" in attribute_filter:
                     attribute_context += (
-                        f"\n\nColor Filter: {attribute_filter['color']}"
+                        f"\n\nColor Filter Applied: {attribute_filter['color']}"
+                    )
+                    if len(products) > 0:
+                        attribute_context += f" ({len(products)} products match)"
+                if (
+                    "gender" in attribute_filter
+                    and attribute_filter["gender"] != "unisex"
+                ):
+                    attribute_context += (
+                        f"\n\nCategory: {attribute_filter['gender'].title()}'s products"
                     )
 
             # Determine if we have relevant context
             has_relevant_context = retrieval_confidence > 0.5 and sources_count > 0
 
+            # Safe chatbot display name (prevent "undefined", URLs, or empty name)
+            chatbot_display_name = _sanitize_display_name(chatbot.name)
+            chatbot_raw_name = (
+                chatbot.name or ""
+            ).strip()  # Keep raw for URL scrubbing
+
+            # Build product carousel instruction (now that we KNOW if products exist)
+            product_carousel_instruction = ""
+            has_products_to_show = len(products) > 0
+
+            if has_products_to_show:
+                product_carousel_instruction = (
+                    "\n\n**🎯 CRITICAL - PRODUCT CAROUSEL ACTIVE:**\n"
+                    f"We have found {len(products)} products matching the user's request. A product carousel with images, prices, and links will be displayed automatically.\n\n"
+                    "**YOUR TASK (MANDATORY):**\n"
+                    "1. Write ONLY 1-2 SHORT sentences acknowledging what the user is looking for\n"
+                    "2. Examples: 'Here are some great options!', 'I found these for you!', 'Take a look at these!'\n"
+                    "3. DO NOT list product names, prices, or create bullet lists - the carousel shows all details\n"
+                    "4. DO NOT mark this query as [[IRRELEVANT]] - products exist!\n"
+                    "5. DO NOT write rejection messages like 'I can only assist with...'"
+                )
+
             system_prompt = (
-                f"You are a helpful AI assistant for {chatbot.name}. "
+                f"You are a helpful AI assistant for {chatbot_display_name}. "
                 "Your role is to answer questions STRICTLY based on the provided context.\n\n"
                 "**CRITICAL RULES - MUST FOLLOW:**\n"
                 "1. **ONLY USE PROVIDED CONTEXT**: You can ONLY answer questions using information explicitly present in the 'Relevant information from knowledge base' section below.\n"
                 "2. **NO FABRICATION**: NEVER make up, invent, or hallucinate information. If the context doesn't contain the answer, admit it.\n"
                 "3. **NO GENERAL KNOWLEDGE**: Do NOT use your general knowledge to answer questions about products, services, prices, policies, people, companies, or any factual information that isn't in the context.\n"
-                "4. **OUT-OF-SCOPE HANDLING**: For questions about topics NOT covered in the context (e.g., celebrities, competitors, unrelated products, general knowledge), respond with:\n"
-                f"   'I'm sorry, I can only help with questions about {chatbot.name} and the information I have access to. Is there something specific about {chatbot.name} I can help you with?'\n"
-                "   Then append `[[IRRELEVANT]]` at the end.\n"
+                "4. **OUT-OF-SCOPE HANDLING**: \n"
+                "   - For questions about celebrities, news, politics, competitors, or completely unrelated topics, respond with:\n"
+                f"     'I'm sorry, I can only assist with questions related to {chatbot_display_name}. Is there something else I can help you with?'\n"
+                "   - Then append `[[IRRELEVANT]]` at the end\n"
+                f"   - **EXCEPTION**: If the product carousel instruction above says products exist, DO NOT mark as [[IRRELEVANT]] even if context is limited. The products speak for themselves!\n"
+                "   - NEVER output the word 'undefined' in your response. Always use the actual business name above.\n"
                 "5. **GREETINGS ARE FINE**: You can respond warmly to greetings (Hi, Hello, etc.) without needing context.\n"
-                "6. **CONTEXT QUALITY CHECK**: If the retrieved context doesn't seem relevant to the user's question (low similarity), politely say you don't have information about that specific topic.\n\n"
-                "**Response Formatting (Fix #5):**\n"
+                "6. **CONTEXT QUALITY CHECK**: If the retrieved context doesn't seem relevant to the user's question (low similarity), politely say you don't have information about that specific topic.\n"
+                "7. **CONVERSATION CONTINUITY**: The user may ask follow-up questions referencing previous messages. Use the conversation history and background context to understand what they're referring to. If they say 'it', 'that', 'those', etc., refer to the conversation history to understand the reference.\n\n"
+                "**Response Formatting:**\n"
                 "- Be friendly and conversational\n"
                 "- Use HTML formatting appropriately for better readability:\n"
                 "  • <strong>text</strong> for important terms, product names, key features, prices\n"
@@ -1106,9 +2019,10 @@ class ChatService:
                 "- Use lists (<ul> or <ol>) when presenting 3+ items or features\n"
                 "- Use <strong> to highlight product names, prices, key specifications\n"
                 "- Keep answers well-structured and scannable\n"
-                "- DO NOT use markdown symbols (##, *, **, etc.)\n\n"
+                "- DO NOT use markdown symbols (##, *, **, etc.)\n"
+                f"{product_carousel_instruction}\n"
                 "**Special Cases:**\n"
-                "- **Product Listings**: If product carousel will show, just say 'Here are our products:' or similar. Don't list details.\n"
+                "- **Product Listings**: If product carousel is active, keep text to 1-2 sentences only. Products are displayed separately.\n"
                 "- **Price Filters**: ONLY mention products within the specified price range from the context.\n"
                 "- **Missing Specific Info**: If asked about specific details not in context, say 'I don't have that specific information' and append `[[MISSING_INFO]]`\n\n"
                 f"Background Context: {summary}{image_context}{price_context}{attribute_context}\n"
@@ -1119,16 +2033,17 @@ class ChatService:
                 "1. Your Answer (ONLY from the context above, well-formatted with HTML)\n"
                 "2. (Optional) `[[IRRELEVANT]]` if query is completely unrelated to the business, OR `[[MISSING_INFO]]` if specific business detail is missing. Do NOT output both.\n"
                 "3. `---SUGGESTIONS---`\n"
-                "4. JSON list of exactly 3 context-aware, user-perspective suggestions (Fix #6):\n"
+                "4. JSON list of exactly 3 context-aware, user-perspective suggestions:\n"
                 "   - MUST be what the USER would type/click next (not agent questions)\n"
                 "   - MUST relate directly to the current conversation context and user's query\n"
                 "   - Should be 6-15 words for clarity\n"
-                "   - Examples:\n"
-                '     * If discussing product features: ["Show me similar products", "What\'s the price range?", "Do you have this in other colors?"]\n'
-                '     * If discussing prices: ["Show me products under $50", "What\'s included in the price?", "Any ongoing discounts?"]\n'
-                '     * If query is [[IRRELEVANT]]: ["What products do you offer?", "Tell me about your services", "How can I contact you?"]\n'
+                "   - Examples by scenario:\n"
+                f'     * If products are shown: ["Show me more options", "What\'s included with purchase?", "Do you offer free shipping?"]\n'
+                '     * If discussing product features: ["What colors are available?", "What\'s the price range?", "Show me similar items"]\n'
+                '     * If discussing prices: ["Show me products under $50", "Any ongoing discounts?", "What\'s the best value?"]\n'
+                f'     * If query is [[IRRELEVANT]]: ["What products do you offer?", "Tell me about {chatbot_display_name}", "How can I contact you?"]\n'
                 '     * If query is [[MISSING_INFO]]: ["Show me available products", "Browse your collection", "What can you help me with?"]\n'
-                "   - Avoid generic suggestions - make them specific to the current context\n"
+                "   - Make suggestions specific to the conversation, not generic\n"
                 "5. `---END---`\n"
             )
 
@@ -1145,7 +2060,7 @@ class ChatService:
 
             llm_messages.append({"role": "user", "content": user_content})
 
-            # --- 7. Generate streaming response from Groq ---
+            # --- 8. Generate streaming response from Groq ---
             sources = []
             for c in top_chunks:
                 meta = c["embedding"].metadata_json
@@ -1156,20 +2071,14 @@ class ChatService:
                     if source not in sources:
                         sources.append(source)
 
-            # Extract products if this is a product-related query
-            products = []
-            if is_product_query(text_content) or (image_attrs is not None):
-                products = extract_products_from_chunks(
-                    combined_results[:30],
-                    limit=10,
-                    price_filter=price_filter,
-                    attribute_filter=attribute_filter,
-                )
+            # Products already extracted earlier (before system prompt construction)
+            # This ensures the LLM knows whether products exist when generating the response
 
             # Stream response from Groq
             full_content = ""
             yielded_len = 0
             stop_yielding = False
+            final_message = ""  # Initialize early to prevent UnboundLocalError
 
             async with httpx.AsyncClient() as client:
                 async with client.stream(
@@ -1283,24 +2192,13 @@ class ChatService:
             is_missing_info = "[[MISSING_INFO]]" in full_content
 
             # Post-processing validation
-            # Post-processing validation
             if is_missing_info:
                 user_lower = text_content.lower().strip()
                 response_lower = full_content.lower()
 
-                # Check for greetings
-                greeting_patterns = [
-                    r"\bhi+\b",
-                    r"\bhello+\b",
-                    r"\bhey+\b",
-                    r"\bheya+\b",
-                    r"\bgood\s+morning",
-                    r"\bgood\s+afternoon",
-                    r"\bgood\s+evening",
-                    r"\bhowdy\b",
-                    r"\bwhat\'?s\s+up\b",
-                ]
-                is_greeting = any(re.search(p, user_lower) for p in greeting_patterns)
+                # Check for greetings (use shared function)
+                if _is_greeting(text_content):
+                    is_missing_info = False
 
                 # Check for contact info queries
                 contact_patterns = [
@@ -1316,30 +2214,99 @@ class ChatService:
                 has_contact_query = any(
                     pattern in user_lower for pattern in contact_patterns
                 )
-                # If user asks for contact and we give a response (even if generic), don't mark as missing info
-                # The prompt should prevent MISSING_INFO tag here, but as a fallback:
-                if has_contact_query:
-                    # If response contains helpful keywords or is not just "I don't know"
-                    if len(response_lower) > 20:
-                        is_missing_info = False
+                if has_contact_query and len(response_lower) > 20:
+                    is_missing_info = False
 
-                # Check for product queries
                 # If we found products and are returning them, it's NOT missing info
                 if products:
                     is_missing_info = False
 
-                if is_greeting:
-                    is_missing_info = False
-
-            # Clean content
+            # Clean content — strip tags and sanitize artifacts
             full_content = full_content.replace("[[IRRELEVANT]]", "").replace(
                 "[[MISSING_INFO]]", ""
             )
 
-            # Extract suggestions
+            # --- Generalized response sanitization ---
+            # 1. Replace any literal "undefined" with the proper display name
+            full_content = re.sub(
+                r"\bundefined\b",
+                chatbot_display_name,
+                full_content,
+                flags=re.IGNORECASE,
+            )
+
+            # 2. Replace any raw URLs that match the chatbot's name/source with the clean brand name
+            #    This handles cases where the LLM echoes back the URL instead of brand name
+            if chatbot_raw_name and re.match(
+                r"^https?://", chatbot_raw_name, re.IGNORECASE
+            ):
+                # Escape URL for regex and replace it with clean name everywhere in the response
+                escaped_url = re.escape(chatbot_raw_name)
+                full_content = re.sub(
+                    escaped_url, chatbot_display_name, full_content, flags=re.IGNORECASE
+                )
+                # Also handle URL without trailing slash
+                escaped_url_no_slash = re.escape(chatbot_raw_name.rstrip("/"))
+                full_content = re.sub(
+                    escaped_url_no_slash,
+                    chatbot_display_name,
+                    full_content,
+                    flags=re.IGNORECASE,
+                )
+                # Also catch the domain-only variant
+                domain = _url_to_domain(chatbot_raw_name)
+                if domain:
+                    # Replace domain references like "ramrajcotton.in" with brand name
+                    full_content = re.sub(
+                        r"https?://(?:www\.)?" + re.escape(domain) + r"[/\w.-]*",
+                        chatbot_display_name,
+                        full_content,
+                        flags=re.IGNORECASE,
+                    )
+
+            # 3. General: replace any remaining full URLs in the text that look like raw domain echoes
+            #    (Only replace if they appear in conversational context like "related to https://...")
+            full_content = re.sub(
+                r"(related to|about|for|regarding)\s+(https?://[^\s<]+)",
+                lambda m: f"{m.group(1)} {chatbot_display_name}",
+                full_content,
+                flags=re.IGNORECASE,
+            )
+
+            # Extract suggestions and final_message BEFORE any logic that uses final_message
             parts = full_content.split("---SUGGESTIONS---")
             final_message = parts[0].strip()
             suggestion_block = parts[1] if len(parts) > 1 else ""
+
+            # --- Fix contradictory IRRELEVANT + products scenario ---
+            # If LLM marked IRRELEVANT but we have products, this is a mistake
+            # The LLM saw limited context but didn't realize products exist
+            if is_irrelevant and products:
+                is_irrelevant = False
+                logger.warning(
+                    f"LLM marked IRRELEVANT but {len(products)} products exist - overriding"
+                )
+
+                # CRITICAL: Replace rejection message with friendly product intro
+                # The LLM likely wrote "I can only assist with..." which contradicts the carousel
+                rejection_patterns = [
+                    r"i'm sorry[,.]? i can only assist with",
+                    r"i can only help with",
+                    r"i can only answer questions about",
+                    r"i don't have information about",
+                    r"i cannot assist with",
+                    r"that (?:question|topic) is (?:outside|beyond)",
+                ]
+
+                message_lower = final_message.lower()
+                is_rejection_message = any(
+                    re.search(pattern, message_lower) for pattern in rejection_patterns
+                )
+
+                if is_rejection_message:
+                    # Replace the entire rejection message with a friendly product intro
+                    final_message = f"Here are some great options from {chatbot_display_name} that match what you're looking for!"
+                    logger.info("Replaced LLM rejection message with product intro")
 
             suggestions = []
             if suggestion_block:
@@ -1355,9 +2322,54 @@ class ChatService:
                             if len(q.strip()) > 5
                         ][:2]
 
+            # --- Sanitize suggestions (same URL/undefined cleanup) ---
+            def _sanitize_suggestion(s: str) -> str:
+                """Clean a single suggestion string of URLs, 'undefined', etc."""
+                if not isinstance(s, str):
+                    return str(s)
+                # Replace 'undefined'
+                s = re.sub(
+                    r"\bundefined\b", chatbot_display_name, s, flags=re.IGNORECASE
+                )
+                # Replace raw URLs with clean brand name
+                if chatbot_raw_name and re.match(
+                    r"^https?://", chatbot_raw_name, re.IGNORECASE
+                ):
+                    s = s.replace(chatbot_raw_name, chatbot_display_name)
+                    s = s.replace(chatbot_raw_name.rstrip("/"), chatbot_display_name)
+                # Catch any remaining URLs in suggestions
+                s = re.sub(
+                    r'https?://[^\s"\']+', chatbot_display_name, s, flags=re.IGNORECASE
+                )
+                return s.strip()
+
+            suggestions = [_sanitize_suggestion(s) for s in suggestions if s]
+
             final_message = re.sub(
                 r"---SUGGESTIONS---.*", "", final_message, flags=re.DOTALL
             ).strip()
+
+            # --- 8.5. Cache successful responses (skip images, irrelevant, missing info) ---
+            if (
+                not image_bytes
+                and not is_irrelevant
+                and not is_missing_info
+                and final_message
+                and len(final_message) > 20
+            ):
+                try:
+                    await cache_response(
+                        chatbot_id=str(chatbot_id),
+                        query=text_content,
+                        content=final_message,
+                        sources=[{"title": s.title, "url": s.url} for s in sources],
+                        suggestions=(
+                            suggestions[:2] if isinstance(suggestions, list) else []
+                        ),
+                        products=[p.dict() for p in products],
+                    )
+                except Exception as e:
+                    logger.debug(f"Cache write error (non-fatal): {e}")
 
             # --- 9. Save messages to DB ---
             response_time_ms = int((time.time() - start_time) * 1000)
@@ -1400,12 +2412,11 @@ class ChatService:
             db.add(user_msg)
             db.add(assistant_msg)
 
-            # Update message counts (only for non-preview chats)
+            # Update message counts (user messages only, excludes preview sessions)
             if not is_preview:
-                # Increment per-chatbot message count
                 chatbot.message_count = (chatbot.message_count or 0) + 1
 
-                # Get and update global message count
+                # Get and update global message count (user messages only)
                 from app.models.subscription import Subscription
 
                 sub_stmt = select(Subscription).where(

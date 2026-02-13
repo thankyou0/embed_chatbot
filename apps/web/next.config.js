@@ -1,4 +1,5 @@
 /** @type {import('next').NextConfig} */
+
 const nextConfig = {
   reactStrictMode: true,
 
@@ -21,6 +22,27 @@ const nextConfig = {
     // your project has type errors.
     // ignoreBuildErrors: true, // Uncomment if you have TypeScript errors
   },
+  experimental: {
+    instrumentationHook: true,
+  },
 };
 
-module.exports = nextConfig;
+// Conditionally apply Sentry config if available
+let finalConfig = nextConfig;
+try {
+  const { withSentryConfig } = require("@sentry/nextjs");
+  finalConfig = withSentryConfig(
+    nextConfig,
+    {
+      silent: true,
+    },
+    {
+      disableLogger: true,
+    },
+  );
+} catch (e) {
+  // Sentry not installed, continue without it
+  console.log("Sentry not available, continuing without monitoring");
+}
+
+module.exports = finalConfig;

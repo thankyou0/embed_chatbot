@@ -4,6 +4,25 @@ import type { NextRequest } from "next/server";
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const accessToken = request.cookies.get("access_token");
+  const refreshToken = request.cookies.get("refresh_token");
+
+  // Consider user "authenticated" if either token exists
+  // The client-side AuthContext will handle refreshing expired access tokens
+  const hasAuth = accessToken || refreshToken;
+
+  // Redirect root based on auth status
+  if (pathname === "/") {
+    if (hasAuth) {
+      return NextResponse.redirect(new URL("/dashboard/chatbots", request.url));
+    } else {
+      return NextResponse.redirect(new URL("/login", request.url));
+    }
+  }
+
+  // Redirect /dashboard to /dashboard/chatbots
+  if (pathname === "/dashboard" || pathname === "/dashboard/") {
+    return NextResponse.redirect(new URL("/dashboard/chatbots", request.url));
+  }
 
   // Public routes (no auth required)
   const publicRoutes = [
@@ -18,24 +37,24 @@ export function middleware(request: NextRequest) {
   const authOnlyRoutes = ["/change-password"];
   const isAuthOnlyRoute = authOnlyRoutes.includes(pathname);
 
-  // If accessing a protected route without token, redirect to login
+  // If accessing a protected route without any token, redirect to login
   if (
     !isPublicRoute &&
     !isAuthOnlyRoute &&
-    !accessToken &&
+    !hasAuth &&
     pathname.startsWith("/dashboard")
   ) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  // If accessing auth-only route without token, redirect to login
-  if (isAuthOnlyRoute && !accessToken) {
+  // If accessing auth-only route without any token, redirect to login
+  if (isAuthOnlyRoute && !hasAuth) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  // If accessing login/signup with token, redirect to dashboard
-  if (isPublicRoute && accessToken) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+  // If accessing login/signup with token, redirect directly to chatbots page
+  if (isPublicRoute && hasAuth) {
+    return NextResponse.redirect(new URL("/dashboard/chatbots", request.url));
   }
 
   return NextResponse.next();
@@ -43,6 +62,7 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
+    "/",
     "/dashboard/:path*",
     "/login",
     "/signup",

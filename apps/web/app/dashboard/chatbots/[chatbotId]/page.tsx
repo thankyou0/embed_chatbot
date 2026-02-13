@@ -59,13 +59,6 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -178,8 +171,6 @@ interface RecentActivityListResponse {
   total_pages: number;
 }
 
-type FilePreviewType = "image" | "pdf" | "text";
-
 const appearanceSchema = z.object({
   primary_color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Invalid hex color"),
   header_text: z.string().min(1, "Header text is required").max(255),
@@ -240,20 +231,25 @@ export default function ChatbotDetailPage() {
   const [isCrawling, setIsCrawling] = useState(false);
   const [uploadFiles, setUploadFiles] = useState<FileList | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [previewingFileId, setPreviewingFileId] = useState<string | null>(null);
-  const [isFilePreviewOpen, setIsFilePreviewOpen] = useState(false);
-  const [filePreviewTitle, setFilePreviewTitle] = useState("");
-  const [filePreviewType, setFilePreviewType] = useState<FilePreviewType>("text");
-  const [filePreviewObjectUrl, setFilePreviewObjectUrl] = useState<string | null>(
-    null,
-  );
-  const [filePreviewText, setFilePreviewText] = useState("");
 
   // Selection state
   const [selectedPages, setSelectedPages] = useState<string[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
   const [selectedQAs, setSelectedQAs] = useState<string[]>([]);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [deletingFileId, setDeletingFileId] = useState<string | null>(null);
+
+  // File preview state
+  const [previewFile, setPreviewFile] = useState<{
+    filename: string;
+    content: string;
+    type: string;
+    url?: string; // For iframe/external viewer preview
+    mode?: "text" | "iframe" | "download"; // How to display the preview
+  } | null>(null);
+  const [loadingPreviewFileId, setLoadingPreviewFileId] = useState<
+    string | null
+  >(null);
 
   // QA state
   const [newQA, setNewQA] = useState({ question: "", answer: "" });
@@ -581,14 +577,27 @@ export default function ChatbotDetailPage() {
     }
   }, [knowledgeSources, manuallyStartedCrawl, isPolling, pollingTimedOut]);
 
-  // Separate effect for the actual polling interval
+  // Adaptive polling: starts fast (2s), slows down over time (5s → 10s)
   useEffect(() => {
     if (!isPolling) return;
 
-    console.log("🔄 Polling started - checking every 2 seconds");
+    let timeoutId: ReturnType<typeof setTimeout>;
+    let stopped = false;
 
-    const interval = setInterval(async () => {
-      console.log("📡 Polling tick - fetching latest sources and stats...");
+    const getPollingInterval = () => {
+      if (!pollingStartTime) return 2000;
+      const elapsed = Date.now() - pollingStartTime;
+      if (elapsed < 15000) return 2000; // First 15s: fast (2s)
+      if (elapsed < 60000) return 5000; // 15s-60s: medium (5s)
+      return 10000; // After 60s: slow (10s)
+    };
+
+    const poll = async () => {
+      if (stopped) return;
+
+      console.log(
+        `📡 Polling tick (interval: ${getPollingInterval()}ms) - fetching latest sources and stats...`,
+      );
 
       // Update both sources and stats for immediate feedback
       await fetchKnowledgeSources(false);
@@ -606,15 +615,23 @@ export default function ChatbotDetailPage() {
         setToastMessage({
           type: "info",
           message:
-            "Polling stopped after 5 minutes. Refresh manually if processing continues.",
+            "Your content is still being processed. Auto-refresh has been paused — click the refresh button to check for updates.",
         });
         return;
       }
-    }, 2000); // Poll every 2 seconds for faster updates
+
+      if (!stopped) {
+        timeoutId = setTimeout(poll, getPollingInterval());
+      }
+    };
+
+    console.log("🔄 Adaptive polling started");
+    timeoutId = setTimeout(poll, getPollingInterval());
 
     return () => {
-      console.log("🛑 Polling stopped - cleaning up interval");
-      clearInterval(interval);
+      console.log("🛑 Polling stopped - cleaning up");
+      stopped = true;
+      clearTimeout(timeoutId);
     };
   }, [isPolling, pollingStartTime]);
 
@@ -962,6 +979,9 @@ export default function ChatbotDetailPage() {
       const token = getAccessToken();
       if (!token) return;
 
+      // Set deleting state for this file
+      setDeletingFileId(sourceId);
+
       await apiRequestWithAuth(
         `/api/v1/chatbots/knowledge-sources/${sourceId}`,
         token,
@@ -973,6 +993,133 @@ export default function ChatbotDetailPage() {
       fetchChatbotStats();
     } catch (err: any) {
       alert(err.message || "Failed to delete source");
+    } finally {
+      setDeletingFileId(null);
+    }
+  };
+
+  const handleStopCrawl = async (sourceId: string) => {
+    try {
+      const token = getAccessToken();
+      if (!token) return;
+
+      await apiRequestWithAuth(
+        `/api/v1/chatbots/knowledge-sources/${sourceId}/stop`,
+        token,
+        { method: "POST" },
+      );
+
+      setToastMessage({
+        type: "info",
+        message: "Crawl stop requested. Pages crawled so far will be saved.",
+      });
+
+      // Refresh after a short delay to get updated status
+      setTimeout(() => fetchKnowledgeSources(false), 2000);
+    } catch (err: any) {
+      alert(err.message || "Failed to stop crawl");
+    }
+  };
+
+  const handlePreviewFile = async (file: any) => {
+    if (!file?.files?.[0]) return;
+
+    const uploadedFile = file.files[0];
+    const filename = uploadedFile.filename;
+    const fileExtension = filename.split(".").pop()?.toLowerCase();
+
+    try {
+      const token = getAccessToken();
+      if (!token) return;
+
+      const API_URL =
+        process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const fileUrl = `${API_URL}/api/v1/chatbots/files/${uploadedFile.id}/preview?token=${token}`;
+
+      // Text-based files: fetch content and show in modal
+      const textFormats = [
+        "txt",
+        "md",
+        "csv",
+        "json",
+        "xml",
+        "html",
+        "htm",
+        "yaml",
+        "yml",
+        "log",
+        "ini",
+        "cfg",
+        "conf",
+        "env",
+        "sh",
+        "bat",
+        "py",
+        "js",
+        "ts",
+        "css",
+        "sql",
+      ];
+      if (fileExtension && textFormats.includes(fileExtension)) {
+        setLoadingPreviewFileId(uploadedFile.id);
+        try {
+          const response = await fetch(fileUrl);
+          if (!response.ok) throw new Error("Failed to fetch file");
+          const text = await response.text();
+          setPreviewFile({
+            filename,
+            content: text,
+            type: fileExtension,
+            mode: "text",
+          });
+        } finally {
+          setLoadingPreviewFileId(null);
+        }
+        return;
+      }
+
+      // PDF: open in new tab (browsers render natively)
+      if (fileExtension === "pdf") {
+        window.open(fileUrl, "_blank");
+        return;
+      }
+
+      // DOCX/PPTX/XLSX: download instead of iframe (Google Docs Viewer can't access local/private URLs)
+      const officeFormats = ["docx", "doc", "pptx", "ppt", "xlsx", "xls"];
+      if (fileExtension && officeFormats.includes(fileExtension)) {
+        setPreviewFile({
+          filename,
+          content: `This ${fileExtension.toUpperCase()} file cannot be previewed in the browser. Click below to download and view it in the appropriate application.`,
+          type: fileExtension,
+          url: fileUrl,
+          mode: "download",
+        });
+        return;
+      }
+
+      // Image files: show in modal as image
+      const imageFormats = ["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp"];
+      if (fileExtension && imageFormats.includes(fileExtension)) {
+        setPreviewFile({
+          filename,
+          content: "",
+          type: fileExtension,
+          url: fileUrl,
+          mode: "iframe",
+        });
+        return;
+      }
+
+      // All other file types: offer download link (don't auto-download)
+      setPreviewFile({
+        filename,
+        content: `This file type (.${fileExtension}) cannot be previewed in the browser.`,
+        type: fileExtension || "unknown",
+        url: fileUrl,
+        mode: "download",
+      });
+    } catch (err: any) {
+      alert(err.message || "Failed to open file preview");
     }
   };
 
@@ -1019,95 +1166,6 @@ export default function ChatbotDetailPage() {
       fetchChatbotStats();
     } catch (err: any) {
       alert(err.message || "Failed to delete page");
-    }
-  };
-
-  const handleOpenUploadedFile = async (
-    sourceId: string,
-    file: {
-      id: string;
-      filename: string;
-      mime_type: string;
-    },
-  ) => {
-    try {
-      const token = getAccessToken();
-      if (!token) return;
-
-      setPreviewingFileId(file.id);
-      const API_URL =
-        process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-      const mime = file.mime_type?.toLowerCase() || "";
-      const isImage = mime.startsWith("image/");
-      const isPdf = mime === "application/pdf";
-
-      if (isImage || isPdf) {
-        const response = await fetch(
-          `${API_URL}/api/v1/chatbots/knowledge-sources/${sourceId}/files/${file.id}/content`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          },
-        );
-        if (!response.ok) {
-          let errorMessage = "Failed to open file";
-          try {
-            const errData = await response.json();
-            errorMessage = errData?.detail || errData?.error || errorMessage;
-          } catch {
-            // ignore JSON parse errors and use fallback message
-          }
-          throw new Error(errorMessage);
-        }
-        const blob = await response.blob();
-        if (filePreviewObjectUrl) URL.revokeObjectURL(filePreviewObjectUrl);
-        const blobUrl = URL.createObjectURL(blob);
-        setFilePreviewObjectUrl(blobUrl);
-        setFilePreviewText("");
-        setFilePreviewType(isImage ? "image" : "pdf");
-      } else {
-        const response = await fetch(
-          `${API_URL}/api/v1/chatbots/knowledge-sources/${sourceId}/files/${file.id}/preview-text`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          },
-        );
-        if (!response.ok) {
-          let errorMessage = "Failed to open file";
-          try {
-            const errData = await response.json();
-            errorMessage = errData?.detail || errData?.error || errorMessage;
-          } catch {
-            // ignore JSON parse errors and use fallback message
-          }
-          throw new Error(errorMessage);
-        }
-        const data = await response.json();
-        if (filePreviewObjectUrl) URL.revokeObjectURL(filePreviewObjectUrl);
-        setFilePreviewObjectUrl(null);
-        setFilePreviewText(data?.text || "No preview text available.");
-        setFilePreviewType("text");
-      }
-      setFilePreviewTitle(file.filename);
-      setIsFilePreviewOpen(true);
-    } catch (err: any) {
-      alert(err.message || "Failed to open file");
-    } finally {
-      setPreviewingFileId(null);
-    }
-  };
-
-  const handleFilePreviewOpenChange = (open: boolean) => {
-    setIsFilePreviewOpen(open);
-    if (!open) {
-      if (filePreviewObjectUrl) URL.revokeObjectURL(filePreviewObjectUrl);
-      setFilePreviewObjectUrl(null);
-      setFilePreviewText("");
-      setFilePreviewTitle("");
-      setFilePreviewType("text");
     }
   };
 
@@ -2266,6 +2324,7 @@ export default function ChatbotDetailPage() {
                               }}
                               onDeleteSelected={() => handleBulkDelete("pages")}
                               isBulkDeleting={isBulkDeleting}
+                              onStopCrawl={handleStopCrawl}
                             />
                           ))}
                         </div>
@@ -2385,39 +2444,39 @@ export default function ChatbotDetailPage() {
                                 >
                                   {source.status}
                                 </Badge>
-                                {source.status === "completed" &&
-                                  source.files?.[0] && (
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      className="h-8"
-                                      disabled={
-                                        previewingFileId === source.files[0].id
-                                      }
-                                      onClick={() =>
-                                        handleOpenUploadedFile(
-                                          source.id,
-                                          source.files![0],
-                                        )
-                                      }
-                                      title="Open file"
-                                    >
-                                      {previewingFileId ===
-                                      source.files[0].id ? (
-                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                      ) : (
-                                        "Show"
-                                      )}
-                                    </Button>
-                                  )}
+                                {source.status === "completed" && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 px-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                    onClick={() => handlePreviewFile(source)}
+                                    disabled={loadingPreviewFileId !== null}
+                                    title="Preview file content"
+                                  >
+                                    {loadingPreviewFileId ===
+                                    source.files?.[0]?.id ? (
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      <>
+                                        <Eye className="h-4 w-4 mr-1" />
+                                        <span className="text-xs">Show</span>
+                                      </>
+                                    )}
+                                  </Button>
+                                )}
                                 <Button
                                   variant="ghost"
                                   size="icon"
                                   className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
                                   onClick={() => handleDeleteSource(source.id)}
+                                  disabled={deletingFileId === source.id}
                                   title="Delete file"
                                 >
-                                  <Trash2 className="h-4 w-4" />
+                                  {deletingFileId === source.id ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <Trash2 className="h-4 w-4" />
+                                  )}
                                 </Button>
                               </div>
                             </div>
@@ -3809,43 +3868,6 @@ export default function ChatbotDetailPage() {
       </Tabs>
 
       {/* Widget Preview - Visible in all tabs */}
-      <Dialog
-        open={isFilePreviewOpen}
-        onOpenChange={handleFilePreviewOpenChange}
-      >
-        <DialogContent className="max-w-5xl w-[95vw] h-[85vh] flex flex-col">
-          <DialogHeader>
-            <DialogTitle className="truncate">{filePreviewTitle}</DialogTitle>
-            <DialogDescription>
-              Preview mode.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex-1 min-h-0 border rounded-md bg-white">
-            {filePreviewType === "image" && filePreviewObjectUrl && (
-              <div className="h-full overflow-auto p-4">
-                <img
-                  src={filePreviewObjectUrl}
-                  alt={filePreviewTitle}
-                  className="max-w-full h-auto mx-auto"
-                />
-              </div>
-            )}
-            {filePreviewType === "pdf" && filePreviewObjectUrl && (
-              <iframe
-                src={filePreviewObjectUrl}
-                title={filePreviewTitle}
-                className="w-full h-full"
-              />
-            )}
-            {filePreviewType === "text" && (
-              <pre className="h-full overflow-auto p-4 text-sm whitespace-pre-wrap break-words">
-                {filePreviewText}
-              </pre>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
-
       {chatbot && appearance && (
         <ChatbotWidgetPreview
           key={`widget-${chatbotId}`}
@@ -3863,6 +3885,102 @@ export default function ChatbotDetailPage() {
           readOnly={false}
           chatbotId={chatbotId}
         />
+      )}
+
+      {/* File Preview Modal */}
+      {previewFile && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={() => setPreviewFile(null)}
+        >
+          <div
+            className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[80vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b">
+              <div className="flex items-center gap-2">
+                <FileText className="h-5 w-5 text-blue-600" />
+                <h3 className="font-semibold text-lg">
+                  {previewFile.filename}
+                </h3>
+                <Badge variant="secondary" className="text-xs">
+                  {previewFile.type.toUpperCase()}
+                </Badge>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setPreviewFile(null)}
+                className="h-8 w-8"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-auto p-6">
+              {previewFile.mode === "text" && (
+                <pre className="text-sm whitespace-pre-wrap font-mono bg-gray-50 p-4 rounded-lg border">
+                  {previewFile.content}
+                </pre>
+              )}
+              {previewFile.mode === "iframe" &&
+                previewFile.url &&
+                (["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp"].includes(
+                  previewFile.type,
+                ) ? (
+                  <div className="flex items-center justify-center">
+                    <img
+                      src={previewFile.url}
+                      alt={previewFile.filename}
+                      className="max-w-full max-h-[60vh] object-contain rounded"
+                    />
+                  </div>
+                ) : (
+                  <iframe
+                    src={previewFile.url}
+                    className="w-full h-[60vh] rounded border"
+                    title={previewFile.filename}
+                  />
+                ))}
+              {previewFile.mode === "download" && (
+                <div className="flex flex-col items-center justify-center gap-4 py-12">
+                  <FileText className="h-16 w-16 text-gray-400" />
+                  <p className="text-gray-600 text-center">
+                    {previewFile.content}
+                  </p>
+                  {previewFile.url && (
+                    <a
+                      href={previewFile.url}
+                      download={previewFile.filename}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                    >
+                      <Download className="h-4 w-4" />
+                      Download File
+                    </a>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t bg-gray-50 flex justify-end gap-2">
+              {previewFile.mode === "text" && (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    navigator.clipboard.writeText(previewFile.content);
+                    alert("Content copied to clipboard!");
+                  }}
+                >
+                  Copy to Clipboard
+                </Button>
+              )}
+              <Button onClick={() => setPreviewFile(null)}>Close</Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

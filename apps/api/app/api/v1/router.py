@@ -24,3 +24,14 @@ async def root():
     """Root endpoint"""
     return {"message": "Chatbot API v1"}
 
+
+@api_router.get("/sentry-debug")
+async def trigger_error():
+    """Test Sentry integration by triggering a division by zero error"""
+    # Import here to avoid circular imports if any
+    from app.core.logging import get_logger
+    logger = get_logger(__name__)
+    logger.info("Sentry debug endpoint reached - triggering artificial error")
+    division_by_zero = 1 / 0
+    return {"result": division_by_zero}
+

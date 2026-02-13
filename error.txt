@@ -98,3 +98,11 @@ i don't know about on Downgrading the plans, how to manage limits bec it's possi
 10:29:46 [o] DEBUG    | Skipping duplicate product name: Exclusive Look by Pankh
 
 recent activity deletion
+
+
+Code Flow:
+
+Dev: Volume mounts → hot reload works → local changes instant
+Prod: Code copied at build time → requires rebuild for updates
+
+after changes, site become very slow

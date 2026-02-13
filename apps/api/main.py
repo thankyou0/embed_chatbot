@@ -12,6 +12,7 @@ from app.core.config import settings
 from app.core.logging import get_logger, setup_uvicorn_logging
 from app.core.exceptions import APIException
 from app.core.error_sanitizer import sanitize_error_message
+from app.core.monitoring import init_sentry, capture_exception_with_context
 from app.core.database import check_database_connection
 from app.api.v1.router import api_router
 from sqlalchemy.exc import SQLAlchemyError, OperationalError, IntegrityError
@@ -123,6 +124,7 @@ def get_error_source() -> str:
 async def lifespan(app: FastAPI):
     # Startup
     setup_uvicorn_logging()
+    init_sentry()
     logger.info("Starting API server...")
 
     # Check database connection
@@ -169,6 +171,20 @@ async def api_exception_handler(request: Request, exc: APIException):
     """Handle custom API exceptions with clean logging."""
     source = f"{exc.source_file}:{exc.source_line}"
     logger.error(f"{exc.message}")
+    if exc.status_code >= 500:
+        capture_exception_with_context(
+            exc,
+            tags={
+                "component": "api_exception_handler",
+                "status_code": exc.status_code,
+                "method": request.method,
+                "path": request.url.path,
+            },
+            context={
+                "source": source,
+                "detail": exc.short_detail,
+            },
+        )
     safe_error = sanitize_error_message(exc.message, fallback="An error occurred")
     safe_detail = sanitize_error_message(exc.short_detail, fallback=safe_error)
 
@@ -201,6 +217,20 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
     source = get_user_source_from_traceback(tb) if tb else ""
 
     logger.error(f"{exc.detail}")
+    if exc.status_code >= 500:
+        capture_exception_with_context(
+            exc,
+            tags={
+                "component": "http_exception_handler",
+                "status_code": exc.status_code,
+                "method": request.method,
+                "path": request.url.path,
+            },
+            context={
+                "source": source,
+                "detail": exc.detail,
+            },
+        )
 
     safe_detail = sanitize_error_message(str(exc.detail), fallback="An error occurred")
     response_content = {
@@ -263,6 +293,18 @@ async def database_exception_handler(request: Request, exc: SQLAlchemyError):
     print(full_traceback, end="")
 
     error_msg = str(exc)
+    capture_exception_with_context(
+        exc,
+        tags={
+            "component": "database_exception_handler",
+            "method": request.method,
+            "path": request.url.path,
+        },
+        context={
+            "source": source,
+            "error_message": error_msg[:500],
+        },
+    )
 
     # Create user-friendly error messages
     if "password authentication failed" in error_msg.lower():
@@ -332,6 +374,19 @@ async def general_exception_handler(request: Request, exc: Exception):
     # Extract source from traceback (find actual error source, not infrastructure)
     tb = traceback.extract_tb(exc.__traceback__)
     source = get_user_source_from_traceback(tb)
+    capture_exception_with_context(
+        exc,
+        tags={
+            "component": "general_exception_handler",
+            "method": request.method,
+            "path": request.url.path,
+            "status_code": 500,
+        },
+        context={
+            "source": source,
+            "error_message": str(exc)[:500],
+        },
+    )
 
     # Log with actual source file
     if source:

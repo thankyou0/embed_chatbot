@@ -30,10 +30,11 @@ FROM base AS dependencies
 # Copy requirements (using root requirements.txt)
 COPY requirements.txt /app/requirements.txt
 
-# Install Python dependencies WITHOUT cache
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r /app/requirements.txt && \
-    rm -rf /root/.cache /tmp/*
+# Use BuildKit cache mount for pip to speed up repeated builds
+# This avoids re-downloading everything if only one package changes
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install --upgrade pip && \
+    pip install -r /app/requirements.txt
 
 # ---- Development Stage ----
 FROM dependencies AS development

@@ -216,6 +216,7 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const windowRef = useRef<HTMLDivElement>(null);
   const isAtBottomRef = useRef(true);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const apiUrl = config.apiUrl || "http://localhost:8000";
   const chatbotId = config.chatbotId;
@@ -678,8 +679,6 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
   };
 
   const sendMessage = async (messageText?: string) => {
-    if (isTyping) return;
-
     // Check if chatbot is paused (only for non-preview mode)
     if (!isPreview && widgetConfig?.is_paused) {
       return; // Do nothing if chatbot is paused
@@ -691,6 +690,25 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
       setError("Chatbot not configured");
       return;
     }
+
+    // If a previous stream is still running, abort it and finalize that message
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    // Finalize any in-progress assistant message
+    setMessages((prev: Message[]) => {
+      const newMessages = [...prev];
+      const lastMsg = newMessages[newMessages.length - 1];
+      if (lastMsg && lastMsg.role === "assistant" && lastMsg.isTyping) {
+        lastMsg.isTyping = false;
+        lastMsg.isWaitingForContent = false;
+        if (!lastMsg.content) {
+          lastMsg.content = "_(interrupted)_";
+        }
+      }
+      return newMessages;
+    });
 
     // Store image data before clearing
     const currentImagePreview = imagePreview;
@@ -753,11 +771,14 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
       }
 
       // Use streaming endpoint
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
       const response = await fetch(
         `${apiUrl}/api/v1/chat/${chatbotId}/message/stream`,
         {
           method: "POST",
           body: formData,
+          signal: controller.signal,
         },
       );
 
@@ -1048,10 +1069,16 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
         }
       }
 
+      abortControllerRef.current = null;
       setIsTyping(false);
       // Image already cleared at start of sendMessage
-    } catch (err) {
+    } catch (err: any) {
+      // If the request was aborted (user sent a new message), don't show error
+      if (err?.name === "AbortError") {
+        return;
+      }
       console.error("Failed to send message:", err);
+      abortControllerRef.current = null;
       setIsTyping(false);
       // Image already cleared at start of sendMessage
 
@@ -1070,8 +1097,7 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
   };
 
   const handleSuggestionClick = (suggestion: string) => {
-    if (isTyping) return;
-    // Fix #1: Scroll will happen inside sendMessage after adding user message
+    // Allow sending even while typing - previous stream will be aborted
     sendMessage(suggestion);
   };
 
@@ -1508,7 +1534,7 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                disabled={isTyping || (!isPreview && widgetConfig?.is_paused)}
+                disabled={!isPreview && widgetConfig?.is_paused}
                 className="chatbot-image-button"
                 title="Upload image"
               >
@@ -1536,17 +1562,16 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" && !isTyping) {
+                  if (e.key === "Enter") {
                     e.preventDefault();
                     sendMessage();
                   }
                 }}
-                disabled={isTyping || (!isPreview && widgetConfig?.is_paused)}
+                disabled={!isPreview && widgetConfig?.is_paused}
               />
               <button
                 type="button"
                 disabled={
-                  isTyping ||
                   (!inputValue.trim() && !selectedImage) ||
                   (!isPreview && widgetConfig?.is_paused)
                 }

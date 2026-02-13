@@ -305,7 +305,10 @@ export default function TeamPage() {
                   </DropdownMenu>
                 )}
                 {member.is_org_owner && member.id !== user?.id && (
-                  <div className="w-10 h-10" /> {/* Placeholder to maintain alignment */}
+                  <>
+                    {/* Placeholder to maintain alignment */}
+                    <div className="w-10 h-10" />
+                  </>
                 )}
               </div>
             </CardContent>

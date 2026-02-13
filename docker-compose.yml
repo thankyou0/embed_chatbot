@@ -132,7 +132,6 @@
 # ============================================
 # Usage: docker-compose up -d
 # ============================================
-version: "3.8"
 
 services:
   postgres:
@@ -180,12 +179,19 @@ services:
     env_file:
       - .env
     volumes:
-      - ./apps/api:/app
+      # Only mount the app code, not requirements (to avoid reinstalls)
+      - ./apps/api/app:/app/app
+      - ./apps/api/main.py:/app/main.py
+      - ./apps/api/alembic:/app/alembic
+      - ./apps/api/alembic.ini:/app/alembic.ini
       - api_uploads:/app/uploads
     environment:
       DATABASE_URL: postgresql+asyncpg://postgres:post@postgres:5432/embed_chatbot
       REDIS_URL: redis://redis:6379/0
       CORS_ORIGINS: '["http://localhost:3000","http://localhost:3001","*","http://127.0.0.1:3000","http://127.0.0.1:3001","http://127.0.0.1:3005"]'
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-development}
+      SENTRY_TRACES_SAMPLE_RATE: ${SENTRY_TRACES_SAMPLE_RATE:-0.1}
     depends_on:
       postgres:
         condition: service_healthy
@@ -203,13 +209,17 @@ services:
     ports:
       - "3000:3000"
     volumes:
+      # Mount source code but exclude node_modules
       - ./apps/web:/app/apps/web
       - ./packages:/app/packages
-      # Preserve node_modules from build
-      - web_node_modules:/app/apps/web/node_modules
-      - root_node_modules:/app/node_modules
+      # Named volumes preserve installed node_modules from build
+      - /app/node_modules
+      - /app/apps/web/node_modules
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:8000
+      NEXT_PUBLIC_SENTRY_DSN: ${NEXT_PUBLIC_SENTRY_DSN:-}
+      NEXT_PUBLIC_SENTRY_ENVIRONMENT: ${NEXT_PUBLIC_SENTRY_ENVIRONMENT:-development}
+      SENTRY_DSN: ${SENTRY_DSN:-}
     depends_on:
       - api
     networks:
@@ -224,11 +234,12 @@ services:
     ports:
       - "3001:3001"
     volumes:
+      # Mount source code but exclude node_modules
       - ./apps/widget:/app/apps/widget
       - ./packages:/app/packages
-      # Preserve node_modules from build
-      - widget_node_modules:/app/apps/widget/node_modules
-      - root_node_modules:/app/node_modules
+      # Anonymous volumes preserve installed node_modules
+      - /app/node_modules
+      - /app/apps/widget/node_modules
     environment:
       VITE_PUBLIC_API_URL: http://localhost:8000
     depends_on:
@@ -240,10 +251,6 @@ volumes:
   postgres_data:
   redis_data:
   api_uploads:
-  # Add these volumes to preserve node_modules
-  web_node_modules:
-  widget_node_modules:
-  root_node_modules:
 
 networks:
   chatbot_network:

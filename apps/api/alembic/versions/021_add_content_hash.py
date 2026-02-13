@@ -1,7 +1,7 @@
 """add content_hash to uploaded_files
 
-Revision ID: f21b34c56d78
-Revises: 96f9c273fa63, e1c9b8c7d6a5
+Revision ID: 021_add_content_hash
+Revises: 020_add_processing_status
 Create Date: 2026-01-29 16:15:00.000000
 
 """
@@ -12,8 +12,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'f21b34c56d78'
-down_revision: Union[str, tuple, None] = ('96f9c273fa63', 'e1c9b8c7d6a5')
+revision: str = '021_add_content_hash'
+down_revision: Union[str, None] = '020_add_processing_status'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

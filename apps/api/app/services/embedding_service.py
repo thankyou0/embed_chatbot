@@ -17,6 +17,7 @@ from app.core.database import get_session_factory
 from app.core.config import settings
 from app.core.logging import get_logger
 from app.core.error_sanitizer import sanitize_error_message
+from app.core.monitoring import capture_exception_with_context
 
 logger = get_logger(__name__)
 
@@ -107,6 +108,18 @@ async def get_embeddings_from_api(
 
             # If we're out of retries or it's not a timeout, raise the error
             logger.error(f"HuggingFace API error: {e}")
+            capture_exception_with_context(
+                e,
+                tags={
+                    "component": "embedding_api",
+                    "provider": "huggingface",
+                },
+                context={
+                    "model": model,
+                    "batch_size": len(texts),
+                    "attempt": attempt + 1,
+                },
+            )
             public_message = sanitize_error_message(
                 str(e),
                 fallback="Embedding service is temporarily unavailable. Please try again shortly.",
@@ -215,7 +228,7 @@ class EmbeddingService:
                         and current_error
                         and any(
                             keyword in current_error.lower()
-                            for keyword in ["quota", "limit"]
+                            for keyword in ["quota", "limit", "stopped"]
                         )
                     ):
                         allow_processing_status = False
@@ -428,7 +441,7 @@ class EmbeddingService:
 
                 if current_error_msg and any(
                     keyword in current_error_msg.lower()
-                    for keyword in ["quota", "limit"]
+                    for keyword in ["quota", "limit", "stopped"]
                 ):
                     update_values["error_message"] = current_error_msg
                 else:
@@ -450,6 +463,20 @@ class EmbeddingService:
                 raw_error = str(e)
                 logger.error(
                     f"Error in embedding pipeline for KS {knowledge_source_id}: {raw_error}"
+                )
+                capture_exception_with_context(
+                    e,
+                    tags={
+                        "component": "embedding_pipeline",
+                        "source_type": "knowledge_source",
+                    },
+                    context={
+                        "knowledge_source_id": str(knowledge_source_id),
+                        "chatbot_id": (
+                            str(ks.chatbot_id) if "ks" in locals() and ks else None
+                        ),
+                        "error_message": raw_error[:500],
+                    },
                 )
                 await db.rollback()
                 public_error = sanitize_error_message(
@@ -499,6 +526,17 @@ class EmbeddingService:
                 except Exception as update_error:
                     logger.error(
                         f"Failed to update knowledge source status: {update_error}"
+                    )
+                    capture_exception_with_context(
+                        update_error,
+                        tags={
+                            "component": "embedding_pipeline_update",
+                            "source_type": "knowledge_source",
+                        },
+                        context={
+                            "knowledge_source_id": str(knowledge_source_id),
+                            "error_message": str(update_error)[:500],
+                        },
                     )
                     await db.rollback()
 
@@ -560,6 +598,14 @@ class EmbeddingService:
 
             except Exception as e:
                 logger.error(f"Error re-embedding QA pair {qa_id}: {e}")
+                capture_exception_with_context(
+                    e,
+                    tags={
+                        "component": "qa_reembedding",
+                        "source_type": "qa_pair",
+                    },
+                    context={"qa_id": str(qa_id)},
+                )
                 await db.rollback()
 
     @staticmethod
@@ -607,4 +653,12 @@ class EmbeddingService:
 
             except Exception as e:
                 logger.error(f"Error cleaning up embeddings for removed pages: {e}")
+                capture_exception_with_context(
+                    e,
+                    tags={
+                        "component": "removed_embeddings_cleanup",
+                        "source_type": "crawled_url",
+                    },
+                    context={"knowledge_source_id": str(knowledge_source_id)},
+                )
                 await db.rollback()

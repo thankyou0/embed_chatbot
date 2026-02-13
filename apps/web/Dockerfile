@@ -18,11 +18,41 @@ WORKDIR /app
 
 ENV NODE_ENV=development
 ENV NEXT_TELEMETRY_DISABLED=1
-# Enable polling for file watching on Windows/Docker
-ENV WATCHPACK_POLLING=true
-ENV CHOKIDAR_USEPOLLING=true
+# Disable polling - use inotify for better performance
+# If file watching doesn't work, enable polling per-user basis
+ENV WATCHPACK_POLLING=false
+ENV CHOKIDAR_USEPOLLING=false
 
 EXPOSE 3000
 
 # Check if node_modules exist in named volume, if not install them, then run dev server
 CMD sh -c "if [ ! -d '/app/apps/web/node_modules/next' ]; then echo 'Installing dependencies in named volume (first run only)...' && cd /app && pnpm install --no-frozen-lockfile; fi && pnpm --filter @chatbot/web dev"
+
+# ============================================
+# Production Stage — Next.js standalone build
+# ============================================
+FROM development AS build
+
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+
+WORKDIR /app/apps/web
+RUN pnpm build
+
+FROM node:18-alpine AS production
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Copy standalone output (includes server + minimal deps)
+COPY --from=build /app/apps/web/.next/standalone ./
+COPY --from=build /app/apps/web/.next/static ./apps/web/.next/static
+COPY --from=build /app/apps/web/public ./apps/web/public
+
+EXPOSE 3000
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+
+CMD ["node", "apps/web/server.js"]

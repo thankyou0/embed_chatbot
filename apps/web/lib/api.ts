@@ -1,3 +1,5 @@
+import * as Sentry from "@sentry/nextjs"
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
 export interface ApiError {
@@ -35,6 +37,19 @@ export async function apiRequest<T>(
       detail: 'An error occurred',
     }))
     const message = getSafeErrorMessage(error, response.status)
+    if (response.status >= 500) {
+      Sentry.captureException(new Error(message), {
+        tags: {
+          component: "api_request",
+          status_code: String(response.status),
+        },
+        extra: {
+          endpoint,
+          detail: error.detail,
+          error: error.error,
+        },
+      })
+    }
     throw new Error(message)
   }
 

@@ -18,12 +18,20 @@ def load_env_file():
         load_dotenv(docker_env)
         return
 
-    # Project root (embed_chatbot/.env) - local development
-    project_root = Path(__file__).resolve().parents[3]
-    project_env = project_root / ".env"
-    if project_env.exists():
-        load_dotenv(project_env)
-        return
+    # Try multiple paths for local development
+    current_file = Path(__file__).resolve()
+
+    # Try going up different levels to find .env
+    for i in range(1, 5):
+        try:
+            potential_root = current_file.parents[i]
+            env_path = potential_root / ".env"
+            if env_path.exists():
+                load_dotenv(env_path)
+                return
+        except IndexError:
+            # Reached root without finding .env
+            break
 
     # Fallback: load from current directory or environment
     load_dotenv()
@@ -98,12 +106,12 @@ async def run_async_migrations() -> None:
     """
     # Get configuration section and ensure URL is set
     configuration = config.get_section(config.config_ini_section, {})
-    
+
     # If DATABASE_URL is in environment, use it directly
     database_url = os.getenv("DATABASE_URL")
     if database_url:
         configuration["sqlalchemy.url"] = database_url
-    
+
     connectable = async_engine_from_config(
         configuration,
         prefix="sqlalchemy.",
@@ -126,4 +134,3 @@ if context.is_offline_mode():
     run_migrations_offline()
 else:
     run_migrations_online()
-

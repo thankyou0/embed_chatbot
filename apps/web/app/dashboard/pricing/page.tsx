@@ -61,6 +61,8 @@ export default function PricingPage() {
     "monthly",
   );
   const [error, setError] = useState<string | null>(null);
+  const [upgradingPlan, setUpgradingPlan] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchPlans = async () => {
@@ -88,6 +90,41 @@ export default function PricingPage() {
 
     fetchPlans();
   }, []);
+
+  const handleUpgrade = async (planName: string) => {
+    try {
+      setUpgradingPlan(planName);
+      setError(null);
+      setSuccessMessage(null);
+      const token = getAccessToken();
+      if (!token) return;
+
+      const response = await apiRequestWithAuth<{
+        success: boolean;
+        message: string;
+        subscription: any;
+      }>("/api/v1/billing/change-plan", token, {
+        method: "POST",
+        body: JSON.stringify({
+          new_plan: planName.toLowerCase(),
+          billing_cycle: billingCycle,
+        }),
+      });
+
+      if (response.success) {
+        setCurrentPlan(planName.toLowerCase());
+        setSuccessMessage(
+          response.message || `Successfully upgraded to ${planName}!`,
+        );
+        // Clear success message after 5 seconds
+        setTimeout(() => setSuccessMessage(null), 5000);
+      }
+    } catch (err: any) {
+      setError(err.message || `Failed to upgrade to ${planName}`);
+    } finally {
+      setUpgradingPlan(null);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -117,6 +154,20 @@ export default function PricingPage() {
               <div>
                 <p className="font-medium text-red-900">Error</p>
                 <p className="text-sm text-red-800">{error}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {successMessage && (
+        <Card className="border-green-200 bg-green-50">
+          <CardContent className="pt-6">
+            <div className="flex items-start space-x-3">
+              <Check className="h-5 w-5 text-green-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-medium text-green-900">Success</p>
+                <p className="text-sm text-green-800">{successMessage}</p>
               </div>
             </div>
           </CardContent>
@@ -233,9 +284,22 @@ export default function PricingPage() {
                       Current Plan
                     </Button>
                   ) : (
-                    <Button className="w-full mt-4">
-                      Upgrade Now
-                      <ArrowRight className="ml-2 h-4 w-4" />
+                    <Button
+                      className="w-full mt-4"
+                      disabled={!!upgradingPlan}
+                      onClick={() => handleUpgrade(plan.name)}
+                    >
+                      {upgradingPlan === plan.name ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Upgrading...
+                        </>
+                      ) : (
+                        <>
+                          Upgrade Now
+                          <ArrowRight className="ml-2 h-4 w-4" />
+                        </>
+                      )}
                     </Button>
                   )}
                 </CardHeader>
