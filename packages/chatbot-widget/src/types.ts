@@ -35,6 +35,13 @@ export interface ChatbotConfig {
   welcomeMessage?: string | null;
   initialSuggestions?: string[];
   showBranding?: boolean;
+  // Personality customization
+  personalityTone?: "formal" | "casual" | "friendly" | "professional";
+  responseLength?: "concise" | "balanced" | "detailed";
+  temperature?: number;
+  customInstructions?: string | null;
+  // Language settings
+  language?: "en" | "hi" | "gu";
   theme?: {
     primaryColor?: string;
     position?: "bottom-right" | "bottom-left";

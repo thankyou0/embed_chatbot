@@ -10,7 +10,6 @@ import {
   ChevronRight,
   Settings,
   Eye,
-  Loader2,
   Database,
   Palette,
   MessageSquare,
@@ -41,6 +40,13 @@ import {
   Download,
   ChevronLeft,
 } from "lucide-react";
+import {
+  PageLoader,
+  SectionLoader,
+  ButtonSpinner,
+  InlineSpinner,
+  OverlayLoader,
+} from "@/components/ui/loading";
 import { Button } from "@/components/ui/button";
 import { CrawlScheduleModal } from "@/components/dashboard/CrawlScheduleModal";
 import {
@@ -181,6 +187,20 @@ const appearanceSchema = z.object({
   welcome_message: z.string().nullable(),
   initial_suggestions: z.array(z.string()),
   show_branding: z.boolean(),
+  // Personality customization
+  personality_tone: z
+    .enum(["formal", "casual", "friendly", "professional"])
+    .default("friendly"),
+  response_length: z
+    .enum(["concise", "balanced", "detailed"])
+    .default("balanced"),
+  temperature: z.number().min(0).max(1).default(0.7),
+  custom_instructions: z.string().nullable().optional(),
+  // Language settings — multi-select
+  languages: z
+    .array(z.enum(["en", "hi", "gu"]))
+    .min(1, "At least one language must be selected")
+    .default(["en"]),
 });
 
 type AppearanceFormData = z.infer<typeof appearanceSchema>;
@@ -318,6 +338,13 @@ export default function ChatbotDetailPage() {
       welcome_message: "Hi! How can I help you today?",
       initial_suggestions: [],
       show_branding: true,
+      // Personality customization
+      personality_tone: "friendly",
+      response_length: "balanced",
+      temperature: 0.7,
+      custom_instructions: null,
+      // Language settings
+      languages: ["en"],
     },
   });
 
@@ -367,6 +394,26 @@ export default function ChatbotDetailPage() {
     name: "show_branding",
     defaultValue: true,
   });
+  const watchedPersonalityTone = useWatch({
+    control,
+    name: "personality_tone",
+    defaultValue: "friendly",
+  });
+  const watchedResponseLength = useWatch({
+    control,
+    name: "response_length",
+    defaultValue: "balanced",
+  });
+  const watchedTemperature = useWatch({
+    control,
+    name: "temperature",
+    defaultValue: 0.7,
+  });
+  const watchedLanguages = useWatch({
+    control,
+    name: "languages",
+    defaultValue: ["en"],
+  });
 
   // Create watched values object for widget preview
   const watchedAppearanceValues = {
@@ -380,6 +427,10 @@ export default function ChatbotDetailPage() {
     initial_suggestions: watchedInitialSuggestions ?? [],
     show_branding:
       watchedShowBranding !== undefined ? watchedShowBranding : true,
+    personality_tone: watchedPersonalityTone ?? "friendly",
+    response_length: watchedResponseLength ?? "balanced",
+    temperature: watchedTemperature ?? 0.7,
+    language: watchedLanguages?.[0] ?? "en",
   };
 
   const formData = watch();
@@ -1009,15 +1060,25 @@ export default function ChatbotDetailPage() {
         { method: "POST" },
       );
 
+      // Optimistically update source status to "processing" (embeddings are being created)
+      setKnowledgeSources((prev) =>
+        prev.map((s) =>
+          s.id === sourceId ? { ...s, status: "processing" as const } : s,
+        ),
+      );
+
       setToastMessage({
-        type: "info",
-        message: "Crawl stop requested. Pages crawled so far will be saved.",
+        type: "success",
+        message: "Crawl stopped. Processing crawled pages...",
       });
 
       // Refresh after a short delay to get updated status
       setTimeout(() => fetchKnowledgeSources(false), 2000);
     } catch (err: any) {
-      alert(err.message || "Failed to stop crawl");
+      setToastMessage({
+        type: "error",
+        message: err.message || "Failed to stop crawl",
+      });
     }
   };
 
@@ -1453,21 +1514,17 @@ export default function ChatbotDetailPage() {
   };
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-      </div>
-    );
+    return <PageLoader />;
   }
 
   if (error || !chatbot) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          <h2 className="text-2xl font-bold text-foreground mb-2">
             {error?.includes("404") ? "Chatbot Not Found" : "Access Denied"}
           </h2>
-          <p className="text-gray-600 mb-4">
+          <p className="text-muted-foreground mb-4">
             {error || "You don't have permission to view this chatbot."}
           </p>
           <Button onClick={() => router.push("/dashboard/chatbots")}>
@@ -1543,12 +1600,12 @@ export default function ChatbotDetailPage() {
       {/* Toast Notification */}
       {toastMessage && (
         <div
-          className={`fixed top-4 right-4 z-50 max-w-md px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 animate-in slide-in-from-top-2 ${
+          className={`fixed top-4 right-4 z-50 max-w-md px-4 py-3 rounded-lg shadow-lg border flex items-center gap-3 animate-in slide-in-from-top-2 ${
             toastMessage.type === "error"
-              ? "bg-red-100 border border-red-300 text-red-800"
+              ? "bg-red-50 border-red-200 text-red-800"
               : toastMessage.type === "success"
-                ? "bg-green-100 border border-green-300 text-green-800"
-                : "bg-blue-100 border border-blue-300 text-blue-800"
+                ? "bg-emerald-50 border-emerald-200 text-emerald-800"
+                : "bg-blue-50 border-blue-200 text-blue-800"
           }`}
         >
           {toastMessage.type === "error" && (
@@ -1574,7 +1631,7 @@ export default function ChatbotDetailPage() {
       <div className="flex items-center justify-between max-w-4xl">
         <div className="space-y-1">
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-gray-900">
+            <h1 className="text-2xl font-bold">
               <Link
                 href="/dashboard/chatbots"
                 className="text-muted-foreground hover:text-foreground transition-colors"
@@ -1582,15 +1639,17 @@ export default function ChatbotDetailPage() {
                 Chatbots
               </Link>
               <ChevronRight className="h-4 w-4 inline-block mx-2 text-muted-foreground" />
-              <span>{chatbot.name}</span>
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
+                {chatbot.name}
+              </span>
             </h1>
             <Badge
               variant={
                 chatbot.status === "active"
-                  ? "success"
+                  ? "active"
                   : chatbot.status === "paused"
-                    ? "warning"
-                    : "secondary"
+                    ? "paused"
+                    : "draft"
               }
             >
               {chatbot.status.charAt(0).toUpperCase() + chatbot.status.slice(1)}
@@ -1600,7 +1659,9 @@ export default function ChatbotDetailPage() {
             </Badge>
           </div>
           {chatbot.description && (
-            <p className="text-gray-600 text-sm">{chatbot.description}</p>
+            <p className="text-muted-foreground text-sm">
+              {chatbot.description}
+            </p>
           )}
         </div>
       </div>
@@ -1657,7 +1718,9 @@ export default function ChatbotDetailPage() {
                   className="flex items-center gap-2"
                 >
                   <Palette className="h-4 w-4" />
-                  <span className="hidden sm:inline">Appearance</span>
+                  <span className="hidden sm:inline">
+                    Appearance & Behavior
+                  </span>
                 </TabsTrigger>
               )}
               <TabsTrigger value="install" className="flex items-center gap-2">
@@ -1681,15 +1744,17 @@ export default function ChatbotDetailPage() {
         <TabsContent value="overview" className="space-y-6">
           {/* Quick Stats */}
           <div className="grid gap-4 md:grid-cols-3">
-            <Card>
+            <Card className="border-l-4 border-l-indigo-500">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
                   Total Conversations
                 </CardTitle>
-                <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                <div className="p-2 rounded-lg bg-indigo-50">
+                  <MessageSquare className="h-4 w-4 text-indigo-600" />
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">
+                <div className="text-2xl font-bold text-indigo-600">
                   {stats?.total_conversations || 0}
                 </div>
                 <p className="text-xs text-muted-foreground">
@@ -1701,17 +1766,19 @@ export default function ChatbotDetailPage() {
             </Card>
 
             <Card
-              className="cursor-pointer hover:bg-muted/50 transition-colors"
+              className="cursor-pointer hover:bg-muted/50 transition-colors border-l-4 border-l-emerald-500"
               onClick={() => setActiveTab("knowledge")}
             >
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
                   Knowledge Sources
                 </CardTitle>
-                <Database className="h-4 w-4 text-muted-foreground" />
+                <div className="p-2 rounded-lg bg-emerald-50">
+                  <Database className="h-4 w-4 text-emerald-600" />
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">
+                <div className="text-2xl font-bold text-emerald-600">
                   {stats?.total_knowledge_sources || 0}
                 </div>
                 <p className="text-xs text-muted-foreground">
@@ -1723,15 +1790,17 @@ export default function ChatbotDetailPage() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="border-l-4 border-l-purple-500">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
                   Knowledge Base Size
                 </CardTitle>
-                <Database className="h-4 w-4 text-muted-foreground" />
+                <div className="p-2 rounded-lg bg-purple-50">
+                  <Database className="h-4 w-4 text-purple-600" />
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">
+                <div className="text-2xl font-bold text-purple-600">
                   {stats?.total_kb_size
                     ? stats.total_kb_size >= 1024 * 1024
                       ? `${(stats.total_kb_size / (1024 * 1024)).toFixed(2)} MB`
@@ -1826,7 +1895,7 @@ export default function ChatbotDetailPage() {
                   disabled={isExportingRecentActivity}
                 >
                   {isExportingRecentActivity ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    <InlineSpinner size="sm" className="mr-2" />
                   ) : (
                     <Download className="h-4 w-4 mr-2" />
                   )}
@@ -1859,12 +1928,12 @@ export default function ChatbotDetailPage() {
                             className={cn(
                               "mt-1 p-1.5 rounded-full",
                               item.type === "knowledge_source"
-                                ? "bg-blue-100 text-blue-600"
+                                ? "bg-indigo-50 text-indigo-600"
                                 : item.type === "conversation"
-                                  ? "bg-green-100 text-green-600"
+                                  ? "bg-emerald-50 text-emerald-600"
                                   : isTeamActivity
-                                    ? "bg-purple-100 text-purple-600"
-                                    : "bg-gray-100 text-gray-600",
+                                    ? "bg-purple-50 text-purple-600"
+                                    : "bg-slate-100 text-slate-600",
                             )}
                           >
                             {item.type === "knowledge_source" ? (
@@ -1878,7 +1947,7 @@ export default function ChatbotDetailPage() {
                             )}
                           </div>
                           <div className="flex-1 space-y-0.5">
-                            <p className="font-medium text-gray-900">
+                            <p className="font-medium text-foreground">
                               {item.description}
                             </p>
                             <p className="text-xs text-muted-foreground">
@@ -1962,11 +2031,7 @@ export default function ChatbotDetailPage() {
                   </div>
                 )}
                 {isLoadingRecentActivity && recentActivity.length > 0 && (
-                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <div className="rounded-md bg-background/80 px-3 py-2 border shadow-sm">
-                      <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
-                    </div>
-                  </div>
+                  <OverlayLoader />
                 )}
               </div>
             </CardContent>
@@ -2062,7 +2127,7 @@ export default function ChatbotDetailPage() {
                           >
                             {isCrawling ? (
                               <>
-                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                <ButtonSpinner />
                                 Starting...
                               </>
                             ) : (
@@ -2113,7 +2178,7 @@ export default function ChatbotDetailPage() {
                           >
                             {isUploading ? (
                               <>
-                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                <ButtonSpinner />
                                 Uploading...
                               </>
                             ) : (
@@ -2267,9 +2332,7 @@ export default function ChatbotDetailPage() {
                 </TabsList>
 
                 {isLoadingKnowledge ? (
-                  <div className="flex justify-center py-12">
-                    <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-                  </div>
+                  <SectionLoader minHeight="min-h-[200px]" />
                 ) : (
                   <>
                     {/* Crawl Tab Content */}
@@ -2455,7 +2518,7 @@ export default function ChatbotDetailPage() {
                                   >
                                     {loadingPreviewFileId ===
                                     source.files?.[0]?.id ? (
-                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                      <InlineSpinner size="sm" />
                                     ) : (
                                       <>
                                         <Eye className="h-4 w-4 mr-1" />
@@ -2473,7 +2536,7 @@ export default function ChatbotDetailPage() {
                                   title="Delete file"
                                 >
                                   {deletingFileId === source.id ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    <InlineSpinner size="sm" />
                                   ) : (
                                     <Trash2 className="h-4 w-4" />
                                   )}
@@ -2485,7 +2548,9 @@ export default function ChatbotDetailPage() {
                       ) : (
                         <div className="text-center py-12 border-2 border-dashed rounded-xl">
                           <FileText className="h-12 w-12 mx-auto text-gray-300 mb-3" />
-                          <p className="text-gray-500">No files uploaded yet</p>
+                          <p className="text-muted-foreground">
+                            No files uploaded yet
+                          </p>
                           <Button
                             variant="link"
                             onClick={() => {
@@ -2649,8 +2714,8 @@ export default function ChatbotDetailPage() {
                                 ) {
                                   return (
                                     <div className="text-center py-12 border-2 border-dashed rounded-xl">
-                                      <MessageSquare className="h-12 w-12 mx-auto text-gray-300 mb-3" />
-                                      <p className="text-gray-500">
+                                      <MessageSquare className="h-12 w-12 mx-auto text-muted-foreground/40 mb-3" />
+                                      <p className="text-muted-foreground">
                                         No Q&A pairs added
                                       </p>
                                       <Button
@@ -3099,69 +3164,355 @@ export default function ChatbotDetailPage() {
                       </div>
                     </div>
 
-                    <div className="flex items-center space-x-2">
-                      <Switch
-                        id="show_branding"
-                        checked={formData.show_branding}
-                        onCheckedChange={(checked) =>
-                          setValue("show_branding", checked, {
-                            shouldDirty: true,
-                          })
-                        }
-                      />
-                      <Label htmlFor="show_branding">Show branding</Label>
+                    {/* Initial Suggestions - merged into general settings */}
+                    <div className="pt-4 border-t">
+                      <Label className="text-sm font-medium">
+                        Initial Suggestions
+                      </Label>
+                      <p className="text-xs text-muted-foreground mt-0.5 mb-2">
+                        Suggested questions shown when users open the chat.
+                        {watchedLanguages &&
+                          watchedLanguages.some((l: string) => l !== "en") && (
+                            <span className="block mt-1 text-amber-600 dark:text-amber-400 font-medium">
+                              Tip: Write suggestions in{" "}
+                              {watchedLanguages
+                                .filter((l: string) => l !== "en")
+                                .map((l: string) =>
+                                  l === "hi" ? "Hindi" : "Gujarati",
+                                )
+                                .join(" and ")}{" "}
+                              to match your selected languages.
+                            </span>
+                          )}
+                      </p>
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="Add a suggestion..."
+                          value={newSuggestion}
+                          onChange={(e) => setNewSuggestion(e.target.value)}
+                          onKeyPress={(e) =>
+                            e.key === "Enter" &&
+                            (e.preventDefault(), handleAddSuggestion())
+                          }
+                        />
+                        <Button
+                          type="button"
+                          onClick={handleAddSuggestion}
+                          size="sm"
+                        >
+                          Add
+                        </Button>
+                      </div>
+                      {(formData.initial_suggestions || []).length > 0 && (
+                        <div className="space-y-2 mt-2">
+                          {(formData.initial_suggestions || []).map(
+                            (suggestion, index) => (
+                              <div
+                                key={index}
+                                className="flex items-center justify-between p-2 bg-muted rounded"
+                              >
+                                <span className="text-sm">{suggestion}</span>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleRemoveSuggestion(index)}
+                                  className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
+                                >
+                                  ×
+                                </Button>
+                              </div>
+                            ),
+                          )}
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
 
-                {/* Initial Suggestions */}
+                {/* Personality & Behavior */}
                 <Card>
                   <CardHeader>
-                    <CardTitle>Initial Suggestions</CardTitle>
+                    <CardTitle>Personality & Behavior</CardTitle>
                     <CardDescription>
-                      Suggested questions to help users start conversations
+                      Customize how your chatbot responds
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="flex gap-2">
-                      <Input
-                        placeholder="Add a suggestion..."
-                        value={newSuggestion}
-                        onChange={(e) => setNewSuggestion(e.target.value)}
-                        onKeyPress={(e) =>
-                          e.key === "Enter" &&
-                          (e.preventDefault(), handleAddSuggestion())
-                        }
+                    <div>
+                      <Label htmlFor="personality_tone">
+                        Conversation Tone
+                      </Label>
+                      <Controller
+                        name="personality_tone"
+                        control={control}
+                        render={({ field }) => (
+                          <RadioGroup
+                            value={field.value}
+                            onValueChange={(value) => {
+                              field.onChange(value);
+                              setValue(
+                                "personality_tone",
+                                value as
+                                  | "formal"
+                                  | "casual"
+                                  | "friendly"
+                                  | "professional",
+                                { shouldDirty: true },
+                              );
+                            }}
+                            className="grid grid-cols-2 gap-4 mt-2"
+                          >
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem
+                                value="friendly"
+                                id="tone-friendly"
+                              />
+                              <Label
+                                htmlFor="tone-friendly"
+                                className="cursor-pointer"
+                              >
+                                Friendly & Warm
+                              </Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem
+                                value="professional"
+                                id="tone-professional"
+                              />
+                              <Label
+                                htmlFor="tone-professional"
+                                className="cursor-pointer"
+                              >
+                                Professional
+                              </Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="casual" id="tone-casual" />
+                              <Label
+                                htmlFor="tone-casual"
+                                className="cursor-pointer"
+                              >
+                                Casual & Relaxed
+                              </Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="formal" id="tone-formal" />
+                              <Label
+                                htmlFor="tone-formal"
+                                className="cursor-pointer"
+                              >
+                                Formal
+                              </Label>
+                            </div>
+                          </RadioGroup>
+                        )}
                       />
-                      <Button
-                        type="button"
-                        onClick={handleAddSuggestion}
-                        size="sm"
-                      >
-                        Add
-                      </Button>
                     </div>
 
-                    <div className="space-y-2">
-                      {(formData.initial_suggestions || []).map(
-                        (suggestion, index) => (
-                          <div
-                            key={index}
-                            className="flex items-center justify-between p-2 bg-muted rounded"
+                    <div>
+                      <Label htmlFor="response_length">Response Length</Label>
+                      <Controller
+                        name="response_length"
+                        control={control}
+                        render={({ field }) => (
+                          <RadioGroup
+                            value={field.value}
+                            onValueChange={(value) => {
+                              field.onChange(value);
+                              setValue(
+                                "response_length",
+                                value as "concise" | "balanced" | "detailed",
+                                { shouldDirty: true },
+                              );
+                            }}
+                            className="flex gap-4 mt-2"
                           >
-                            <span className="text-sm">{suggestion}</span>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleRemoveSuggestion(index)}
-                              className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
-                            >
-                              ×
-                            </Button>
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem
+                                value="concise"
+                                id="length-concise"
+                              />
+                              <Label
+                                htmlFor="length-concise"
+                                className="cursor-pointer"
+                              >
+                                Concise
+                              </Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem
+                                value="balanced"
+                                id="length-balanced"
+                              />
+                              <Label
+                                htmlFor="length-balanced"
+                                className="cursor-pointer"
+                              >
+                                Balanced
+                              </Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem
+                                value="detailed"
+                                id="length-detailed"
+                              />
+                              <Label
+                                htmlFor="length-detailed"
+                                className="cursor-pointer"
+                              >
+                                Detailed
+                              </Label>
+                            </div>
+                          </RadioGroup>
+                        )}
+                      />
+                    </div>
+
+                    <div>
+                      <Label>Supported Languages</Label>
+                      <p className="text-xs text-muted-foreground mt-0.5 mb-2">
+                        Select which languages your chatbot should respond in.
+                        Users can chat in any selected language. At least one
+                        must be selected.
+                      </p>
+                      <Controller
+                        name="languages"
+                        control={control}
+                        render={({ field }) => {
+                          const currentLangs: string[] = field.value || ["en"];
+                          const toggleLanguage = (lang: string) => {
+                            let newLangs: string[];
+                            if (currentLangs.includes(lang)) {
+                              // Prevent unchecking the last language
+                              if (currentLangs.length <= 1) return;
+                              newLangs = currentLangs.filter((l) => l !== lang);
+                            } else {
+                              newLangs = [...currentLangs, lang];
+                            }
+                            field.onChange(newLangs);
+                            setValue(
+                              "languages",
+                              newLangs as ("en" | "hi" | "gu")[],
+                              {
+                                shouldDirty: true,
+                              },
+                            );
+                          };
+                          return (
+                            <div className="flex flex-col gap-3 mt-2">
+                              {[
+                                {
+                                  code: "en",
+                                  label: "English",
+                                  desc: "Respond in English",
+                                },
+                                {
+                                  code: "hi",
+                                  label: "हिंदी (Hindi)",
+                                  desc: "Respond in Hindi + romanized Hindi",
+                                },
+                                {
+                                  code: "gu",
+                                  label: "ગુજરાતી (Gujarati)",
+                                  desc: "Respond in Gujarati + romanized Gujarati",
+                                },
+                              ].map((lang) => (
+                                <label
+                                  key={lang.code}
+                                  className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                                    currentLangs.includes(lang.code)
+                                      ? "border-indigo-500 bg-indigo-50/50 dark:bg-indigo-900/20"
+                                      : "border-border hover:border-muted-foreground/30"
+                                  }`}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={currentLangs.includes(lang.code)}
+                                    onChange={() => toggleLanguage(lang.code)}
+                                    className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                  />
+                                  <div>
+                                    <span className="text-sm font-medium">
+                                      {lang.label}
+                                    </span>
+                                    <span className="block text-xs text-muted-foreground">
+                                      {lang.desc}
+                                    </span>
+                                  </div>
+                                </label>
+                              ))}
+                              {currentLangs.length > 1 && (
+                                <p className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
+                                  💡 Your bot will auto-detect the user&apos;s
+                                  language and respond accordingly. It also
+                                  supports &quot;WhatsApp-style&quot; messages
+                                  (e.g., &quot;mane products batav&quot; in
+                                  romanized Gujarati). Languages not selected
+                                  will be politely declined.
+                                </p>
+                              )}
+                            </div>
+                          );
+                        }}
+                      />
+                    </div>
+
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="temperature">
+                          Creativity Level (Temperature)
+                        </Label>
+                        <span className="text-sm text-muted-foreground">
+                          {formData.temperature?.toFixed(1) || "0.7"}
+                        </span>
+                      </div>
+                      <Controller
+                        name="temperature"
+                        control={control}
+                        render={({ field }) => (
+                          <div className="mt-2">
+                            <input
+                              type="range"
+                              id="temperature"
+                              min="0"
+                              max="1"
+                              step="0.1"
+                              value={field.value ?? 0.7}
+                              onChange={(e) => {
+                                const value = parseFloat(e.target.value);
+                                field.onChange(value);
+                                setValue("temperature", value, {
+                                  shouldDirty: true,
+                                });
+                              }}
+                              className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                            />
+                            <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                              <span>Precise (0.0)</span>
+                              <span>Balanced (0.5)</span>
+                              <span>Creative (1.0)</span>
+                            </div>
                           </div>
-                        ),
-                      )}
+                        )}
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="custom_instructions">
+                        Custom Instructions (Optional)
+                      </Label>
+                      <Textarea
+                        id="custom_instructions"
+                        {...register("custom_instructions")}
+                        placeholder="Add any additional instructions for how the chatbot should behave..."
+                        rows={3}
+                        className="mt-2"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        These instructions will be added to the chatbot&apos;s
+                        system prompt.
+                      </p>
                     </div>
                   </CardContent>
                 </Card>
@@ -3174,7 +3525,7 @@ export default function ChatbotDetailPage() {
                   >
                     {isSavingAppearance ? (
                       <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        <ButtonSpinner />
                         Saving...
                       </>
                     ) : (
@@ -3193,10 +3544,10 @@ export default function ChatbotDetailPage() {
         {/* Install Tab */}
         <TabsContent value="install" className="space-y-6">
           {/* Quick Start Guide */}
-          <Card className="border-purple-200 bg-purple-50/30">
+          <Card className="border-indigo-200 bg-gradient-to-r from-indigo-50/50 to-purple-50/50">
             <CardHeader>
               <div className="flex items-start gap-3">
-                <div className="h-10 w-10 rounded-lg bg-purple-600 flex items-center justify-center flex-shrink-0">
+                <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center flex-shrink-0 shadow-sm">
                   <Sparkles className="h-5 w-5 text-white" />
                 </div>
                 <div>
@@ -3210,7 +3561,7 @@ export default function ChatbotDetailPage() {
             <CardContent>
               <div className="space-y-4">
                 <div className="flex gap-3">
-                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-600 text-white flex items-center justify-center font-semibold text-sm">
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-indigo-600 to-purple-600 text-white flex items-center justify-center font-semibold text-sm shadow-sm">
                     1
                   </div>
                   <div className="flex-1">
@@ -3224,7 +3575,7 @@ export default function ChatbotDetailPage() {
                   </div>
                 </div>
                 <div className="flex gap-3">
-                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-600 text-white flex items-center justify-center font-semibold text-sm">
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-indigo-600 to-purple-600 text-white flex items-center justify-center font-semibold text-sm shadow-sm">
                     2
                   </div>
                   <div className="flex-1">
@@ -3234,7 +3585,7 @@ export default function ChatbotDetailPage() {
                     <p className="text-sm text-muted-foreground">
                       Copy the code snippet and paste it into your website's
                       HTML, just before the closing{" "}
-                      <code className="bg-purple-100 px-1.5 py-0.5 rounded text-xs">
+                      <code className="bg-indigo-100 px-1.5 py-0.5 rounded text-xs text-indigo-700">
                         &lt;/body&gt;
                       </code>{" "}
                       tag.
@@ -3242,7 +3593,7 @@ export default function ChatbotDetailPage() {
                   </div>
                 </div>
                 <div className="flex gap-3">
-                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-600 text-white flex items-center justify-center font-semibold text-sm">
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-indigo-600 to-purple-600 text-white flex items-center justify-center font-semibold text-sm shadow-sm">
                     3
                   </div>
                   <div className="flex-1">
@@ -3268,7 +3619,7 @@ export default function ChatbotDetailPage() {
                     JavaScript Widget
                     <Badge
                       variant="secondary"
-                      className="bg-green-100 text-green-700"
+                      className="bg-emerald-50 text-emerald-700 border-emerald-200"
                     >
                       Recommended
                     </Badge>
@@ -3283,21 +3634,21 @@ export default function ChatbotDetailPage() {
             <CardContent className="space-y-4">
               <div className="space-y-3">
                 <div className="flex items-start gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                  <CheckCircle2 className="h-5 w-5 text-emerald-500 mt-0.5 flex-shrink-0" />
                   <p className="text-sm">
                     <strong>Automatic updates:</strong> Changes to appearance
                     and settings sync instantly
                   </p>
                 </div>
                 <div className="flex items-start gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                  <CheckCircle2 className="h-5 w-5 text-emerald-500 mt-0.5 flex-shrink-0" />
                   <p className="text-sm">
                     <strong>Lightweight:</strong> Only ~15KB gzipped, won't slow
                     down your site
                   </p>
                 </div>
                 <div className="flex items-start gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                  <CheckCircle2 className="h-5 w-5 text-emerald-500 mt-0.5 flex-shrink-0" />
                   <p className="text-sm">
                     <strong>Mobile responsive:</strong> Optimized for all
                     devices and screen sizes
@@ -3368,7 +3719,7 @@ export default function ChatbotDetailPage() {
                 {/* HTML/Static Websites */}
                 <div className="border rounded-lg p-4 space-y-3">
                   <div className="flex items-center gap-2">
-                    <Globe className="h-5 w-5 text-purple-600" />
+                    <Globe className="h-5 w-5 text-indigo-600" />
                     <h4 className="font-semibold">HTML / Static Websites</h4>
                   </div>
                   <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground ml-7">
@@ -3725,28 +4076,45 @@ export default function ChatbotDetailPage() {
               </TabsTrigger>
             </TabsList>
             <TabsContent value="general" className="space-y-6">
+              {/* Chatbot Information */}
               <Card>
-                <CardHeader>
-                  <CardTitle>Chatbot Settings</CardTitle>
-                  <CardDescription>
-                    Update your chatbot&apos;s general information and status
-                  </CardDescription>
+                <CardHeader className="pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                      <Settings className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <CardTitle>General Information</CardTitle>
+                      <CardDescription>
+                        Manage your chatbot&apos;s identity and operational
+                        status
+                      </CardDescription>
+                    </div>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <form onSubmit={handleSettingsSubmit} className="space-y-6">
                     {settingsError && (
-                      <div className="p-3 bg-red-50 border border-red-200 text-red-600 rounded-md text-sm">
+                      <div className="p-3 bg-red-50 border border-red-200 text-red-600 rounded-md text-sm flex items-center gap-2">
+                        <AlertCircle className="h-4 w-4 flex-shrink-0" />
                         {settingsError}
                       </div>
                     )}
                     {settingsSuccess && (
-                      <div className="p-3 bg-green-50 border border-green-200 text-green-600 rounded-md text-sm">
+                      <div className="p-3 bg-green-50 border border-green-200 text-green-600 rounded-md text-sm flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
                         {settingsSuccess}
                       </div>
                     )}
 
+                    {/* Chatbot Name */}
                     <div className="space-y-2">
-                      <Label htmlFor="chatbot-name">Chatbot Name</Label>
+                      <Label
+                        htmlFor="chatbot-name"
+                        className="text-sm font-medium"
+                      >
+                        Chatbot Name
+                      </Label>
                       <Input
                         id="chatbot-name"
                         name="name"
@@ -3754,20 +4122,63 @@ export default function ChatbotDetailPage() {
                         placeholder="My Awesome Chatbot"
                         required
                         disabled={!canEdit}
+                        className="max-w-md"
                       />
                       <p className="text-xs text-muted-foreground">
-                        This is the internal name of your chatbot.
+                        Internal name used to identify this chatbot across your
+                        dashboard.
                       </p>
                     </div>
 
-                    <div className="space-y-3">
-                      <Label>Chatbot Status</Label>
+                    {/* Chatbot Details (Read-only) */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 bg-muted/30 rounded-lg border">
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                          Chatbot ID
+                        </p>
+                        <p
+                          className="text-sm font-mono mt-1 truncate"
+                          title={chatbot.id}
+                        >
+                          {chatbot.id}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                          Created
+                        </p>
+                        <p className="text-sm mt-1">
+                          {new Date(chatbot.created_at).toLocaleDateString(
+                            "en-US",
+                            { year: "numeric", month: "short", day: "numeric" },
+                          )}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                          Your Role
+                        </p>
+                        <Badge variant="outline" className="mt-1 capitalize">
+                          {chatbot.permission_level}
+                        </Badge>
+                      </div>
+                    </div>
+
+                    {/* Status */}
+                    <div className="space-y-3 pt-2 border-t">
+                      <Label className="text-sm font-medium">
+                        Chatbot Status
+                      </Label>
+                      <p className="text-xs text-muted-foreground -mt-2">
+                        Control whether your chatbot is live and responding to
+                        users.
+                      </p>
                       <RadioGroup
                         name="status"
                         defaultValue={
                           chatbot.status === "draft" ? "paused" : chatbot.status
                         }
-                        className="grid gap-4 sm:grid-cols-2"
+                        className="grid gap-4 sm:grid-cols-2 max-w-lg"
                         disabled={!canEdit}
                       >
                         <div>
@@ -3778,15 +4189,17 @@ export default function ChatbotDetailPage() {
                           />
                           <Label
                             htmlFor="status-active"
-                            className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
+                            className="flex items-center gap-3 rounded-lg border-2 border-muted bg-popover p-4 hover:bg-accent/50 hover:text-accent-foreground peer-data-[state=checked]:border-emerald-500 peer-data-[state=checked]:bg-emerald-50 [&:has([data-state=checked])]:border-emerald-500 [&:has([data-state=checked])]:bg-emerald-50 cursor-pointer transition-all"
                           >
-                            <div className="mb-2 h-4 w-4 rounded-full border border-primary peer-data-[state=checked]:bg-primary" />
-                            <span className="text-sm font-semibold">
-                              Active
-                            </span>
-                            <span className="text-xs text-muted-foreground text-center mt-1">
-                              Live and responding
-                            </span>
+                            <div className="h-3 w-3 rounded-full bg-emerald-500 ring-4 ring-emerald-500/20" />
+                            <div>
+                              <span className="text-sm font-semibold block">
+                                Active
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                Live and responding to users
+                              </span>
+                            </div>
                           </Label>
                         </div>
                         <div>
@@ -3797,23 +4210,28 @@ export default function ChatbotDetailPage() {
                           />
                           <Label
                             htmlFor="status-paused"
-                            className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
+                            className="flex items-center gap-3 rounded-lg border-2 border-muted bg-popover p-4 hover:bg-accent/50 hover:text-accent-foreground peer-data-[state=checked]:border-amber-500 peer-data-[state=checked]:bg-amber-50 [&:has([data-state=checked])]:border-amber-500 [&:has([data-state=checked])]:bg-amber-50 cursor-pointer transition-all"
                           >
-                            <div className="mb-2 h-4 w-4 rounded-full border border-primary peer-data-[state=checked]:bg-primary" />
-                            <span className="text-sm font-semibold">
-                              Paused
-                            </span>
-                            <span className="text-xs text-muted-foreground text-center mt-1">
-                              Temporarily offline
-                            </span>
+                            <div className="h-3 w-3 rounded-full bg-amber-500 ring-4 ring-amber-500/20" />
+                            <div>
+                              <span className="text-sm font-semibold block">
+                                Paused
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                Temporarily offline
+                              </span>
+                            </div>
                           </Label>
                         </div>
                       </RadioGroup>
                       {chatbot.status === "draft" && (
-                        <p className="text-sm text-yellow-600 font-medium">
-                          This chatbot is currently in Draft mode. Change it to
-                          Active to make it live.
-                        </p>
+                        <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-md">
+                          <AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0" />
+                          <p className="text-sm text-amber-700">
+                            This chatbot is in Draft mode. Set it to Active to
+                            make it live.
+                          </p>
+                        </div>
                       )}
                     </div>
 
@@ -3821,10 +4239,11 @@ export default function ChatbotDetailPage() {
                       <Button
                         type="submit"
                         disabled={isSavingSettings || !canEdit}
+                        className="min-w-[140px]"
                       >
                         {isSavingSettings ? (
                           <>
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            <ButtonSpinner />
                             Saving...
                           </>
                         ) : (
@@ -3840,12 +4259,23 @@ export default function ChatbotDetailPage() {
               </Card>
 
               {["owner", "admin"].includes(chatbot.permission_level) && (
-                <Card className="border-red-100">
-                  <CardHeader>
-                    <CardTitle className="text-red-600">Danger Zone</CardTitle>
-                    <CardDescription>
-                      Permanently delete this chatbot and all its data
-                    </CardDescription>
+                <Card className="border-red-200/50">
+                  <CardHeader className="pb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-lg bg-red-50 border border-red-200 flex items-center justify-center flex-shrink-0">
+                        <Trash2 className="h-5 w-5 text-red-600" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-red-700">
+                          Danger Zone
+                        </CardTitle>
+                        <CardDescription>
+                          This action is irreversible. All data including
+                          knowledge base, conversations, and analytics will be
+                          permanently deleted.
+                        </CardDescription>
+                      </div>
+                    </div>
                   </CardHeader>
                   <CardContent>
                     <Button
@@ -3860,7 +4290,14 @@ export default function ChatbotDetailPage() {
                 </Card>
               )}
             </TabsContent>
-            <TabsContent value="team" className="space-y-6">
+            <TabsContent
+              value="team"
+              className="space-y-6"
+              forceMount
+              style={{
+                display: settingsSubTab === "team" ? undefined : "none",
+              }}
+            >
               <ChatbotTeamSettings chatbotId={chatbotId} />
             </TabsContent>
           </Tabs>
@@ -3880,6 +4317,7 @@ export default function ChatbotDetailPage() {
           welcomeMessage={watchedAppearanceValues.welcome_message}
           initialSuggestions={watchedAppearanceValues.initial_suggestions}
           showBranding={watchedAppearanceValues.show_branding}
+          language={watchedAppearanceValues.language as "en" | "hi" | "gu"}
           contained={false}
           initialOpen={false}
           readOnly={false}
@@ -3894,13 +4332,13 @@ export default function ChatbotDetailPage() {
           onClick={() => setPreviewFile(null)}
         >
           <div
-            className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[80vh] flex flex-col"
+            className="bg-card rounded-lg shadow-xl max-w-4xl w-full max-h-[80vh] flex flex-col border"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b">
               <div className="flex items-center gap-2">
-                <FileText className="h-5 w-5 text-blue-600" />
+                <FileText className="h-5 w-5 text-indigo-600" />
                 <h3 className="font-semibold text-lg">
                   {previewFile.filename}
                 </h3>
@@ -3921,7 +4359,7 @@ export default function ChatbotDetailPage() {
             {/* Content */}
             <div className="flex-1 overflow-auto p-6">
               {previewFile.mode === "text" && (
-                <pre className="text-sm whitespace-pre-wrap font-mono bg-gray-50 p-4 rounded-lg border">
+                <pre className="text-sm whitespace-pre-wrap font-mono bg-muted p-4 rounded-lg border">
                   {previewFile.content}
                 </pre>
               )}
@@ -3946,15 +4384,15 @@ export default function ChatbotDetailPage() {
                 ))}
               {previewFile.mode === "download" && (
                 <div className="flex flex-col items-center justify-center gap-4 py-12">
-                  <FileText className="h-16 w-16 text-gray-400" />
-                  <p className="text-gray-600 text-center">
+                  <FileText className="h-16 w-16 text-muted-foreground" />
+                  <p className="text-muted-foreground text-center">
                     {previewFile.content}
                   </p>
                   {previewFile.url && (
                     <a
                       href={previewFile.url}
                       download={previewFile.filename}
-                      className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
                     >
                       <Download className="h-4 w-4" />
                       Download File
@@ -3965,7 +4403,7 @@ export default function ChatbotDetailPage() {
             </div>
 
             {/* Footer */}
-            <div className="p-4 border-t bg-gray-50 flex justify-end gap-2">
+            <div className="p-4 border-t bg-muted/50 flex justify-end gap-2">
               {previewFile.mode === "text" && (
                 <Button
                   variant="outline"

@@ -169,7 +169,7 @@ export function Sidebar({ isCollapsed = false, setIsCollapsed }: SidebarProps) {
       {/* Sidebar */}
       <div
         className={cn(
-          "fixed inset-y-0 left-0 z-40 bg-card border-r border-border transform transition-all duration-300 ease-in-out lg:translate-x-0 flex flex-col",
+          "fixed inset-y-0 left-0 z-40 bg-gradient-to-b from-card to-card/95 border-r border-border transform transition-all duration-300 ease-in-out lg:translate-x-0 flex flex-col",
           mobileMenuOpen ? "translate-x-0" : "-translate-x-full",
           isCollapsed ? "w-20" : "w-64",
         )}
@@ -182,12 +182,12 @@ export function Sidebar({ isCollapsed = false, setIsCollapsed }: SidebarProps) {
             )}
           >
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center shrink-0 shadow-lg shadow-indigo-500/20">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center shrink-0 shadow-lg shadow-indigo-500/25">
                 <MessageSquare className="h-6 w-6 text-white" />
               </div>
               {!isCollapsed && (
                 <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600 tracking-tight">
-                  Chatbot SaaS
+                  EmbedChat
                 </span>
               )}
             </div>
@@ -269,8 +269,8 @@ export function Sidebar({ isCollapsed = false, setIsCollapsed }: SidebarProps) {
                       "flex items-center text-sm font-medium rounded-lg transition-all group relative",
                       isCollapsed ? "justify-center p-3" : "px-4 py-3",
                       isActive
-                        ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
-                        : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                        ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-500/25"
+                        : "text-muted-foreground hover:bg-indigo-50 hover:text-indigo-700",
                       pendingHref === href &&
                         !isActive &&
                         "bg-accent/60 text-foreground ring-1 ring-primary/30",
@@ -320,8 +320,8 @@ export function Sidebar({ isCollapsed = false, setIsCollapsed }: SidebarProps) {
                         "flex items-center text-sm font-medium rounded-lg transition-all group relative",
                         isCollapsed ? "justify-center p-3" : "px-4 py-3",
                         isActive
-                          ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
-                          : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                          ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-500/25"
+                          : "text-muted-foreground hover:bg-indigo-50 hover:text-indigo-700",
                       )}
                     >
                       <item.icon
@@ -370,7 +370,7 @@ export function Sidebar({ isCollapsed = false, setIsCollapsed }: SidebarProps) {
                         isCollapsed ? "flex-col" : "space-x-2 flex-1",
                       )}
                     >
-                      <div className="h-10 w-10 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 flex items-center justify-center shrink-0 shadow-sm">
+                      <div className="h-10 w-10 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 flex items-center justify-center shrink-0 shadow-sm ring-2 ring-indigo-500/20">
                         <span className="text-white font-bold text-xs">
                           {(user.name ||
                             user.username ||

@@ -6,7 +6,6 @@ import {
   ChevronUp,
   Trash2,
   FileQuestion,
-  Loader2,
   AlertCircle,
   HelpCircle,
   MessageCircle,
@@ -17,6 +16,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
+import { InlineSpinner, Spinner } from "@/components/ui/loading";
 
 interface QAPair {
   id: string;
@@ -106,8 +106,8 @@ export function QABundlePanel({
         source.status === "failed"
           ? "border-l-red-500"
           : source.status === "completed"
-            ? "border-l-green-500"
-            : "border-l-blue-500",
+            ? "border-l-emerald-500"
+            : "border-l-indigo-500",
       )}
     >
       <CardHeader className="py-3 px-4 bg-muted/20 flex flex-row items-center justify-between space-y-0">
@@ -142,7 +142,7 @@ export function QABundlePanel({
             className="capitalize"
           >
             {(source.status === "processing" || source.status === "crawling") && (
-              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+              <InlineSpinner size="xs" className="mr-1" />
             )}
             {source.status === "failed" && (
               <AlertCircle className="h-3 w-3 mr-1" />
@@ -256,7 +256,7 @@ export function QABundlePanel({
               </div>
             ) : (
               <div className="p-8 text-center text-muted-foreground text-sm flex flex-col items-center gap-2">
-                <Loader2 className="h-8 w-8 animate-spin opacity-20" />
+                <Spinner size="lg" className="opacity-20" />
                 <p>Waiting for QA pairs...</p>
               </div>
             )}

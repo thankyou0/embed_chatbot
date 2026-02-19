@@ -8,11 +8,20 @@ from app.models.chatbot import Chatbot, ChatbotStatus, ChatbotActivity
 from app.models.chatbot_permission import ChatbotPermission, PermissionLevel
 from app.models.chatbot_appearance import ChatbotAppearance, WidgetPosition
 from app.models.knowledge import (
-    KnowledgeSource, KnowledgeSourceType, KnowledgeSourceStatus, 
-    CrawledPage, UploadedFile, Embedding, QAPair,
-    CrawlSchedule, CrawlHistory, ScheduleType, CrawlStatus
+    KnowledgeSource,
+    KnowledgeSourceType,
+    KnowledgeSourceStatus,
+    CrawledPage,
+    UploadedFile,
+    Embedding,
+    QAPair,
+    CrawlSchedule,
+    CrawlHistory,
+    ScheduleType,
+    CrawlStatus,
 )
 from app.models.chat import ChatSession, ChatMessage, MessageRole
+from app.models.subscription import Subscription, PlanType
 from app.core.logging import get_logger
 from app.core.exceptions import (
     BadRequestError,
@@ -77,31 +86,28 @@ logger = get_logger(__name__)
 
 
 class ChatbotService:
-    
+
     # ============== Chatbot CRUD ==============
-    
+
     @staticmethod
     async def create_chatbot(
-        db: AsyncSession,
-        tenant_id: int,
-        user: User,
-        request: ChatbotCreate
+        db: AsyncSession, tenant_id: int, user: User, request: ChatbotCreate
     ) -> ChatbotWithPermission:
         """Create a new chatbot
-        
+
         Only admins and org owners can create chatbots.
         Regular members cannot create chatbots.
         """
         # Check if user has permission to create chatbots
         if user.role != UserRole.ADMIN:
-            logger.warning(f"[Chatbot] Member {user.email} attempted to create chatbot but lacks permission")
+            logger.warning(
+                f"[Chatbot] Member {user.email} attempted to create chatbot but lacks permission"
+            )
             raise ForbiddenError("Only admins can create chatbots")
-        
+
         # Enforce chatbot limit based on plan
         billing_overview = await BillingService.get_billing_overview(
-            db=db,
-            tenant_id=tenant_id,
-            user=user
+            db=db, tenant_id=tenant_id, user=user
         )
         current_count = billing_overview.usage.current_usage.chatbots_count
         limit = billing_overview.current_plan.limits.chatbots
@@ -110,11 +116,11 @@ class ChatbotService:
                 f"Chatbot limit reached. You have {current_count} out of {limit} chatbots on your "
                 f"{billing_overview.subscription.plan_type.value} plan. Please upgrade to create more."
             )
-        
+
         # #region agent log
         # with open(r'e:\e_com_Chatbot\.cursor\debug.log', 'a') as f: f.write('{"sessionId":"debug-session","runId":"run1","hypothesisId":"A","location":"chatbot_service.py:42","message":"Before creating chatbot","data":{"status_enum_name":"' + str(ChatbotStatus.DRAFT.name) + '","status_enum_value":"' + str(ChatbotStatus.DRAFT.value) + '","status_repr":"' + repr(ChatbotStatus.DRAFT) + '"},"timestamp":' + str(__import__('time').time() * 1000) + '}\n')
         # #endregion
-        
+
         # Create chatbot
         chatbot = Chatbot(
             tenant_id=tenant_id,
@@ -123,19 +129,19 @@ class ChatbotService:
             created_by=user.id,
             status=ChatbotStatus.DRAFT,
         )
-        
+
         # #region agent log
         # with open(r'e:\e_com_Chatbot\.cursor\debug.log', 'a') as f: f.write('{"sessionId":"debug-session","runId":"run1","hypothesisId":"A","location":"chatbot_service.py:50","message":"After creating chatbot object","data":{"chatbot_status":"' + str(chatbot.status) + '","chatbot_status_type":"' + str(type(chatbot.status).__name__) + '","chatbot_status_value":"' + str(chatbot.status.value if hasattr(chatbot.status, "value") else "N/A") + '"},"timestamp":' + str(__import__('time').time() * 1000) + '}\n')
         # #endregion
-        
+
         db.add(chatbot)
-        
+
         # #region agent log
         # with open(r'e:\e_com_Chatbot\.cursor\debug.log', 'a') as f: f.write('{"sessionId":"debug-session","runId":"run1","hypothesisId":"B","location":"chatbot_service.py:54","message":"Before flush - checking status attribute","data":{"has_status":"' + str(hasattr(chatbot, "status")) + '","status_value":"' + str(getattr(chatbot, "status", "NOT_SET")) + '"},"timestamp":' + str(__import__('time').time() * 1000) + '}\n')
         # #endregion
-        
+
         await db.flush()
-        
+
         # Auto-assign OWNER permission to creator
         permission = ChatbotPermission(
             user_id=user.id,
@@ -154,20 +160,20 @@ class ChatbotService:
             chatbot_id=chatbot.id,
             user_id=user.id,
             activity_type="chatbot_created",
-            description=f"Chatbot created by {user.name or user.email}"
+            description=f"Chatbot created by {user.name or user.email}",
         )
         db.add(activity)
-        
+
         await db.commit()
         await db.refresh(chatbot)
-        
+
         logger.success(f"Chatbot created: {chatbot.name} by user {user.email}")
-        
+
         return ChatbotWithPermission(
             **ChatbotResponse.model_validate(chatbot).model_dump(),
-            permission_level=PermissionLevel.OWNER
+            permission_level=PermissionLevel.OWNER,
         )
-    
+
     @staticmethod
     async def list_chatbots(
         db: AsyncSession,
@@ -175,11 +181,12 @@ class ChatbotService:
         user: User,
     ) -> List[ChatbotWithPermission]:
         """List chatbots user has access to"""
-        
+
         # Admin sees all chatbots in tenant
         if user.role == UserRole.ADMIN:
             result = await db.execute(
-                select(Chatbot).options(selectinload(Chatbot.appearance))
+                select(Chatbot)
+                .options(selectinload(Chatbot.appearance))
                 .where(
                     Chatbot.tenant_id == tenant_id,
                     Chatbot.deleted_at.is_(None),
@@ -187,34 +194,33 @@ class ChatbotService:
                 .order_by(Chatbot.created_at.desc())
             )
             chatbots = result.scalars().all()
-            
+
             # Get permissions for admin
             chatbot_list = []
             for chatbot in chatbots:
                 # Check if admin has permission, if not they're implicit ADMIN
                 perm_result = await db.execute(
-                    select(ChatbotPermission)
-                    .where(
+                    select(ChatbotPermission).where(
                         ChatbotPermission.chatbot_id == chatbot.id,
-                        ChatbotPermission.user_id == user.id
+                        ChatbotPermission.user_id == user.id,
                     )
                 )
                 permission = perm_result.scalar_one_or_none()
-                
+
                 if permission:
                     perm_level = permission.permission_level
                     flags = {
                         "can_manage_knowledge": permission.can_manage_knowledge,
                         "can_manage_appearance": permission.can_manage_appearance,
                         "can_resolve_queries": permission.can_resolve_queries,
-                        "can_view_analytics_billing": permission.can_view_analytics_billing
+                        "can_view_analytics_billing": permission.can_view_analytics_billing,
                     }
                     if perm_level == PermissionLevel.CUSTOM:
                         perm_level = ChatbotService._derive_permission_level_from_flags(
                             permission.can_manage_knowledge,
                             permission.can_manage_appearance,
                             permission.can_resolve_queries,
-                            permission.can_view_analytics_billing
+                            permission.can_view_analytics_billing,
                         )
                 else:
                     perm_level = PermissionLevel.ADMIN
@@ -222,23 +228,27 @@ class ChatbotService:
                         "can_manage_knowledge": True,
                         "can_manage_appearance": True,
                         "can_resolve_queries": True,
-                        "can_view_analytics_billing": True
+                        "can_view_analytics_billing": True,
                     }
-                
+
                 base_data = ChatbotResponse.model_validate(chatbot).model_dump()
-                if chatbot.appearance and chatbot.appearance.welcome_message is not None:
+                if (
+                    chatbot.appearance
+                    and chatbot.appearance.welcome_message is not None
+                ):
                     base_data["welcome_message"] = chatbot.appearance.welcome_message
-                chatbot_list.append(ChatbotWithPermission(
-                    **base_data,
-                    permission_level=perm_level,
-                    **flags
-                ))
-            
+                chatbot_list.append(
+                    ChatbotWithPermission(
+                        **base_data, permission_level=perm_level, **flags
+                    )
+                )
+
             return chatbot_list
-        
+
         # Regular users only see chatbots they have explicit permission for
         result = await db.execute(
-            select(Chatbot, ChatbotPermission).options(selectinload(Chatbot.appearance))
+            select(Chatbot, ChatbotPermission)
+            .options(selectinload(Chatbot.appearance))
             .join(ChatbotPermission, Chatbot.id == ChatbotPermission.chatbot_id)
             .where(
                 Chatbot.tenant_id == tenant_id,
@@ -248,7 +258,7 @@ class ChatbotService:
             .order_by(Chatbot.created_at.desc())
         )
         rows = result.all()
-        
+
         chatbot_results = []
         for chatbot, permission in rows:
             perm_level = permission.permission_level
@@ -257,21 +267,23 @@ class ChatbotService:
                     permission.can_manage_knowledge,
                     permission.can_manage_appearance,
                     permission.can_resolve_queries,
-                    permission.can_view_analytics_billing
+                    permission.can_view_analytics_billing,
                 )
             base_data = ChatbotResponse.model_validate(chatbot).model_dump()
             if chatbot.appearance and chatbot.appearance.welcome_message is not None:
                 base_data["welcome_message"] = chatbot.appearance.welcome_message
-            chatbot_results.append(ChatbotWithPermission(
-                **base_data,
-                permission_level=perm_level,
-                can_manage_knowledge=permission.can_manage_knowledge,
-                can_manage_appearance=permission.can_manage_appearance,
-                can_resolve_queries=permission.can_resolve_queries,
-                can_view_analytics_billing=permission.can_view_analytics_billing
-            ))
+            chatbot_results.append(
+                ChatbotWithPermission(
+                    **base_data,
+                    permission_level=perm_level,
+                    can_manage_knowledge=permission.can_manage_knowledge,
+                    can_manage_appearance=permission.can_manage_appearance,
+                    can_resolve_queries=permission.can_resolve_queries,
+                    can_view_analytics_billing=permission.can_view_analytics_billing,
+                )
+            )
         return chatbot_results
-    
+
     @staticmethod
     async def get_chatbot(
         db: AsyncSession,
@@ -280,9 +292,10 @@ class ChatbotService:
         user: User,
     ) -> ChatbotWithPermission:
         """Get a specific chatbot"""
-        
+
         result = await db.execute(
-            select(Chatbot).options(selectinload(Chatbot.appearance))
+            select(Chatbot)
+            .options(selectinload(Chatbot.appearance))
             .where(
                 Chatbot.id == chatbot_id,
                 Chatbot.tenant_id == tenant_id,
@@ -290,22 +303,32 @@ class ChatbotService:
             )
         )
         chatbot = result.scalar_one_or_none()
-        
+
         if not chatbot:
             raise NotFoundError("Chatbot not found")
-        
+
         # Check permission
         permission = await ChatbotService._get_permission_record(db, chatbot_id, user)
         if not permission and user.role != UserRole.ADMIN:
             raise ForbiddenError("You don't have access to this chatbot")
-        
+
         if user.role == UserRole.ADMIN:
-            perm_level = permission.permission_level if permission else PermissionLevel.ADMIN
+            perm_level = (
+                permission.permission_level if permission else PermissionLevel.ADMIN
+            )
             flags = {
-                "can_manage_knowledge": permission.can_manage_knowledge if permission else True,
-                "can_manage_appearance": permission.can_manage_appearance if permission else True,
-                "can_resolve_queries": permission.can_resolve_queries if permission else True,
-                "can_view_analytics_billing": permission.can_view_analytics_billing if permission else True,
+                "can_manage_knowledge": (
+                    permission.can_manage_knowledge if permission else True
+                ),
+                "can_manage_appearance": (
+                    permission.can_manage_appearance if permission else True
+                ),
+                "can_resolve_queries": (
+                    permission.can_resolve_queries if permission else True
+                ),
+                "can_view_analytics_billing": (
+                    permission.can_view_analytics_billing if permission else True
+                ),
             }
         else:
             perm_level = permission.permission_level
@@ -321,51 +344,52 @@ class ChatbotService:
                 permission.can_manage_knowledge,
                 permission.can_manage_appearance,
                 permission.can_resolve_queries,
-                permission.can_view_analytics_billing
+                permission.can_view_analytics_billing,
             )
 
         base_data = ChatbotResponse.model_validate(chatbot).model_dump()
         if chatbot.appearance and chatbot.appearance.welcome_message is not None:
             base_data["welcome_message"] = chatbot.appearance.welcome_message
-        return ChatbotWithPermission(
-            **base_data,
-            permission_level=perm_level,
-            **flags
-        )
-    
+        return ChatbotWithPermission(**base_data, permission_level=perm_level, **flags)
+
     @staticmethod
     async def update_chatbot(
         db: AsyncSession,
         tenant_id: int,
         chatbot_id: UUID,
         user: User,
-        request: ChatbotUpdate
+        request: ChatbotUpdate,
     ) -> ChatbotWithPermission:
         """Update chatbot (requires EDITOR+ permission)"""
-        
+
         result = await db.execute(
-            select(Chatbot)
-            .where(
+            select(Chatbot).where(
                 Chatbot.id == chatbot_id,
                 Chatbot.tenant_id == tenant_id,
                 Chatbot.deleted_at.is_(None),
             )
         )
         chatbot = result.scalar_one_or_none()
-        
+
         if not chatbot:
             raise NotFoundError("Chatbot not found")
-        
+
         # Check permission (need at least EDITOR or specific flag)
-        if not await ChatbotService.has_permission(db, chatbot_id, user, "can_manage_knowledge"): # Using knowledge flag as proxy for general settings
-             # We might want a dedicated can_manage_settings flag, but for now EDITOR is knowledge/qa
-             pass
-        
+        if not await ChatbotService.has_permission(
+            db, chatbot_id, user, "can_manage_knowledge"
+        ):  # Using knowledge flag as proxy for general settings
+            # We might want a dedicated can_manage_settings flag, but for now EDITOR is knowledge/qa
+            pass
+
         # More precise check:
-        permission_level = await ChatbotService._get_permission_level(db, chatbot_id, user)
+        permission_level = await ChatbotService._get_permission_level(
+            db, chatbot_id, user
+        )
         if not permission_level or permission_level == PermissionLevel.VIEWER:
-            raise ForbiddenError("You need EDITOR or higher permission to update this chatbot")
-        
+            raise ForbiddenError(
+                "You need EDITOR or higher permission to update this chatbot"
+            )
+
         # Update fields
         if request.name is not None:
             chatbot.name = request.name
@@ -374,29 +398,35 @@ class ChatbotService:
             chatbot.status = request.status
             if old_status != request.status:
                 # Use only the status name (e.g., DRAFT, ACTIVE) instead of enum representation
-                old_status_name = old_status.name if hasattr(old_status, 'name') else str(old_status)
-                new_status_name = request.status.name if hasattr(request.status, 'name') else str(request.status)
+                old_status_name = (
+                    old_status.name if hasattr(old_status, "name") else str(old_status)
+                )
+                new_status_name = (
+                    request.status.name
+                    if hasattr(request.status, "name")
+                    else str(request.status)
+                )
                 activity = ChatbotActivity(
                     chatbot_id=chatbot_id,
                     user_id=user.id,
                     activity_type="status_change",
-                    description=f"Status changed from {old_status_name} to {new_status_name} by {user.name or user.email}"
+                    description=f"Status changed from {old_status_name} to {new_status_name} by {user.name or user.email}",
                 )
                 db.add(activity)
-        
+
         if request.welcome_message is not None:
             chatbot.welcome_message = request.welcome_message
-        
+
         await db.commit()
         await db.refresh(chatbot)
-        
+
         logger.success(f"Chatbot updated: {chatbot.name}")
-        
+
         return ChatbotWithPermission(
             **ChatbotResponse.model_validate(chatbot).model_dump(),
-            permission_level=permission_level
+            permission_level=permission_level,
         )
-    
+
     @staticmethod
     async def delete_chatbot(
         db: AsyncSession,
@@ -405,30 +435,34 @@ class ChatbotService:
         user: User,
     ) -> None:
         """Delete chatbot (requires OWNER or tenant ADMIN)"""
-        
+
         result = await db.execute(
-            select(Chatbot)
-            .where(
+            select(Chatbot).where(
                 Chatbot.id == chatbot_id,
                 Chatbot.tenant_id == tenant_id,
                 Chatbot.deleted_at.is_(None),
             )
         )
         chatbot = result.scalar_one_or_none()
-        
+
         if not chatbot:
             raise NotFoundError("Chatbot not found")
-        
+
         # Check permission (need OWNER or be tenant ADMIN)
-        permission_level = await ChatbotService._get_permission_level(db, chatbot_id, user)
+        permission_level = await ChatbotService._get_permission_level(
+            db, chatbot_id, user
+        )
         if permission_level != PermissionLevel.OWNER and user.role != UserRole.ADMIN:
             raise ForbiddenError("Only OWNER or tenant ADMIN can delete this chatbot")
 
         # Collect file paths for cleanup before deleting DB records
-        file_stmt = select(UploadedFile.file_path).join(
-            KnowledgeSource,
-            KnowledgeSource.id == UploadedFile.knowledge_source_id
-        ).where(KnowledgeSource.chatbot_id == chatbot_id)
+        file_stmt = (
+            select(UploadedFile.file_path)
+            .join(
+                KnowledgeSource, KnowledgeSource.id == UploadedFile.knowledge_source_id
+            )
+            .where(KnowledgeSource.chatbot_id == chatbot_id)
+        )
         file_result = await db.execute(file_stmt)
         file_paths = [row[0] for row in file_result.fetchall() if row and row[0]]
 
@@ -447,7 +481,9 @@ class ChatbotService:
 
         if avatar_url:
             try:
-                avatar_path = avatar_url.lstrip("/") if avatar_url.startswith("/") else avatar_url
+                avatar_path = (
+                    avatar_url.lstrip("/") if avatar_url.startswith("/") else avatar_url
+                )
                 await FileService.delete_file(avatar_path)
             except Exception as e:
                 logger.error(f"Failed to delete avatar {avatar_url}: {e}")
@@ -461,22 +497,50 @@ class ChatbotService:
         )
 
         # Delete analytics data (sessions + messages)
-        await db.execute(delete(ChatMessage).where(ChatMessage.session_id.in_(session_ids_subq)))
-        await db.execute(delete(ChatSession).where(ChatSession.chatbot_id == chatbot_id))
+        await db.execute(
+            delete(ChatMessage).where(ChatMessage.session_id.in_(session_ids_subq))
+        )
+        await db.execute(
+            delete(ChatSession).where(ChatSession.chatbot_id == chatbot_id)
+        )
 
         # Delete knowledge base data
         await db.execute(delete(Embedding).where(Embedding.chatbot_id == chatbot_id))
-        await db.execute(delete(CrawlHistory).where(CrawlHistory.knowledge_source_id.in_(ks_ids_subq)))
-        await db.execute(delete(CrawlSchedule).where(CrawlSchedule.knowledge_source_id.in_(ks_ids_subq)))
-        await db.execute(delete(CrawledPage).where(CrawledPage.knowledge_source_id.in_(ks_ids_subq)))
-        await db.execute(delete(UploadedFile).where(UploadedFile.knowledge_source_id.in_(ks_ids_subq)))
-        await db.execute(delete(QAPair).where(QAPair.knowledge_source_id.in_(ks_ids_subq)))
-        await db.execute(delete(KnowledgeSource).where(KnowledgeSource.chatbot_id == chatbot_id))
+        await db.execute(
+            delete(CrawlHistory).where(
+                CrawlHistory.knowledge_source_id.in_(ks_ids_subq)
+            )
+        )
+        await db.execute(
+            delete(CrawlSchedule).where(
+                CrawlSchedule.knowledge_source_id.in_(ks_ids_subq)
+            )
+        )
+        await db.execute(
+            delete(CrawledPage).where(CrawledPage.knowledge_source_id.in_(ks_ids_subq))
+        )
+        await db.execute(
+            delete(UploadedFile).where(
+                UploadedFile.knowledge_source_id.in_(ks_ids_subq)
+            )
+        )
+        await db.execute(
+            delete(QAPair).where(QAPair.knowledge_source_id.in_(ks_ids_subq))
+        )
+        await db.execute(
+            delete(KnowledgeSource).where(KnowledgeSource.chatbot_id == chatbot_id)
+        )
 
         # Delete team access + activity + appearance
-        await db.execute(delete(ChatbotPermission).where(ChatbotPermission.chatbot_id == chatbot_id))
-        await db.execute(delete(ChatbotActivity).where(ChatbotActivity.chatbot_id == chatbot_id))
-        await db.execute(delete(ChatbotAppearance).where(ChatbotAppearance.chatbot_id == chatbot_id))
+        await db.execute(
+            delete(ChatbotPermission).where(ChatbotPermission.chatbot_id == chatbot_id)
+        )
+        await db.execute(
+            delete(ChatbotActivity).where(ChatbotActivity.chatbot_id == chatbot_id)
+        )
+        await db.execute(
+            delete(ChatbotAppearance).where(ChatbotAppearance.chatbot_id == chatbot_id)
+        )
 
         # Delete the chatbot itself
         await db.execute(delete(Chatbot).where(Chatbot.id == chatbot_id))
@@ -491,7 +555,7 @@ class ChatbotService:
                 logger.error(f"Failed to remove upload dir {upload_dir}: {e}")
 
         logger.success(f"Chatbot deleted: {chatbot.name}")
-    
+
     # ============== Permission Management ==============
 
     @staticmethod
@@ -528,86 +592,91 @@ class ChatbotService:
         if can_view_analytics_billing:
             parts.append("View Analytics & Billing")
         return ", ".join(parts) if parts else "No permissions"
-    
+
     @staticmethod
     async def assign_permission(
         db: AsyncSession,
         tenant_id: int,
         chatbot_id: UUID,
         user: User,
-        request: PermissionAssign
+        request: PermissionAssign,
     ) -> PermissionResponse:
         """Assign permission to a user for a chatbot (requires OWNER/ADMIN permission)"""
-        
+
         # Verify chatbot exists and belongs to tenant
         result = await db.execute(
-            select(Chatbot)
-            .where(
+            select(Chatbot).where(
                 Chatbot.id == chatbot_id,
                 Chatbot.tenant_id == tenant_id,
                 Chatbot.deleted_at.is_(None),
             )
         )
         chatbot = result.scalar_one_or_none()
-        
+
         if not chatbot:
             raise NotFoundError("Chatbot not found")
-        
+
         # Check if assigner has OWNER/ADMIN permission or is tenant ADMIN
-        assigner_level = await ChatbotService._get_permission_level(db, chatbot_id, user)
+        assigner_level = await ChatbotService._get_permission_level(
+            db, chatbot_id, user
+        )
         can_assign = (
             assigner_level in [PermissionLevel.OWNER, PermissionLevel.ADMIN]
             or user.role == UserRole.ADMIN
         )
-        
+
         if not can_assign:
-            raise ForbiddenError("You need OWNER or ADMIN permission to assign permissions")
-        
+            raise ForbiddenError(
+                "You need OWNER or ADMIN permission to assign permissions"
+            )
+
         # Use only granular flags provided by the request
         # No longer set default values based on permission_level
 
         # Verify target user exists and belongs to same tenant
         result = await db.execute(
-            select(User)
-            .where(User.id == request.user_id, User.tenant_id == tenant_id)
+            select(User).where(User.id == request.user_id, User.tenant_id == tenant_id)
         )
         target_user = result.scalar_one_or_none()
-        
+
         if not target_user:
             raise NotFoundError("User not found in this tenant")
-        
+
         # Check if permission already exists
         result = await db.execute(
-            select(ChatbotPermission)
-            .where(
+            select(ChatbotPermission).where(
                 ChatbotPermission.chatbot_id == chatbot_id,
-                ChatbotPermission.user_id == request.user_id
+                ChatbotPermission.user_id == request.user_id,
             )
         )
         existing_permission = result.scalar_one_or_none()
-        
+
         if existing_permission:
             # Update existing permission with granular flags only
             existing_permission.can_manage_knowledge = request.can_manage_knowledge
             existing_permission.can_manage_appearance = request.can_manage_appearance
             existing_permission.can_resolve_queries = request.can_resolve_queries
-            existing_permission.can_view_analytics_billing = request.can_view_analytics_billing
+            existing_permission.can_view_analytics_billing = (
+                request.can_view_analytics_billing
+            )
             if existing_permission.permission_level != PermissionLevel.OWNER:
-                existing_permission.permission_level = ChatbotService._derive_permission_level_from_flags(
-                    request.can_manage_knowledge,
-                    request.can_manage_appearance,
-                    request.can_resolve_queries,
-                    request.can_view_analytics_billing
+                existing_permission.permission_level = (
+                    ChatbotService._derive_permission_level_from_flags(
+                        request.can_manage_knowledge,
+                        request.can_manage_appearance,
+                        request.can_resolve_queries,
+                        request.can_view_analytics_billing,
+                    )
                 )
             existing_permission.granted_by = user.id
             await db.commit()
             await db.refresh(existing_permission)
-            
+
             permission_summary = ChatbotService._format_permission_summary(
                 existing_permission.can_manage_knowledge,
                 existing_permission.can_manage_appearance,
                 existing_permission.can_resolve_queries,
-                existing_permission.can_view_analytics_billing
+                existing_permission.can_view_analytics_billing,
             )
 
             # Log activity
@@ -618,13 +687,15 @@ class ChatbotService:
                 description=(
                     f"Permissions updated for user {target_user.email} by {user.email}: "
                     f"{permission_summary}"
-                )
+                ),
             )
             db.add(activity)
             await db.commit()
-            
-            logger.success(f"Permission updated for user {target_user.email} on chatbot {chatbot.name}")
-            
+
+            logger.success(
+                f"Permission updated for user {target_user.email} on chatbot {chatbot.name}"
+            )
+
             return PermissionResponse(
                 id=existing_permission.id,
                 user_id=existing_permission.user_id,
@@ -639,13 +710,13 @@ class ChatbotService:
                 user_email=target_user.email,
                 user_name=target_user.name,
             )
-        
+
         # Create new permission
         permission_level = ChatbotService._derive_permission_level_from_flags(
             request.can_manage_knowledge,
             request.can_manage_appearance,
             request.can_resolve_queries,
-            request.can_view_analytics_billing
+            request.can_view_analytics_billing,
         )
         permission = ChatbotPermission(
             user_id=request.user_id,
@@ -660,12 +731,12 @@ class ChatbotService:
         db.add(permission)
         await db.commit()
         await db.refresh(permission)
-        
+
         permission_summary = ChatbotService._format_permission_summary(
             permission.can_manage_knowledge,
             permission.can_manage_appearance,
             permission.can_resolve_queries,
-            permission.can_view_analytics_billing
+            permission.can_view_analytics_billing,
         )
 
         # Log activity
@@ -676,13 +747,15 @@ class ChatbotService:
             description=(
                 f"Permissions granted to user {target_user.email} by {user.email}: "
                 f"{permission_summary}"
-            )
+            ),
         )
         db.add(activity)
         await db.commit()
-        
-        logger.success(f"Permission granted to user {target_user.email} on chatbot {chatbot.name}")
-        
+
+        logger.success(
+            f"Permission granted to user {target_user.email} on chatbot {chatbot.name}"
+        )
+
         return PermissionResponse(
             id=permission.id,
             user_id=permission.user_id,
@@ -698,7 +771,7 @@ class ChatbotService:
             user_username=target_user.username,
             user_name=target_user.name,
         )
-    
+
     @staticmethod
     async def list_permissions(
         db: AsyncSession,
@@ -707,26 +780,27 @@ class ChatbotService:
         user: User,
     ) -> List[PermissionResponse]:
         """List all permissions for a chatbot"""
-        
+
         # Verify chatbot exists
         result = await db.execute(
-            select(Chatbot)
-            .where(
+            select(Chatbot).where(
                 Chatbot.id == chatbot_id,
                 Chatbot.tenant_id == tenant_id,
                 Chatbot.deleted_at.is_(None),
             )
         )
         chatbot = result.scalar_one_or_none()
-        
+
         if not chatbot:
             raise NotFoundError("Chatbot not found")
-        
+
         # Check if user has access to view permissions
-        permission_level = await ChatbotService._get_user_permission(db, chatbot_id, user)
+        permission_level = await ChatbotService._get_user_permission(
+            db, chatbot_id, user
+        )
         if not permission_level:
             raise ForbiddenError("You don't have access to this chatbot")
-        
+
         # Get all permissions with user info
         result = await db.execute(
             select(ChatbotPermission, User)
@@ -734,7 +808,7 @@ class ChatbotService:
             .where(ChatbotPermission.chatbot_id == chatbot_id)
         )
         rows = result.all()
-        
+
         response_list = []
         for perm, target_user in rows:
             perm_level = perm.permission_level
@@ -743,7 +817,7 @@ class ChatbotService:
                     perm.can_manage_knowledge,
                     perm.can_manage_appearance,
                     perm.can_resolve_queries,
-                    perm.can_view_analytics_billing
+                    perm.can_view_analytics_billing,
                 )
             response_list.append(
                 PermissionResponse(
@@ -763,7 +837,7 @@ class ChatbotService:
                 )
             )
         return response_list
-    
+
     @staticmethod
     async def remove_permission(
         db: AsyncSession,
@@ -773,62 +847,66 @@ class ChatbotService:
         user: User,
     ) -> None:
         """Remove user's permission from chatbot"""
-        
+
         # Verify chatbot exists
         result = await db.execute(
-            select(Chatbot)
-            .where(
+            select(Chatbot).where(
                 Chatbot.id == chatbot_id,
                 Chatbot.tenant_id == tenant_id,
                 Chatbot.deleted_at.is_(None),
             )
         )
         chatbot = result.scalar_one_or_none()
-        
+
         if not chatbot:
             raise NotFoundError("Chatbot not found")
-        
+
         # Check if remover has OWNER/ADMIN permission or is tenant ADMIN
-        remover_permission = await ChatbotService._get_permission_level(db, chatbot_id, user)
+        remover_permission = await ChatbotService._get_permission_level(
+            db, chatbot_id, user
+        )
         can_remove = (
             remover_permission in [PermissionLevel.OWNER, PermissionLevel.ADMIN]
             or user.role == UserRole.ADMIN
         )
-        
+
         if not can_remove:
-            raise ForbiddenError("You need OWNER or ADMIN permission to remove permissions")
-        
+            raise ForbiddenError(
+                "You need OWNER or ADMIN permission to remove permissions"
+            )
+
         # Find the permission
         result = await db.execute(
-            select(ChatbotPermission)
-            .where(
+            select(ChatbotPermission).where(
                 ChatbotPermission.chatbot_id == chatbot_id,
-                ChatbotPermission.user_id == target_user_id
+                ChatbotPermission.user_id == target_user_id,
             )
         )
         permission = result.scalar_one_or_none()
-        
+
         if not permission:
             raise NotFoundError("Permission not found")
-        
+
         # Get target user email for logging
         result = await db.execute(select(User.email).where(User.id == target_user_id))
         target_email = result.scalar_one_or_none() or "Unknown"
 
         # Cannot remove OWNER's permission
         if permission.permission_level == PermissionLevel.OWNER:
-            raise BadRequestError("Cannot remove OWNER permission. Transfer ownership first.")
+            raise BadRequestError(
+                "Cannot remove OWNER permission. Transfer ownership first."
+            )
 
         permission_summary = ChatbotService._format_permission_summary(
             permission.can_manage_knowledge,
             permission.can_manage_appearance,
             permission.can_resolve_queries,
-            permission.can_view_analytics_billing
+            permission.can_view_analytics_billing,
         )
-        
+
         await db.delete(permission)
         await db.commit()
-        
+
         # Log activity
         activity = ChatbotActivity(
             chatbot_id=chatbot_id,
@@ -837,39 +915,38 @@ class ChatbotService:
             description=(
                 f"Permissions removed for user {target_email} by {user.email}: "
                 f"{permission_summary}"
-            )
+            ),
         )
         db.add(activity)
         await db.commit()
-        
-        logger.success(f"Permission removed for user {target_user_id} on chatbot {chatbot.name}")
-    
+
+        logger.success(
+            f"Permission removed for user {target_user_id} on chatbot {chatbot.name}"
+        )
+
     # ============== Helper Methods ==============
-    
+
     @staticmethod
     async def has_permission(
-        db: AsyncSession,
-        chatbot_id: UUID,
-        user: User,
-        required_flag: str = None
+        db: AsyncSession, chatbot_id: UUID, user: User, required_flag: str = None
     ) -> bool:
         """Check if user has specific granular permission"""
-        
+
         # Tenant ADMIN has implicit full access to all chatbots
         if user.role == UserRole.ADMIN:
             return True
-        
+
         permission = await ChatbotService._get_permission_record(db, chatbot_id, user)
         if not permission:
             return False
-            
+
         # OWNER has all permissions
         if permission.permission_level == PermissionLevel.OWNER:
             return True
-            
+
         if required_flag:
             return getattr(permission, required_flag, False)
-            
+
         return True
 
     @staticmethod
@@ -880,10 +957,9 @@ class ChatbotService:
     ) -> Optional[ChatbotPermission]:
         """Get user's permission record for a chatbot"""
         result = await db.execute(
-            select(ChatbotPermission)
-            .where(
+            select(ChatbotPermission).where(
                 ChatbotPermission.chatbot_id == chatbot_id,
-                ChatbotPermission.user_id == user.id
+                ChatbotPermission.user_id == user.id,
             )
         )
         return result.scalar_one_or_none()
@@ -903,13 +979,13 @@ class ChatbotService:
                     permission.can_manage_knowledge,
                     permission.can_manage_appearance,
                     permission.can_resolve_queries,
-                    permission.can_view_analytics_billing
+                    permission.can_view_analytics_billing,
                 )
             return perm_level
-        
+
         if user.role == UserRole.ADMIN:
             return PermissionLevel.ADMIN
-            
+
         return None
 
     @staticmethod
@@ -920,9 +996,9 @@ class ChatbotService:
     ) -> Optional[PermissionLevel]:
         """Deprecated: Use _get_permission_level instead"""
         return await ChatbotService._get_permission_level(db, chatbot_id, user)
-    
+
     # ============== Appearance Management ==============
-    
+
     @staticmethod
     async def get_appearance(
         db: AsyncSession,
@@ -931,43 +1007,45 @@ class ChatbotService:
         user: User,
     ) -> ChatbotAppearanceResponse:
         """Get chatbot appearance settings (create default if doesn't exist)"""
-        
+
         # Verify chatbot exists and user has access
         result = await db.execute(
-            select(Chatbot)
-            .where(Chatbot.id == chatbot_id, Chatbot.tenant_id == tenant_id)
+            select(Chatbot).where(
+                Chatbot.id == chatbot_id, Chatbot.tenant_id == tenant_id
+            )
         )
         chatbot = result.scalar_one_or_none()
-        
+
         if not chatbot:
             raise NotFoundError("Chatbot not found")
-        
+
         # Check permission
-        permission_level = await ChatbotService._get_user_permission(db, chatbot_id, user)
+        permission_level = await ChatbotService._get_user_permission(
+            db, chatbot_id, user
+        )
         if not permission_level:
             raise ForbiddenError("You don't have access to this chatbot")
-        
+
         # Get or create appearance
         result = await db.execute(
-            select(ChatbotAppearance)
-            .where(ChatbotAppearance.chatbot_id == chatbot_id)
+            select(ChatbotAppearance).where(ChatbotAppearance.chatbot_id == chatbot_id)
         )
         appearance = result.scalar_one_or_none()
-        
+
         if not appearance:
             # Create default appearance with explicit defaults to avoid server_default issues
             appearance = ChatbotAppearance(
                 chatbot_id=chatbot_id,
-                initial_suggestions=[]  # Explicitly set to avoid server_default issues with JSONB
+                initial_suggestions=[],  # Explicitly set to avoid server_default issues with JSONB
             )
             db.add(appearance)
             await db.commit()
             await db.refresh(appearance)
-            
+
             logger.info(f"Created default appearance for chatbot {chatbot_id}")
-        
+
         return ChatbotAppearanceResponse.model_validate(appearance)
-    
+
     @staticmethod
     async def upload_avatar(
         db: AsyncSession,
@@ -978,8 +1056,12 @@ class ChatbotService:
     ) -> AvatarUploadResponse:
         """Upload a custom avatar image for the chatbot appearance"""
         # Permission check: require at least can_manage_appearance
-        if not await ChatbotService.has_permission(db, chatbot_id, user, "can_manage_appearance"):
-            raise ForbiddenError("You need permission to manage appearance to upload an avatar")
+        if not await ChatbotService.has_permission(
+            db, chatbot_id, user, "can_manage_appearance"
+        ):
+            raise ForbiddenError(
+                "You need permission to manage appearance to upload an avatar"
+            )
 
         # Validate image mime type
         allowed_types = {"image/png", "image/jpeg", "image/webp", "image/gif"}
@@ -1014,7 +1096,7 @@ class ChatbotService:
             # Create new appearance with explicit defaults to avoid server_default issues
             appearance = ChatbotAppearance(
                 chatbot_id=chatbot_id,
-                initial_suggestions=[]  # Explicitly set to avoid server_default issues with JSONB
+                initial_suggestions=[],  # Explicitly set to avoid server_default issues with JSONB
             )
             db.add(appearance)
             await db.commit()
@@ -1024,46 +1106,51 @@ class ChatbotService:
         await db.commit()
 
         return AvatarUploadResponse(chatbot_id=chatbot_id, avatar_url=avatar_url)
+
     @staticmethod
     async def update_appearance(
         db: AsyncSession,
         tenant_id: int,
         chatbot_id: UUID,
         user: User,
-        request: ChatbotAppearanceUpdate
+        request: ChatbotAppearanceUpdate,
     ) -> ChatbotAppearanceResponse:
         """Update chatbot appearance settings (requires can_manage_appearance permission)"""
-        
+
         # Verify chatbot exists
         result = await db.execute(
-            select(Chatbot)
-            .where(Chatbot.id == chatbot_id, Chatbot.tenant_id == tenant_id)
+            select(Chatbot).where(
+                Chatbot.id == chatbot_id, Chatbot.tenant_id == tenant_id
+            )
         )
         chatbot = result.scalar_one_or_none()
-        
+
         if not chatbot:
             raise NotFoundError("Chatbot not found")
-        
+
         # Check permission
-        if not await ChatbotService.has_permission(db, chatbot_id, user, "can_manage_appearance"):
-            raise ForbiddenError("You need permission to manage appearance to update appearance settings")
-        
+        if not await ChatbotService.has_permission(
+            db, chatbot_id, user, "can_manage_appearance"
+        ):
+            raise ForbiddenError(
+                "You need permission to manage appearance to update appearance settings"
+            )
+
         # Get or create appearance
         result = await db.execute(
-            select(ChatbotAppearance)
-            .where(ChatbotAppearance.chatbot_id == chatbot_id)
+            select(ChatbotAppearance).where(ChatbotAppearance.chatbot_id == chatbot_id)
         )
         appearance = result.scalar_one_or_none()
-        
+
         if not appearance:
             # Create with explicit defaults to avoid server_default issues with JSONB
             appearance = ChatbotAppearance(
                 chatbot_id=chatbot_id,
-                initial_suggestions=[]  # Explicitly set to avoid server_default issues with JSONB
+                initial_suggestions=[],  # Explicitly set to avoid server_default issues with JSONB
             )
             db.add(appearance)
             await db.flush()  # Flush to get the ID and apply defaults
-        
+
         # Update fields
         update_data = request.model_dump(exclude_unset=True)
         changed_fields = []
@@ -1076,63 +1163,69 @@ class ChatbotService:
         # Keep chatbot welcome_message in sync with appearance updates
         if "welcome_message" in update_data:
             chatbot.welcome_message = update_data["welcome_message"]
-        
+
         # Update timestamp
         appearance.updated_at = datetime.now(timezone.utc)
-        
+
         await db.commit()
         await db.refresh(appearance)
-        
+
         # Log activity if any field changed
         if changed_fields:
             activity = ChatbotActivity(
                 chatbot_id=chatbot_id,
                 user_id=user.id,
                 activity_type="appearance_updated",
-                description=f"Appearance updated: changed {', '.join(changed_fields)} by {user.name or user.email}"
+                description=f"Appearance updated: changed {', '.join(changed_fields)} by {user.name or user.email}",
             )
             db.add(activity)
             await db.commit()
         logger.success(f"Appearance updated for chatbot {chatbot_id}")
-        
+
         return ChatbotAppearanceResponse.model_validate(appearance)
-    
+
     @staticmethod
     async def get_widget_config(
         db: AsyncSession,
         chatbot_id: UUID,
     ) -> WidgetConfigResponse:
         """Get widget configuration (public, no auth required)"""
-        
+
         # Verify chatbot exists (no tenant check needed for public endpoint)
-        result = await db.execute(
-            select(Chatbot)
-            .where(Chatbot.id == chatbot_id)
-        )
+        result = await db.execute(select(Chatbot).where(Chatbot.id == chatbot_id))
         chatbot = result.scalar_one_or_none()
-        
+
         if not chatbot:
             raise NotFoundError("Chatbot not found")
-        
+
         # Get or create appearance
         result = await db.execute(
-            select(ChatbotAppearance)
-            .where(ChatbotAppearance.chatbot_id == chatbot_id)
+            select(ChatbotAppearance).where(ChatbotAppearance.chatbot_id == chatbot_id)
         )
         appearance = result.scalar_one_or_none()
-        
+
         if not appearance:
             # Create default appearance with explicit defaults to avoid server_default issues
             appearance = ChatbotAppearance(
                 chatbot_id=chatbot_id,
-                initial_suggestions=[]  # Explicitly set to avoid server_default issues with JSONB
+                initial_suggestions=[],  # Explicitly set to avoid server_default issues with JSONB
             )
             db.add(appearance)
             await db.commit()
             await db.refresh(appearance)
-            
+
             logger.info(f"Created default appearance for chatbot {chatbot_id}")
-        
+
+        # Check subscription plan to enforce branding for free tier
+        # Free tier users must always show branding
+        show_branding = appearance.show_branding
+        sub_result = await db.execute(
+            select(Subscription).where(Subscription.tenant_id == chatbot.tenant_id)
+        )
+        subscription = sub_result.scalar_one_or_none()
+        if subscription and subscription.plan_type == PlanType.FREE:
+            show_branding = True  # Force branding for free tier
+
         # Convert to widget config response (position as string)
         # Note: welcome_message is kept in sync via chatbot.welcome_message when appearance is updated
         return WidgetConfigResponse(
@@ -1140,61 +1233,81 @@ class ChatbotService:
             primary_color=appearance.primary_color,
             header_text=appearance.header_text,
             avatar_url=appearance.avatar_url,
-            position=appearance.position.value if isinstance(appearance.position, WidgetPosition) else str(appearance.position),
+            position=(
+                appearance.position.value
+                if isinstance(appearance.position, WidgetPosition)
+                else str(appearance.position)
+            ),
             offset_x=appearance.offset_x,
             offset_y=appearance.offset_y,
             welcome_message=chatbot.welcome_message,
             initial_suggestions=appearance.initial_suggestions or [],
-            show_branding=appearance.show_branding,
+            show_branding=show_branding,
             is_paused=chatbot.status == ChatbotStatus.PAUSED,
+            # Personality settings
+            personality_tone=appearance.personality_tone or "friendly",
+            response_length=appearance.response_length or "balanced",
+            temperature=(
+                appearance.temperature if appearance.temperature is not None else 0.7
+            ),
+            custom_instructions=appearance.custom_instructions,
+            # Language settings
+            languages=appearance.languages if appearance.languages else ["en"],
         )
 
     # ============== Knowledge Base Management ==============
 
     @staticmethod
     @staticmethod
-    async def get_remaining_page_quota(db: AsyncSession, chatbot_id: UUID, user: User) -> dict:
+    async def get_remaining_page_quota(
+        db: AsyncSession, chatbot_id: UUID, user: User
+    ) -> dict:
         """
         Calculate remaining crawl page quota for a tenant based on subscription.
         Returns dict with total_limit, used, and remaining pages.
         NOTE: This is TENANT-WIDE, not per-chatbot. All chatbots share the same quota.
         """
         # Get billing overview for the tenant
-        billing_overview = await BillingService.get_billing_overview(db, user.tenant_id, user)
+        billing_overview = await BillingService.get_billing_overview(
+            db, user.tenant_id, user
+        )
         total_limit = billing_overview.current_plan.limits.knowledge_pages
         user_tier = billing_overview.subscription.plan_type
-        
+
         # Get all chatbot IDs for this tenant
         chatbot_stmt = select(Chatbot.id).where(Chatbot.tenant_id == user.tenant_id)
         chatbot_result = await db.execute(chatbot_stmt)
         chatbot_ids = [row[0] for row in chatbot_result.fetchall()]
-        
+
         if not chatbot_ids:
             return {
-                'total_limit': total_limit,
-                'used': 0,
-                'remaining': total_limit,
-                'tier': user_tier
+                "total_limit": total_limit,
+                "used": 0,
+                "remaining": total_limit,
+                "tier": user_tier,
             }
-        
+
         # Count existing crawled pages ACROSS ALL CHATBOTS (tenant-wide quota)
-        stmt = select(func.count(CrawledPage.id)).join(
-            KnowledgeSource,
-            KnowledgeSource.id == CrawledPage.knowledge_source_id
-        ).where(
-            KnowledgeSource.chatbot_id.in_(chatbot_ids),
-            CrawledPage.is_removed == False
+        stmt = (
+            select(func.count(CrawledPage.id))
+            .join(
+                KnowledgeSource, KnowledgeSource.id == CrawledPage.knowledge_source_id
+            )
+            .where(
+                KnowledgeSource.chatbot_id.in_(chatbot_ids),
+                CrawledPage.is_removed == False,
+            )
         )
-        
+
         result = await db.execute(stmt)
         used_pages = result.scalar() or 0
         remaining_pages = max(0, total_limit - used_pages)
-        
+
         return {
-            'total_limit': total_limit,
-            'used': used_pages,
-            'remaining': remaining_pages,
-            'tier': user_tier
+            "total_limit": total_limit,
+            "used": used_pages,
+            "remaining": remaining_pages,
+            "tier": user_tier,
         }
 
     @staticmethod
@@ -1204,23 +1317,25 @@ class ChatbotService:
         chatbot_id: UUID,
         user: User,
         request: KnowledgeSourceCreate,
-        background_tasks: BackgroundTasks
+        background_tasks: BackgroundTasks,
     ) -> KnowledgeSourceResponse:
         """Create a new crawl-based knowledge source and start crawling"""
-        
+
         # Verify chatbot access and check permissions
-        if not await ChatbotService.has_permission(db, chatbot_id, user, "can_manage_knowledge"):
+        if not await ChatbotService.has_permission(
+            db, chatbot_id, user, "can_manage_knowledge"
+        ):
             raise ForbiddenError("Insufficient permissions to add knowledge source")
 
         # Check remaining page quota
         quota = await ChatbotService.get_remaining_page_quota(db, chatbot_id, user)
-        
-        if quota['remaining'] <= 0:
+
+        if quota["remaining"] <= 0:
             raise ForbiddenError(
                 f"Page limit reached. You've used {quota['used']}/{quota['total_limit']} pages. "
                 f"Upgrade to increase your limit."
             )
-        
+
         # Log quota info
         logger.info(
             f"Chatbot {chatbot_id} page quota: {quota['used']}/{quota['total_limit']} used, "
@@ -1229,54 +1344,62 @@ class ChatbotService:
 
         # Normalize URL - strip trailing slash to prevent duplicates
         # https://example.com/ and https://example.com should be treated as the same
-        normalized_url = request.base_url.rstrip('/')
-        
+        normalized_url = request.base_url.rstrip("/")
+
         # Check if this URL is already a knowledge source for this chatbot
         # Use selectinload to eagerly load relationships for Pydantic validation
-        stmt = select(KnowledgeSource).options(
-            selectinload(KnowledgeSource.files),
-            selectinload(KnowledgeSource.qa_pairs),
-            selectinload(KnowledgeSource.pages)
-        ).where(
-            KnowledgeSource.chatbot_id == chatbot_id,
-            KnowledgeSource.source_type == KnowledgeSourceType.CRAWLED_URL,
-            KnowledgeSource.source_url == normalized_url
+        stmt = (
+            select(KnowledgeSource)
+            .options(
+                selectinload(KnowledgeSource.files),
+                selectinload(KnowledgeSource.qa_pairs),
+                selectinload(KnowledgeSource.pages),
+            )
+            .where(
+                KnowledgeSource.chatbot_id == chatbot_id,
+                KnowledgeSource.source_type == KnowledgeSourceType.CRAWLED_URL,
+                KnowledgeSource.source_url == normalized_url,
+            )
         )
         existing_ks = (await db.execute(stmt)).scalar_one_or_none()
-        
+
         if existing_ks:
             # Re-crawl: No per-crawl limit, only total quota matters
             # The crawler will stop when hitting the total page quota
-            
+
             # If already exists, update status to CRAWLING and clear error message immediately
             await db.execute(
                 update(KnowledgeSource)
                 .where(KnowledgeSource.id == existing_ks.id)
                 .values(
                     status=KnowledgeSourceStatus.PROCESSING,
-                    error_message=None  # Clear any previous error
+                    error_message=None,  # Clear any previous error
                 )
             )
             await db.commit()
-            
+
             # Refresh to get updated values
             await db.refresh(existing_ks)
-            
+
             # Trigger a re-crawl with no per-crawl limit (only quota matters)
             background_tasks.add_task(
                 CrawlerService.start_crawl,
                 knowledge_source_id=existing_ks.id,
                 base_url=normalized_url,
                 is_recrawl=True,
-                quota_limit=quota['total_limit'],  # Pass total limit, runtime check will enforce
-                background_tasks=background_tasks
+                quota_limit=quota[
+                    "total_limit"
+                ],  # Pass total limit, runtime check will enforce
+                background_tasks=background_tasks,
             )
             return KnowledgeSourceResponse.model_validate(existing_ks)
 
         # New crawl: No per-crawl limit, only total quota matters
         # The runtime quota check will stop crawling when total reaches 300
-        
-        logger.info(f"Starting new crawl - no per-crawl limit, total quota: {quota['total_limit']}")
+
+        logger.info(
+            f"Starting new crawl - no per-crawl limit, total quota: {quota['total_limit']}"
+        )
 
         # Create knowledge source with normalized URL
         ks = KnowledgeSource(
@@ -1284,7 +1407,7 @@ class ChatbotService:
             source_type=KnowledgeSourceType.CRAWLED_URL,
             source_url=normalized_url,
             status=KnowledgeSourceStatus.PENDING,
-            pages_found=0
+            pages_found=0,
         )
         db.add(ks)
 
@@ -1293,18 +1416,22 @@ class ChatbotService:
             chatbot_id=chatbot_id,
             user_id=user.id,
             activity_type="knowledge_source",
-            description=f"Added website knowledge source: {normalized_url} by {user.name or user.email}"
+            description=f"Added website knowledge source: {normalized_url} by {user.name or user.email}",
         )
         db.add(activity)
 
         await db.commit()
-        
+
         # Fetch with loaded relationships to avoid MissingGreenlet during validation
-        stmt = select(KnowledgeSource).options(
-            selectinload(KnowledgeSource.files),
-            selectinload(KnowledgeSource.qa_pairs),
-            selectinload(KnowledgeSource.pages)
-        ).where(KnowledgeSource.id == ks.id)
+        stmt = (
+            select(KnowledgeSource)
+            .options(
+                selectinload(KnowledgeSource.files),
+                selectinload(KnowledgeSource.qa_pairs),
+                selectinload(KnowledgeSource.pages),
+            )
+            .where(KnowledgeSource.id == ks.id)
+        )
         ks = (await db.execute(stmt)).scalar_one()
 
         # Start background crawl with no per-crawl limit (quota enforces total)
@@ -1313,53 +1440,57 @@ class ChatbotService:
             knowledge_source_id=ks.id,
             base_url=request.base_url,
             is_recrawl=False,
-            quota_limit=quota['total_limit'],  # Pass total limit, runtime check will enforce
-            background_tasks=background_tasks
+            quota_limit=quota[
+                "total_limit"
+            ],  # Pass total limit, runtime check will enforce
+            background_tasks=background_tasks,
         )
 
         return KnowledgeSourceResponse.model_validate(ks)
 
     @staticmethod
     async def list_knowledge_sources(
-        db: AsyncSession,
-        tenant_id: int,
-        chatbot_id: UUID,
-        user: User
+        db: AsyncSession, tenant_id: int, chatbot_id: UUID, user: User
     ) -> List[KnowledgeSourceResponse]:
         """List all knowledge sources for a chatbot"""
-        
+
         # Verify chatbot access
         await ChatbotService.get_chatbot(db, tenant_id, chatbot_id, user)
-        
-        stmt = select(KnowledgeSource).options(
-            selectinload(KnowledgeSource.files),
-            selectinload(KnowledgeSource.qa_pairs),
-            selectinload(KnowledgeSource.pages)
-        ).where(KnowledgeSource.chatbot_id == chatbot_id).order_by(KnowledgeSource.created_at.desc())
+
+        stmt = (
+            select(KnowledgeSource)
+            .options(
+                selectinload(KnowledgeSource.files),
+                selectinload(KnowledgeSource.qa_pairs),
+                selectinload(KnowledgeSource.pages),
+            )
+            .where(KnowledgeSource.chatbot_id == chatbot_id)
+            .order_by(KnowledgeSource.created_at.desc())
+        )
         result = await db.execute(stmt)
         sources = result.scalars().all()
-        
+
         return [KnowledgeSourceResponse.model_validate(s) for s in sources]
 
     @staticmethod
     async def get_knowledge_source_status(
-        db: AsyncSession,
-        knowledge_source_id: UUID,
-        user: User
+        db: AsyncSession, knowledge_source_id: UUID, user: User
     ) -> CrawlStatusResponse:
         """Get the status of a specific knowledge source"""
-        
+
         # Find the source and verify user has access to the chatbot it belongs to
         stmt = select(KnowledgeSource).where(KnowledgeSource.id == knowledge_source_id)
         result = await db.execute(stmt)
         ks = result.scalar_one_or_none()
-        
+
         if not ks:
             raise NotFoundError("Knowledge source not found")
-            
+
         # Verify access to the parent chatbot
         if user.role != UserRole.ADMIN:
-            permission_level = await ChatbotService._get_user_permission(db, ks.chatbot_id, user)
+            permission_level = await ChatbotService._get_user_permission(
+                db, ks.chatbot_id, user
+            )
             if not permission_level:
                 raise ForbiddenError("Access to this knowledge source is denied")
 
@@ -1372,17 +1503,22 @@ class ChatbotService:
         chatbot_id: UUID,
         user: User,
         file: UploadFile,
-        background_tasks: BackgroundTasks
+        background_tasks: BackgroundTasks,
     ) -> FileUploadResponse:
         """Upload a file, extract text, and start embedding"""
-        
+
         # 1. Verify chatbot access and permissions (can_manage_knowledge)
-        if not await ChatbotService.has_permission(db, chatbot_id, user, "can_manage_knowledge"):
+        if not await ChatbotService.has_permission(
+            db, chatbot_id, user, "can_manage_knowledge"
+        ):
             raise ForbiddenError("Insufficient permissions to upload files")
 
         # Enforce file count limit (plan-level)
         from app.services.billing_service import BillingService
-        file_limit = await BillingService.check_file_upload_limit(db, tenant_id, str(chatbot_id))
+
+        file_limit = await BillingService.check_file_upload_limit(
+            db, tenant_id, str(chatbot_id)
+        )
         if file_limit["exceeded"]:
             raise BadRequestError(
                 f"File upload limit reached. You've used {file_limit['current']}/"
@@ -1390,31 +1526,37 @@ class ChatbotService:
             )
 
         # 2. Validate file type
-        allowed_extensions = {'.pdf', '.docx', '.txt', '.md'}
+        allowed_extensions = {".pdf", ".docx", ".txt", ".md"}
         ext = os.path.splitext(file.filename)[1].lower()
         if ext not in allowed_extensions:
-            raise BadRequestError(f"Unsupported file type: {ext}. Allowed: {', '.join(allowed_extensions)}")
+            raise BadRequestError(
+                f"Unsupported file type: {ext}. Allowed: {', '.join(allowed_extensions)}"
+            )
 
         # 3. Pre-validate: Can we extract text from this file?
         content = await file.read()
 
         # Calculate content hash for deduplication
         content_hash = hashlib.sha256(content).hexdigest()
-        
+
         # Check for duplicate file for this chatbot
-        stmt = select(UploadedFile).join(KnowledgeSource).where(
-            KnowledgeSource.chatbot_id == chatbot_id,
-            UploadedFile.content_hash == content_hash
+        stmt = (
+            select(UploadedFile)
+            .join(KnowledgeSource)
+            .where(
+                KnowledgeSource.chatbot_id == chatbot_id,
+                UploadedFile.content_hash == content_hash,
+            )
         )
         existing_file = (await db.execute(stmt)).scalar_one_or_none()
         if existing_file:
-            raise BadRequestError(f"A file with the same content has already been uploaded as '{existing_file.filename}'.")
+            raise BadRequestError(
+                f"A file with the same content has already been uploaded as '{existing_file.filename}'."
+            )
 
         # Enforce storage limit before extracting/saving
         storage_limit = await BillingService.check_storage_limit(
-            db,
-            tenant_id,
-            additional_bytes=len(content)
+            db, tenant_id, additional_bytes=len(content)
         )
         if storage_limit["exceeded"]:
             raise BadRequestError(
@@ -1425,7 +1567,9 @@ class ChatbotService:
 
         extracted_text = await FileService.extract_text(content, file.content_type)
         if not extracted_text:
-            raise BadRequestError(f"Cannot extract text from {file.filename}. The file might be corrupted, encrypted, or empty.")
+            raise BadRequestError(
+                f"Cannot extract text from {file.filename}. The file might be corrupted, encrypted, or empty."
+            )
 
         # 4. Save file only if extraction succeeded
         upload_dir = os.path.join("uploads", str(tenant_id), str(chatbot_id))
@@ -1436,7 +1580,7 @@ class ChatbotService:
             chatbot_id=chatbot_id,
             source_type=KnowledgeSourceType.UPLOADED_FILE,
             status=KnowledgeSourceStatus.PENDING,
-            pages_found=1
+            pages_found=1,
         )
         db.add(ks)
         await db.flush()
@@ -1448,7 +1592,7 @@ class ChatbotService:
             file_path=file_path,
             file_size=len(content),
             mime_type=file.content_type,
-            content_hash=content_hash
+            content_hash=content_hash,
         )
         db.add(uploaded_file)
 
@@ -1457,18 +1601,22 @@ class ChatbotService:
             chatbot_id=chatbot_id,
             user_id=user.id,
             activity_type="knowledge_source",
-            description=f"Uploaded document: {file.filename} by {user.name or user.email}"
+            description=f"Uploaded document: {file.filename} by {user.name or user.email}",
         )
         db.add(activity)
 
         await db.commit()
-        
+
         # Fetch with loaded relationships to avoid MissingGreenlet during validation
-        stmt = select(KnowledgeSource).options(
-            selectinload(KnowledgeSource.files),
-            selectinload(KnowledgeSource.qa_pairs),
-            selectinload(KnowledgeSource.pages)
-        ).where(KnowledgeSource.id == ks.id)
+        stmt = (
+            select(KnowledgeSource)
+            .options(
+                selectinload(KnowledgeSource.files),
+                selectinload(KnowledgeSource.qa_pairs),
+                selectinload(KnowledgeSource.pages),
+            )
+            .where(KnowledgeSource.id == ks.id)
+        )
         ks = (await db.execute(stmt)).scalar_one()
 
         # 6. Extract text and embed in background
@@ -1477,17 +1625,17 @@ class ChatbotService:
             ks.id,
             file_path,
             file.content_type,
-            extracted_text  # Pass the already extracted text
+            extracted_text,  # Pass the already extracted text
         )
 
         return FileUploadResponse(
-            knowledge_source_id=ks.id,
-            filename=file.filename,
-            status=ks.status
+            knowledge_source_id=ks.id, filename=file.filename, status=ks.status
         )
 
     @staticmethod
-    async def _process_uploaded_file(ks_id: UUID, file_path: str, mime_type: str, text: Optional[str] = None):
+    async def _process_uploaded_file(
+        ks_id: UUID, file_path: str, mime_type: str, text: Optional[str] = None
+    ):
         """Background task to extract text from file and generate embeddings"""
         session_factory = get_session_factory()
         try:
@@ -1504,21 +1652,21 @@ class ChatbotService:
                     # Extract text if not provided
                     if not text:
                         text = await FileService.extract_text(file_path, mime_type)
-                    
+
                     if not text:
                         raise Exception("Failed to extract text from file")
 
                     # Create a "virtual page" for the file content so embedding service can use it
-                    # Or we can modify embedding service to handle raw text. 
+                    # Or we can modify embedding service to handle raw text.
                     # For now, let's create a CrawledPage entry as it's the expected input for EmbeddingService
                     stmt = select(KnowledgeSource).where(KnowledgeSource.id == ks_id)
                     ks = (await db.execute(stmt)).scalar_one()
-                    
+
                     crawled_page = CrawledPage(
                         knowledge_source_id=ks_id,
                         url=f"file://{os.path.basename(file_path)}",
                         title=os.path.basename(file_path),
-                        content=text
+                        content=text,
                     )
                     db.add(crawled_page)
                     await db.commit()
@@ -1533,7 +1681,9 @@ class ChatbotService:
                         .values(status=KnowledgeSourceStatus.COMPLETED)
                     )
                     await db.commit()
-                    logger.success(f"Successfully processed uploaded file for KS: {ks_id}")
+                    logger.success(
+                        f"Successfully processed uploaded file for KS: {ks_id}"
+                    )
 
                 except Exception as e:
                     logger.error(f"Error processing uploaded file {ks_id}: {str(e)}")
@@ -1543,13 +1693,14 @@ class ChatbotService:
                         await FileService.delete_file(file_path)
                         logger.info(f"Deleted failed upload from storage: {file_path}")
                     except Exception as cleanup_error:
-                        logger.error(f"Failed to cleanup file after error: {cleanup_error}")
+                        logger.error(
+                            f"Failed to cleanup file after error: {cleanup_error}"
+                        )
 
                     try:
                         raw_error = str(e)
                         short_error = sanitize_error_message(
-                            raw_error,
-                            fallback="Processing failed. Please try again."
+                            raw_error, fallback="Processing failed. Please try again."
                         )
                         if len(short_error) > 400:
                             short_error = short_error[:400] + "..."
@@ -1558,35 +1709,42 @@ class ChatbotService:
                             .where(KnowledgeSource.id == ks_id)
                             .values(
                                 status=KnowledgeSourceStatus.FAILED,
-                                error_message=short_error
+                                error_message=short_error,
                             )
                         )
                         await db.commit()
                     except Exception as update_error:
-                        logger.error(f"Failed to mark knowledge source as FAILED: {update_error}")
+                        logger.error(
+                            f"Failed to mark knowledge source as FAILED: {update_error}"
+                        )
                         await db.rollback()
         except Exception as outer_error:
-            logger.error(f"Upload background task crashed before handling failure for KS {ks_id}: {outer_error}")
+            logger.error(
+                f"Upload background task crashed before handling failure for KS {ks_id}: {outer_error}"
+            )
 
     @staticmethod
     async def delete_knowledge_source(
-        db: AsyncSession,
-        tenant_id: int,
-        ks_id: UUID,
-        user: User
+        db: AsyncSession, tenant_id: int, ks_id: UUID, user: User
     ) -> None:
         """Delete a knowledge source and all its associated data (pages, embeddings, files)"""
-        
+
         # 1. Find knowledge source
-        stmt = select(KnowledgeSource).options(selectinload(KnowledgeSource.files)).where(KnowledgeSource.id == ks_id)
+        stmt = (
+            select(KnowledgeSource)
+            .options(selectinload(KnowledgeSource.files))
+            .where(KnowledgeSource.id == ks_id)
+        )
         result = await db.execute(stmt)
         ks = result.scalar_one_or_none()
-        
+
         if not ks:
             raise NotFoundError("Knowledge source not found")
 
         # 2. Verify permission (can_manage_knowledge)
-        if not await ChatbotService.has_permission(db, ks.chatbot_id, user, "can_manage_knowledge"):
+        if not await ChatbotService.has_permission(
+            db, ks.chatbot_id, user, "can_manage_knowledge"
+        ):
             raise ForbiddenError("Insufficient permissions to delete knowledge")
 
         # 3. If it's a file, delete the actual file from storage (S3/Supabase or local)
@@ -1598,70 +1756,99 @@ class ChatbotService:
 
         # 4. Explicitly delete all embeddings for this knowledge source
         # (CASCADE should handle this, but being explicit ensures it works)
-        await db.execute(delete(Embedding).where(Embedding.knowledge_source_id == ks_id))
-        
+        await db.execute(
+            delete(Embedding).where(Embedding.knowledge_source_id == ks_id)
+        )
+
         # 5. Delete all related records to avoid FK constraints
-        await db.execute(delete(CrawlHistory).where(CrawlHistory.knowledge_source_id == ks_id))
-        await db.execute(delete(CrawlSchedule).where(CrawlSchedule.knowledge_source_id == ks_id))
-        
+        await db.execute(
+            delete(CrawlHistory).where(CrawlHistory.knowledge_source_id == ks_id)
+        )
+        await db.execute(
+            delete(CrawlSchedule).where(CrawlSchedule.knowledge_source_id == ks_id)
+        )
+
         # Count items for logging
         from app.models.knowledge import CrawledPage, UploadedFile, QAPair
-        pages_count = (await db.execute(select(func.count()).where(CrawledPage.knowledge_source_id == ks_id))).scalar() or 0
-        files_count = (await db.execute(select(func.count()).where(UploadedFile.knowledge_source_id == ks_id))).scalar() or 0
-        qa_count = (await db.execute(select(func.count()).where(QAPair.knowledge_source_id == ks_id))).scalar() or 0
+
+        pages_count = (
+            await db.execute(
+                select(func.count()).where(CrawledPage.knowledge_source_id == ks_id)
+            )
+        ).scalar() or 0
+        files_count = (
+            await db.execute(
+                select(func.count()).where(UploadedFile.knowledge_source_id == ks_id)
+            )
+        ).scalar() or 0
+        qa_count = (
+            await db.execute(
+                select(func.count()).where(QAPair.knowledge_source_id == ks_id)
+            )
+        ).scalar() or 0
 
         # Delete all crawled pages, uploaded files, and QA pairs
-        await db.execute(delete(CrawledPage).where(CrawledPage.knowledge_source_id == ks_id))
-        await db.execute(delete(UploadedFile).where(UploadedFile.knowledge_source_id == ks_id))
+        await db.execute(
+            delete(CrawledPage).where(CrawledPage.knowledge_source_id == ks_id)
+        )
+        await db.execute(
+            delete(UploadedFile).where(UploadedFile.knowledge_source_id == ks_id)
+        )
         await db.execute(delete(QAPair).where(QAPair.knowledge_source_id == ks_id))
-        
+
         # 6. Log activity before deleting
         item_desc = []
-        if pages_count: item_desc.append(f"{pages_count} pages")
-        if files_count: item_desc.append(f"{files_count} files")
-        if qa_count: item_desc.append(f"{qa_count} Q&A pairs")
-        
+        if pages_count:
+            item_desc.append(f"{pages_count} pages")
+        if files_count:
+            item_desc.append(f"{files_count} files")
+        if qa_count:
+            item_desc.append(f"{qa_count} Q&A pairs")
+
         details = f" ({', '.join(item_desc)})" if item_desc else ""
-        
+
         activity = ChatbotActivity(
             chatbot_id=ks.chatbot_id,
             user_id=user.id,
             activity_type="knowledge_source_deleted",
-            description=f"Knowledge source deleted: {ks.source_url or str(ks_id)[:8]}{details} by {user.name or user.email}"
+            description=f"Knowledge source deleted: {ks.source_url or str(ks_id)[:8]}{details} by {user.name or user.email}",
         )
         db.add(activity)
-        
+
         # 7. Delete from database (cascade will handle pages, files, qa_pairs)
         await db.execute(delete(KnowledgeSource).where(KnowledgeSource.id == ks_id))
         await db.commit()
-        logger.success(f"Deleted knowledge source {ks_id} and all associated embeddings")
+        logger.success(
+            f"Deleted knowledge source {ks_id} and all associated embeddings"
+        )
 
     @staticmethod
     async def _delete_crawled_page_internal(
-        db: AsyncSession,
-        page_id: UUID,
-        user: User,
-        commit: bool = True
+        db: AsyncSession, page_id: UUID, user: User, commit: bool = True
     ) -> Optional[UUID]:
         """Internal method to delete a crawled page and its embeddings.
         Returns the knowledge_source_id if the page was deleted, None otherwise.
         If commit is False, the caller is responsible for committing."""
-        
+
         # 1. Find page
         stmt = select(CrawledPage).where(CrawledPage.id == page_id)
         result = await db.execute(stmt)
         page = result.scalar_one_or_none()
-        
+
         if not page:
             raise NotFoundError("Page not found")
 
         # 2. Find parent knowledge source to check permissions
-        stmt = select(KnowledgeSource).where(KnowledgeSource.id == page.knowledge_source_id)
+        stmt = select(KnowledgeSource).where(
+            KnowledgeSource.id == page.knowledge_source_id
+        )
         result = await db.execute(stmt)
         ks = result.scalar_one()
 
         # 3. Verify permission (can_manage_knowledge)
-        if not await ChatbotService.has_permission(db, ks.chatbot_id, user, "can_manage_knowledge"):
+        if not await ChatbotService.has_permission(
+            db, ks.chatbot_id, user, "can_manage_knowledge"
+        ):
             raise ForbiddenError("Insufficient permissions to delete page")
 
         # 4. Delete associated embeddings (metadata contains 'url' field, not 'page_id')
@@ -1671,33 +1858,31 @@ class ChatbotService:
         await db.execute(
             delete(Embedding).where(
                 Embedding.knowledge_source_id == ks.id,
-                text(f"metadata_json->>'url' = '{escaped_url}'")
+                text(f"metadata_json->>'url' = '{escaped_url}'"),
             )
         )
 
         # 5. Delete page
         await db.delete(page)
-        
+
         # 6. Update pages_found count in KnowledgeSource
         ks.pages_found = max(0, ks.pages_found - 1)
-        
+
         if commit:
             await db.commit()
-        
+
         logger.success(f"Deleted crawled page {page_id}")
         return ks.id
 
     @staticmethod
-    async def delete_crawled_page(
-        db: AsyncSession,
-        page_id: UUID,
-        user: User
-    ) -> None:
+    async def delete_crawled_page(db: AsyncSession, page_id: UUID, user: User) -> None:
         """Delete an individual crawled page and its embeddings"""
         try:
-            ks_id = await ChatbotService._delete_crawled_page_internal(db, page_id, user, commit=False)
+            ks_id = await ChatbotService._delete_crawled_page_internal(
+                db, page_id, user, commit=False
+            )
             await db.commit()
-            
+
             # Check if knowledge source is now empty and delete it if it's a crawl source
             if ks_id:
                 try:
@@ -1706,25 +1891,45 @@ class ChatbotService:
                         CrawledPage.knowledge_source_id == ks_id
                     )
                     page_count = (await db.execute(stmt)).scalar() or 0
-                    
+
                     if page_count == 0:
                         # Get the knowledge source to check its type
-                        stmt = select(KnowledgeSource).where(KnowledgeSource.id == ks_id)
+                        stmt = select(KnowledgeSource).where(
+                            KnowledgeSource.id == ks_id
+                        )
                         ks = (await db.execute(stmt)).scalar_one_or_none()
-                        
+
                         # Only delete CRAWLED_URL sources that are empty
                         if ks and ks.source_type == KnowledgeSourceType.CRAWLED_URL:
                             # Delete embeddings first
-                            await db.execute(delete(Embedding).where(Embedding.knowledge_source_id == ks_id))
+                            await db.execute(
+                                delete(Embedding).where(
+                                    Embedding.knowledge_source_id == ks_id
+                                )
+                            )
                             # Delete crawl-related records to avoid FK constraint
-                            await db.execute(delete(CrawlHistory).where(CrawlHistory.knowledge_source_id == ks_id))
-                            await db.execute(delete(CrawlSchedule).where(CrawlSchedule.knowledge_source_id == ks_id))
+                            await db.execute(
+                                delete(CrawlHistory).where(
+                                    CrawlHistory.knowledge_source_id == ks_id
+                                )
+                            )
+                            await db.execute(
+                                delete(CrawlSchedule).where(
+                                    CrawlSchedule.knowledge_source_id == ks_id
+                                )
+                            )
                             # Delete knowledge source
-                            await db.execute(delete(KnowledgeSource).where(KnowledgeSource.id == ks_id))
+                            await db.execute(
+                                delete(KnowledgeSource).where(
+                                    KnowledgeSource.id == ks_id
+                                )
+                            )
                             await db.commit()
                             logger.info(f"Deleted empty crawl knowledge source {ks_id}")
                 except Exception as e:
-                    logger.error(f"Failed to check/delete empty knowledge source {ks_id}: {e}")
+                    logger.error(
+                        f"Failed to check/delete empty knowledge source {ks_id}: {e}"
+                    )
                     # Don't fail the whole operation if this check fails
         except Exception as e:
             await db.rollback()
@@ -1736,21 +1941,21 @@ class ChatbotService:
         tenant_id: int,
         chatbot_id: UUID,
         source_ids: List[UUID],
-        user: User
+        user: User,
     ) -> None:
         """Bulk delete knowledge sources"""
         for source_id in source_ids:
             try:
-                await ChatbotService.delete_knowledge_source(db, tenant_id, source_id, user)
+                await ChatbotService.delete_knowledge_source(
+                    db, tenant_id, source_id, user
+                )
             except Exception as e:
                 logger.error(f"Failed to delete source {source_id}: {e}")
         await db.commit()
 
     @staticmethod
     async def bulk_delete_qa_pairs(
-        db: AsyncSession,
-        qa_ids: List[UUID],
-        user: User
+        db: AsyncSession, qa_ids: List[UUID], user: User
     ) -> None:
         """Bulk delete QA pairs"""
         for qa_id in qa_ids:
@@ -1762,18 +1967,16 @@ class ChatbotService:
 
     @staticmethod
     async def bulk_delete_pages(
-        db: AsyncSession,
-        page_ids: List[UUID],
-        user: User
+        db: AsyncSession, page_ids: List[UUID], user: User
     ) -> None:
         """Bulk delete individual pages in a single transaction"""
         if not page_ids:
             return
-        
+
         # Track knowledge sources that might become empty
         affected_ks_ids = set()
         deleted_count = 0
-        
+
         try:
             for page_id in page_ids:
                 try:
@@ -1790,10 +1993,10 @@ class ChatbotService:
                 except Exception as e:
                     logger.error(f"Failed to delete page {page_id}: {e}")
                     # Continue with other pages
-            
+
             # Commit all deletions at once
             await db.commit()
-            
+
             # Check for empty knowledge sources and delete them
             if affected_ks_ids:
                 empty_ks_to_delete = []
@@ -1804,19 +2007,23 @@ class ChatbotService:
                             CrawledPage.knowledge_source_id == ks_id
                         )
                         page_count = (await db.execute(stmt)).scalar() or 0
-                        
+
                         if page_count == 0:
                             # Get the knowledge source to check its type
-                            stmt = select(KnowledgeSource).where(KnowledgeSource.id == ks_id)
+                            stmt = select(KnowledgeSource).where(
+                                KnowledgeSource.id == ks_id
+                            )
                             ks = (await db.execute(stmt)).scalar_one_or_none()
-                            
+
                             # Only delete CRAWLED_URL sources that are empty
                             # (UPLOADED_FILE and QA_PAIR sources have different content)
                             if ks and ks.source_type == KnowledgeSourceType.CRAWLED_URL:
                                 empty_ks_to_delete.append(ks_id)
                     except Exception as e:
-                        logger.error(f"Failed to check empty knowledge source {ks_id}: {e}")
-                
+                        logger.error(
+                            f"Failed to check empty knowledge source {ks_id}: {e}"
+                        )
+
                 # Delete all empty crawl sources in one go
                 if empty_ks_to_delete:
                     try:
@@ -1834,7 +2041,9 @@ class ChatbotService:
                         )
                         await db.execute(
                             delete(CrawlSchedule).where(
-                                CrawlSchedule.knowledge_source_id.in_(empty_ks_to_delete)
+                                CrawlSchedule.knowledge_source_id.in_(
+                                    empty_ks_to_delete
+                                )
                             )
                         )
                         # Delete knowledge sources
@@ -1843,15 +2052,17 @@ class ChatbotService:
                                 KnowledgeSource.id.in_(empty_ks_to_delete)
                             )
                         )
-                        logger.info(f"Deleted {len(empty_ks_to_delete)} empty crawl knowledge source(s)")
+                        logger.info(
+                            f"Deleted {len(empty_ks_to_delete)} empty crawl knowledge source(s)"
+                        )
                     except Exception as e:
                         logger.error(f"Failed to delete empty knowledge sources: {e}")
-                
+
                 # Commit knowledge source deletions
                 await db.commit()
-            
+
             logger.success(f"Bulk deleted {deleted_count} pages")
-            
+
         except Exception as e:
             await db.rollback()
             logger.error(f"Error in bulk_delete_pages: {e}")
@@ -1866,28 +2077,30 @@ class ChatbotService:
         chatbot_id: UUID,
         user: User,
         request: QAPairCreate,
-        background_tasks: BackgroundTasks
+        background_tasks: BackgroundTasks,
     ) -> QAPairResponse:
         """Create a single QA pair and re-embed"""
-        
+
         # Verify access and permission (can_manage_knowledge)
-        if not await ChatbotService.has_permission(db, chatbot_id, user, "can_manage_knowledge"):
+        if not await ChatbotService.has_permission(
+            db, chatbot_id, user, "can_manage_knowledge"
+        ):
             raise ForbiddenError("Insufficient permissions to manage QA pairs")
 
         # Get or create a "Manual QA" KnowledgeSource for this chatbot
         stmt = select(KnowledgeSource).where(
             KnowledgeSource.chatbot_id == chatbot_id,
             KnowledgeSource.source_type == KnowledgeSourceType.QA_PAIR,
-            KnowledgeSource.source_url == "manual"
+            KnowledgeSource.source_url == "manual",
         )
         ks = (await db.execute(stmt)).scalar_one_or_none()
-        
+
         if not ks:
             ks = KnowledgeSource(
                 chatbot_id=chatbot_id,
                 source_type=KnowledgeSourceType.QA_PAIR,
                 source_url="manual",
-                status=KnowledgeSourceStatus.COMPLETED
+                status=KnowledgeSourceStatus.COMPLETED,
             )
             db.add(ks)
             await db.flush()
@@ -1895,21 +2108,21 @@ class ChatbotService:
         # Check for duplicate QA pair
         q_text = request.question.strip()
         a_text = request.answer.strip()
-        
-        stmt = select(QAPair).join(KnowledgeSource).where(
-            KnowledgeSource.chatbot_id == chatbot_id,
-            QAPair.question == q_text,
-            QAPair.answer == a_text
+
+        stmt = (
+            select(QAPair)
+            .join(KnowledgeSource)
+            .where(
+                KnowledgeSource.chatbot_id == chatbot_id,
+                QAPair.question == q_text,
+                QAPair.answer == a_text,
+            )
         )
         existing_qa = (await db.execute(stmt)).scalar_one_or_none()
         if existing_qa:
             raise BadRequestError("This Q&A pair already exists for this chatbot.")
 
-        qa = QAPair(
-            knowledge_source_id=ks.id,
-            question=q_text,
-            answer=a_text
-        )
+        qa = QAPair(knowledge_source_id=ks.id, question=q_text, answer=a_text)
         db.add(qa)
 
         # Log activity
@@ -1917,7 +2130,7 @@ class ChatbotService:
             chatbot_id=chatbot_id,
             user_id=user.id,
             activity_type="knowledge_source",
-            description=f"Added Q&A pair by {user.name or user.email}"
+            description=f"Added Q&A pair by {user.name or user.email}",
         )
         db.add(activity)
 
@@ -1936,34 +2149,36 @@ class ChatbotService:
         chatbot_id: UUID,
         user: User,
         file: UploadFile,
-        background_tasks: BackgroundTasks
+        background_tasks: BackgroundTasks,
     ) -> KnowledgeSourceResponse:
         """Bulk upload QA pairs from XLSX"""
-        
+
         # Verify access and permission (can_manage_knowledge)
-        if not await ChatbotService.has_permission(db, chatbot_id, user, "can_manage_knowledge"):
+        if not await ChatbotService.has_permission(
+            db, chatbot_id, user, "can_manage_knowledge"
+        ):
             raise ForbiddenError("Insufficient permissions to manage QA pairs")
-        
-        if not file.filename.endswith(('.xlsx', '.xls')):
+
+        if not file.filename.endswith((".xlsx", ".xls")):
             raise BadRequestError("Please upload an Excel file (.xlsx or .xls)")
 
         content = await file.read()
         try:
             df = pd.read_excel(io.BytesIO(content))
-            
+
             # Normalize column names: lowercase and strip spaces
             original_cols = list(df.columns)
             df.columns = [str(col).lower().strip() for col in df.columns]
-            
+
             # Map potential column names to standard names
             col_map = {}
             for col in df.columns:
-                if col in ['question', 'q', 'queries', 'query']:
-                    col_map[col] = 'question'
-                elif col in ['answer', 'a', 'responses', 'response']:
-                    col_map[col] = 'answer'
-            
-            if 'question' in col_map.values() and 'answer' in col_map.values():
+                if col in ["question", "q", "queries", "query"]:
+                    col_map[col] = "question"
+                elif col in ["answer", "a", "responses", "response"]:
+                    col_map[col] = "answer"
+
+            if "question" in col_map.values() and "answer" in col_map.values():
                 # Rename the identified columns to 'question' and 'answer'
                 rename_dict = {k: v for k, v in col_map.items()}
                 df = df.rename(columns=rename_dict)
@@ -1985,25 +2200,31 @@ class ChatbotService:
         # Reset iterator
         df_iter = df.iterrows()
         for _, row in df_iter:
-            q = str(row['question']).strip()
+            q = str(row["question"]).strip()
             if q:
                 first_question = q
                 break
-        
-        bundle_name = f"QA Bundle: {first_question[:30]}..." if first_question else f"QA Bundle: {file.filename}"
+
+        bundle_name = (
+            f"QA Bundle: {first_question[:30]}..."
+            if first_question
+            else f"QA Bundle: {file.filename}"
+        )
 
         ks = KnowledgeSource(
             chatbot_id=chatbot_id,
             source_type=KnowledgeSourceType.QA_PAIR,
             source_url=bundle_name,
-            status=KnowledgeSourceStatus.PROCESSING
+            status=KnowledgeSourceStatus.PROCESSING,
         )
         db.add(ks)
         await db.flush()
 
         # Get existing QA pairs for this chatbot to prevent duplicates
-        stmt = select(QAPair.question, QAPair.answer).join(KnowledgeSource).where(
-            KnowledgeSource.chatbot_id == chatbot_id
+        stmt = (
+            select(QAPair.question, QAPair.answer)
+            .join(KnowledgeSource)
+            .where(KnowledgeSource.chatbot_id == chatbot_id)
         )
         res = await db.execute(stmt)
         existing_pairs = {(row[0].strip(), row[1].strip()) for row in res.all()}
@@ -2013,13 +2234,13 @@ class ChatbotService:
         seen_in_batch = set()
 
         for _, row in df.iterrows():
-            q = str(row['question']).strip()
-            a = str(row['answer']).strip()
+            q = str(row["question"]).strip()
+            a = str(row["answer"]).strip()
             if q and a:
                 if (q, a) in existing_pairs or (q, a) in seen_in_batch:
                     skipped += 1
                     continue
-                
+
                 qa = QAPair(knowledge_source_id=ks.id, question=q, answer=a)
                 db.add(qa)
                 seen_in_batch.add((q, a))
@@ -2030,46 +2251,54 @@ class ChatbotService:
             await db.delete(ks)
             await db.commit()
             if skipped > 0:
-                raise BadRequestError(f"All {skipped} Q&A pairs in the file already exist.")
+                raise BadRequestError(
+                    f"All {skipped} Q&A pairs in the file already exist."
+                )
             raise BadRequestError("All Q&A pairs in the file are empty.")
 
         ks.pages_found = count
-        
+
         # Log descriptive activity
         activity = ChatbotActivity(
             chatbot_id=chatbot_id,
             user_id=user.id,
             activity_type="knowledge_source",
-            description=f"Added {count} Q&A pairs from {file.filename}. First: {first_question[:50]}..."
+            description=f"Added {count} Q&A pairs from {file.filename}. First: {first_question[:50]}...",
         )
         db.add(activity)
-        
+
         await db.commit()
-        
+
         # Fetch with loaded relationships to avoid MissingGreenlet during validation
-        stmt = select(KnowledgeSource).options(
-            selectinload(KnowledgeSource.files),
-            selectinload(KnowledgeSource.qa_pairs),
-            selectinload(KnowledgeSource.pages)
-        ).where(KnowledgeSource.id == ks.id)
+        stmt = (
+            select(KnowledgeSource)
+            .options(
+                selectinload(KnowledgeSource.files),
+                selectinload(KnowledgeSource.qa_pairs),
+                selectinload(KnowledgeSource.pages),
+            )
+            .where(KnowledgeSource.id == ks.id)
+        )
         ks = (await db.execute(stmt)).scalar_one()
 
         # Re-embed everything in this new source
         background_tasks.add_task(EmbeddingService.process_knowledge_source, ks.id)
-        
+
         return KnowledgeSourceResponse.model_validate(ks)
 
     @staticmethod
     async def list_qa_pairs(
-        db: AsyncSession,
-        tenant_id: int,
-        chatbot_id: UUID,
-        user: User
+        db: AsyncSession, tenant_id: int, chatbot_id: UUID, user: User
     ) -> List[QAPairResponse]:
         """List all QA pairs for a chatbot across all QA sources"""
         await ChatbotService.get_chatbot(db, tenant_id, chatbot_id, user)
-        
-        stmt = select(QAPair).join(KnowledgeSource).where(KnowledgeSource.chatbot_id == chatbot_id).order_by(QAPair.created_at.asc(), QAPair.id.asc())
+
+        stmt = (
+            select(QAPair)
+            .join(KnowledgeSource)
+            .where(KnowledgeSource.chatbot_id == chatbot_id)
+            .order_by(QAPair.created_at.asc(), QAPair.id.asc())
+        )
         result = await db.execute(stmt)
         return [QAPairResponse.model_validate(qa) for qa in result.scalars().all()]
 
@@ -2079,49 +2308,55 @@ class ChatbotService:
         qa_id: UUID,
         user: User,
         request: QAPairCreate,
-        background_tasks: BackgroundTasks
+        background_tasks: BackgroundTasks,
     ) -> QAPairResponse:
         stmt = select(QAPair).where(QAPair.id == qa_id)
         qa = (await db.execute(stmt)).scalar_one_or_none()
-        if not qa: raise NotFoundError("QA pair not found")
-        
+        if not qa:
+            raise NotFoundError("QA pair not found")
+
         # Get parent knowledge source to find chatbot
-        stmt = select(KnowledgeSource).where(KnowledgeSource.id == qa.knowledge_source_id)
+        stmt = select(KnowledgeSource).where(
+            KnowledgeSource.id == qa.knowledge_source_id
+        )
         ks = (await db.execute(stmt)).scalar_one()
-        
+
         # Verify permission
-        if not await ChatbotService.has_permission(db, ks.chatbot_id, user, "can_manage_knowledge"):
+        if not await ChatbotService.has_permission(
+            db, ks.chatbot_id, user, "can_manage_knowledge"
+        ):
             raise ForbiddenError("Insufficient permissions to update QA pairs")
-        
+
         qa.question = request.question
         qa.answer = request.answer
         await db.commit()
         await db.refresh(qa)
-        
+
         # Re-embed only this pair (faster, avoids global processing state)
         background_tasks.add_task(EmbeddingService.process_single_qa_pair, qa.id)
         return QAPairResponse.model_validate(qa)
 
     @staticmethod
-    async def delete_qa_pair(
-        db: AsyncSession,
-        qa_id: UUID,
-        user: User
-    ) -> None:
+    async def delete_qa_pair(db: AsyncSession, qa_id: UUID, user: User) -> None:
         stmt = select(QAPair).where(QAPair.id == qa_id)
         qa = (await db.execute(stmt)).scalar_one_or_none()
-        if not qa: raise NotFoundError("QA pair not found")
-        
+        if not qa:
+            raise NotFoundError("QA pair not found")
+
         # Get parent knowledge source to find chatbot
-        stmt = select(KnowledgeSource).where(KnowledgeSource.id == qa.knowledge_source_id)
+        stmt = select(KnowledgeSource).where(
+            KnowledgeSource.id == qa.knowledge_source_id
+        )
         ks = (await db.execute(stmt)).scalar_one()
-        
+
         # Verify permission
-        if not await ChatbotService.has_permission(db, ks.chatbot_id, user, "can_manage_knowledge"):
+        if not await ChatbotService.has_permission(
+            db, ks.chatbot_id, user, "can_manage_knowledge"
+        ):
             raise ForbiddenError("Insufficient permissions to delete QA pairs")
-        
+
         ks_id = qa.knowledge_source_id
-        
+
         # Delete the specific embedding for this QA pair
         # Embedding metadata contains "qa_id" as a string
         # Use JSONB contains operator: metadata_json->>'qa_id' = 'qa_id_string'
@@ -2129,50 +2364,47 @@ class ChatbotService:
         await db.execute(
             delete(Embedding).where(
                 Embedding.knowledge_source_id == ks_id,
-                text(f"metadata_json->>'qa_id' = '{qa_id_str}'")
+                text(f"metadata_json->>'qa_id' = '{qa_id_str}'"),
             )
         )
-        
+
         # Delete the QA pair
         await db.delete(qa)
-        
+
         # Update the knowledge source pages_found count
         ks.pages_found = max(0, ks.pages_found - 1)
-        
+
         # Check if this was the last QA pair in the knowledge source
         remaining_qa_count = await db.execute(
             select(func.count(QAPair.id)).where(
                 QAPair.knowledge_source_id == ks_id,
-                QAPair.id != qa_id  # Exclude the one we're about to delete
+                QAPair.id != qa_id,  # Exclude the one we're about to delete
             )
         )
         remaining_count = remaining_qa_count.scalar() or 0
-        
+
         # Log activity
         activity = ChatbotActivity(
             chatbot_id=ks.chatbot_id,
             user_id=user.id,
             activity_type="qa_pair_deleted",
-            description=f"Q&A pair deleted: '{qa.question[:50]}...' by {user.name or user.email}"
+            description=f"Q&A pair deleted: '{qa.question[:50]}...' by {user.name or user.email}",
         )
         db.add(activity)
-        
+
         await db.commit()
-        
+
         # If this was the last QA pair, delete the knowledge source entirely
         if remaining_count == 0 and ks.source_type == KnowledgeSourceType.QA_PAIR:
             await db.execute(delete(KnowledgeSource).where(KnowledgeSource.id == ks_id))
             await db.commit()
             logger.success(f"Deleted empty QA knowledge source {ks_id}")
-        
+
         logger.success(f"Deleted QA pair {qa_id} and its embedding")
 
     @staticmethod
     async def get_overview_stats(
-        db: AsyncSession,
-        tenant_id: int,
-        chatbot_id: UUID,
-        user: User
+        db: AsyncSession, tenant_id: int, chatbot_id: UUID, user: User
     ) -> ChatbotStatsResponse:
         """Get overview statistics for a specific chatbot"""
         await ChatbotService._ensure_analytics_access(
@@ -2184,62 +2416,92 @@ class ChatbotService:
 
         # 1. Total Conversations (Sessions with actual messages, excluding previews)
         # Only count sessions that have at least one user message
-        sessions_with_messages_stmt = select(func.count(func.distinct(ChatMessage.session_id))).where(
-            ChatMessage.session_id.in_(
-                select(ChatSession.id).where(
-                    ChatSession.chatbot_id == chatbot_id,
-                    ChatSession.is_preview == False
+        sessions_with_messages_stmt = (
+            select(func.count(func.distinct(ChatMessage.session_id)))
+            .where(
+                ChatMessage.session_id.in_(
+                    select(ChatSession.id).where(
+                        ChatSession.chatbot_id == chatbot_id,
+                        ChatSession.is_preview == False,
+                    )
                 )
             )
-        ).where(ChatMessage.role == MessageRole.USER.value)
+            .where(ChatMessage.role == MessageRole.USER.value)
+        )
         sessions_count = (await db.execute(sessions_with_messages_stmt)).scalar() or 0
 
         # 2. Knowledge Sources
-        ks_stmt = select(KnowledgeSource).where(KnowledgeSource.chatbot_id == chatbot_id)
+        ks_stmt = select(KnowledgeSource).where(
+            KnowledgeSource.chatbot_id == chatbot_id
+        )
         ks_result = await db.execute(ks_stmt)
         ks_list = ks_result.scalars().all()
-        
+
         # Exclude failed knowledge sources from total count
-        total_ks = len([ks for ks in ks_list if ks.status != KnowledgeSourceStatus.FAILED])
-        active_ks = len([ks for ks in ks_list if ks.status == KnowledgeSourceStatus.COMPLETED])
+        total_ks = len(
+            [ks for ks in ks_list if ks.status != KnowledgeSourceStatus.FAILED]
+        )
+        active_ks = len(
+            [ks for ks in ks_list if ks.status == KnowledgeSourceStatus.COMPLETED]
+        )
 
         # 2.5. Calculate detailed breakdown and total knowledge base size
         # Only count knowledge sources with COMPLETED status in breakdown stats
-        completed_ks_list = [ks for ks in ks_list if ks.status == KnowledgeSourceStatus.COMPLETED]
-        
+        completed_ks_list = [
+            ks for ks in ks_list if ks.status == KnowledgeSourceStatus.COMPLETED
+        ]
+
         total_kb_size = 0
         breakdown = {
-            'total_crawled_urls': 0,
-            'total_uploaded_files': 0,
-            'total_qa_pairs': 0,
-            'total_crawled_pages': 0,
-            'total_file_size': 0,
-            'total_qa_count': 0
+            "total_crawled_urls": 0,
+            "total_uploaded_files": 0,
+            "total_qa_pairs": 0,
+            "total_crawled_pages": 0,
+            "total_file_size": 0,
+            "total_qa_count": 0,
         }
 
         if completed_ks_list:
             completed_ks_ids = [ks.id for ks in completed_ks_list]
-            
+
             # Count by source type - only completed sources
-            breakdown['total_crawled_urls'] = len([ks for ks in completed_ks_list if ks.source_type == KnowledgeSourceType.CRAWLED_URL])
-            breakdown['total_uploaded_files'] = len([ks for ks in completed_ks_list if ks.source_type == KnowledgeSourceType.UPLOADED_FILE])
-            breakdown['total_qa_pairs'] = len([ks for ks in completed_ks_list if ks.source_type == KnowledgeSourceType.QA_PAIR])
-            
+            breakdown["total_crawled_urls"] = len(
+                [
+                    ks
+                    for ks in completed_ks_list
+                    if ks.source_type == KnowledgeSourceType.CRAWLED_URL
+                ]
+            )
+            breakdown["total_uploaded_files"] = len(
+                [
+                    ks
+                    for ks in completed_ks_list
+                    if ks.source_type == KnowledgeSourceType.UPLOADED_FILE
+                ]
+            )
+            breakdown["total_qa_pairs"] = len(
+                [
+                    ks
+                    for ks in completed_ks_list
+                    if ks.source_type == KnowledgeSourceType.QA_PAIR
+                ]
+            )
+
             # Sum uploaded file sizes - only from completed sources
             uploaded_files_stmt = select(func.sum(UploadedFile.file_size)).where(
                 UploadedFile.knowledge_source_id.in_(completed_ks_ids)
             )
             uploaded_size = (await db.execute(uploaded_files_stmt)).scalar() or 0
-            breakdown['total_file_size'] = uploaded_size
+            breakdown["total_file_size"] = uploaded_size
             total_kb_size += uploaded_size
 
             # Count and estimate crawled content size (average ~2KB per page) - only from completed sources
             crawled_pages_stmt = select(func.count(CrawledPage.id)).where(
                 CrawledPage.knowledge_source_id.in_(completed_ks_ids),
-                CrawledPage.is_removed == False
+                CrawledPage.is_removed == False,
             )
             crawled_pages_count = (await db.execute(crawled_pages_stmt)).scalar() or 0
-            breakdown['total_crawled_pages'] = crawled_pages_count
+            breakdown["total_crawled_pages"] = crawled_pages_count
             total_kb_size += crawled_pages_count * 2000  # Estimate 2KB per page
 
             # Count and estimate QA pairs size (average ~500 bytes per pair) - only from completed sources
@@ -2247,7 +2509,7 @@ class ChatbotService:
                 QAPair.knowledge_source_id.in_(completed_ks_ids)
             )
             qa_pairs_count = (await db.execute(qa_pairs_stmt)).scalar() or 0
-            breakdown['total_qa_count'] = qa_pairs_count
+            breakdown["total_qa_count"] = qa_pairs_count
             total_kb_size += qa_pairs_count * 500  # Estimate 500 bytes per QA pair
 
         # 3. Recent Activity (Knowledge, Status, Team, Permission changes)
@@ -2266,7 +2528,7 @@ class ChatbotService:
             active_knowledge_sources=active_ks,
             total_kb_size=total_kb_size,
             knowledge_breakdown=KnowledgeSourceBreakdown(**breakdown),
-            recent_activity=activity[:15]
+            recent_activity=activity[:15],
         )
 
     @staticmethod
@@ -2279,21 +2541,27 @@ class ChatbotService:
         # Verify access and analytics permission
         await ChatbotService.get_chatbot(db, tenant_id, chatbot_id, user)
 
-        if not await ChatbotService.has_permission(db, chatbot_id, user, "can_view_analytics_billing"):
+        if not await ChatbotService.has_permission(
+            db, chatbot_id, user, "can_view_analytics_billing"
+        ):
             raise ForbiddenError("Insufficient permissions to view analytics")
 
     @staticmethod
-    def _map_recent_activities(db_activities: List[ChatbotActivity]) -> List[RecentActivity]:
+    def _map_recent_activities(
+        db_activities: List[ChatbotActivity],
+    ) -> List[RecentActivity]:
         activity = []
         for db_act in db_activities:
             # Map backend activity_type to frontend expected type if needed
             frontend_type = db_act.activity_type
-            activity.append(RecentActivity(
-                id=db_act.id,
-                type=frontend_type,
-                description=db_act.description,
-                created_at=db_act.created_at
-            ))
+            activity.append(
+                RecentActivity(
+                    id=db_act.id,
+                    type=frontend_type,
+                    description=db_act.description,
+                    created_at=db_act.created_at,
+                )
+            )
 
         activity.sort(key=lambda x: x.created_at, reverse=True)
         return activity
@@ -2375,26 +2643,25 @@ class ChatbotService:
         writer.writerow(["id", "type", "description", "created_at"])
 
         for db_act in db_activities:
-            writer.writerow([
-                str(db_act.id),
-                db_act.activity_type,
-                db_act.description,
-                db_act.created_at.isoformat() if db_act.created_at else "",
-            ])
+            writer.writerow(
+                [
+                    str(db_act.id),
+                    db_act.activity_type,
+                    db_act.description,
+                    db_act.created_at.isoformat() if db_act.created_at else "",
+                ]
+            )
 
         return output.getvalue()
 
     @staticmethod
     async def get_analytics_overview(
-        db: AsyncSession,
-        tenant_id: int,
-        chatbot_id: Optional[UUID],
-        user: User
+        db: AsyncSession, tenant_id: int, chatbot_id: Optional[UUID], user: User
     ) -> AnalyticsOverviewResponse:
         """Get analytics overview for all chatbots or a specific one"""
         # For now, we'll aggregate from chat_sessions and chat_messages
         # In a real app, you'd have an analytics_events table
-        
+
         query = select(ChatSession)
         if chatbot_id:
             # Verify access to specific chatbot
@@ -2409,38 +2676,34 @@ class ChatbotService:
 
         sessions = (await db.execute(query)).scalars().all()
         total_sessions = len(sessions)
-        
+
         session_ids = [s.id for s in sessions]
         if not session_ids:
             return AnalyticsOverviewResponse(
-                total_sessions=0,
-                total_messages=0,
-                avg_messages_per_session=0.0
+                total_sessions=0, total_messages=0, avg_messages_per_session=0.0
             )
 
         messages_stmt = select(func.count(ChatMessage.id)).where(
             and_(
                 ChatMessage.session_id.in_(session_ids),
-                ChatMessage.role == MessageRole.USER.value
+                ChatMessage.role == MessageRole.USER.value,
             )
         )
         total_messages = (await db.execute(messages_stmt)).scalar() or 0
-        
+
         avg_msgs = total_messages / total_sessions if total_sessions > 0 else 0
 
         return AnalyticsOverviewResponse(
             total_sessions=total_sessions,
             total_messages=total_messages,
-            avg_messages_per_session=round(avg_msgs, 1)
+            avg_messages_per_session=round(avg_msgs, 1),
         )
 
     # ============== Crawl Scheduling ==============
 
     @staticmethod
     async def get_crawl_schedule(
-        db: AsyncSession,
-        knowledge_source_id: UUID,
-        user: User
+        db: AsyncSession, knowledge_source_id: UUID, user: User
     ) -> CrawlScheduleResponse:
         """Get crawl schedule for a knowledge source"""
         # Verify access
@@ -2448,28 +2711,30 @@ class ChatbotService:
         ks = (await db.execute(stmt)).scalar_one_or_none()
         if not ks:
             raise NotFoundError("Knowledge source not found")
-        
+
         if user.role != UserRole.ADMIN:
             perm = await ChatbotService._get_user_permission(db, ks.chatbot_id, user)
             if not perm:
                 raise ForbiddenError("Access denied")
-        
+
         # Get schedule
-        stmt = select(CrawlSchedule).where(CrawlSchedule.knowledge_source_id == knowledge_source_id)
+        stmt = select(CrawlSchedule).where(
+            CrawlSchedule.knowledge_source_id == knowledge_source_id
+        )
         schedule = (await db.execute(stmt)).scalar_one_or_none()
-        
+
         if not schedule:
             # Return default manual schedule
             schedule = CrawlSchedule(
                 knowledge_source_id=knowledge_source_id,
                 schedule_type=ScheduleType.MANUAL,
                 preferred_hour=2,
-                is_active=False
+                is_active=False,
             )
             db.add(schedule)
             await db.commit()
             await db.refresh(schedule)
-        
+
         return CrawlScheduleResponse.model_validate(schedule)
 
     @staticmethod
@@ -2477,7 +2742,7 @@ class ChatbotService:
         db: AsyncSession,
         knowledge_source_id: UUID,
         user: User,
-        request: CrawlScheduleCreate
+        request: CrawlScheduleCreate,
     ) -> CrawlScheduleResponse:
         """Create or update crawl schedule"""
         # Verify access
@@ -2485,24 +2750,28 @@ class ChatbotService:
         ks = (await db.execute(stmt)).scalar_one_or_none()
         if not ks:
             raise NotFoundError("Knowledge source not found")
-        
+
         if user.role != UserRole.ADMIN:
-            if not await ChatbotService.has_permission(db, ks.chatbot_id, user, "can_manage_knowledge"):
-                raise ForbiddenError("Insufficient permissions to manage crawl schedule")
-        
+            if not await ChatbotService.has_permission(
+                db, ks.chatbot_id, user, "can_manage_knowledge"
+            ):
+                raise ForbiddenError(
+                    "Insufficient permissions to manage crawl schedule"
+                )
+
         # Only allow scheduling for crawled URLs
         if ks.source_type != KnowledgeSourceType.CRAWLED_URL:
             raise BadRequestError("Scheduling is only available for crawled URLs")
-        
+
         schedule = await SchedulerService.create_or_update_schedule(
             db=db,
             knowledge_source_id=str(knowledge_source_id),
             schedule_type=request.schedule_type,
             day_of_week=request.day_of_week,
             preferred_hour=request.preferred_hour,
-            is_active=request.is_active
+            is_active=request.is_active,
         )
-        
+
         return CrawlScheduleResponse.model_validate(schedule)
 
     @staticmethod
@@ -2510,7 +2779,7 @@ class ChatbotService:
         db: AsyncSession,
         knowledge_source_id: UUID,
         user: User,
-        request: CrawlScheduleUpdate
+        request: CrawlScheduleUpdate,
     ) -> CrawlScheduleResponse:
         """Update crawl schedule"""
         # Verify access
@@ -2518,18 +2787,24 @@ class ChatbotService:
         ks = (await db.execute(stmt)).scalar_one_or_none()
         if not ks:
             raise NotFoundError("Knowledge source not found")
-        
+
         if user.role != UserRole.ADMIN:
-            if not await ChatbotService.has_permission(db, ks.chatbot_id, user, "can_manage_knowledge"):
-                raise ForbiddenError("Insufficient permissions to update crawl schedule")
-        
+            if not await ChatbotService.has_permission(
+                db, ks.chatbot_id, user, "can_manage_knowledge"
+            ):
+                raise ForbiddenError(
+                    "Insufficient permissions to update crawl schedule"
+                )
+
         # Get existing schedule
-        stmt = select(CrawlSchedule).where(CrawlSchedule.knowledge_source_id == knowledge_source_id)
+        stmt = select(CrawlSchedule).where(
+            CrawlSchedule.knowledge_source_id == knowledge_source_id
+        )
         schedule = (await db.execute(stmt)).scalar_one_or_none()
-        
+
         if not schedule:
             raise NotFoundError("Schedule not found")
-        
+
         # Update fields
         if request.schedule_type is not None:
             schedule.schedule_type = request.schedule_type
@@ -2539,16 +2814,16 @@ class ChatbotService:
             schedule.preferred_hour = request.preferred_hour
         if request.is_active is not None:
             schedule.is_active = request.is_active
-        
+
         # Recalculate next crawl time
         if schedule.schedule_type != ScheduleType.MANUAL and schedule.is_active:
             schedule.next_crawl_at = SchedulerService.calculate_next_crawl(schedule)
         else:
             schedule.next_crawl_at = None
-        
+
         await db.commit()
         await db.refresh(schedule)
-        
+
         return CrawlScheduleResponse.model_validate(schedule)
 
     @staticmethod
@@ -2556,7 +2831,7 @@ class ChatbotService:
         db: AsyncSession,
         knowledge_source_id: UUID,
         user: User,
-        background_tasks: BackgroundTasks
+        background_tasks: BackgroundTasks,
     ) -> TriggerCrawlResponse:
         """Trigger an immediate re-crawl"""
         # Verify access
@@ -2564,43 +2839,46 @@ class ChatbotService:
         ks = (await db.execute(stmt)).scalar_one_or_none()
         if not ks:
             raise NotFoundError("Knowledge source not found")
-        
+
         if user.role != UserRole.ADMIN:
-            if not await ChatbotService.has_permission(db, ks.chatbot_id, user, "can_manage_knowledge"):
+            if not await ChatbotService.has_permission(
+                db, ks.chatbot_id, user, "can_manage_knowledge"
+            ):
                 raise ForbiddenError("Insufficient permissions to trigger crawl")
-        
+
         # Only allow for crawled URLs
         if ks.source_type != KnowledgeSourceType.CRAWLED_URL:
             raise BadRequestError("Manual crawl is only available for crawled URLs")
-        
+
         # Check if already crawling
         if ks.status == KnowledgeSourceStatus.PROCESSING:
             raise BadRequestError("Crawl already in progress")
-        
+
         # Get quota info for logging and passing to crawler
         # NOTE: We don't block sync even at quota limit - sync updates existing pages
         # The crawler will intelligently:
         # - Always allow updating existing pages (no quota check)
         # - Only enforce quota when adding NEW pages
         quota = await ChatbotService.get_remaining_page_quota(db, ks.chatbot_id, user)
-        
+
         logger.info(
             f"Sync crawl for chatbot {ks.chatbot_id}: {quota['used']}/{quota['total_limit']} used, "
             f"{quota['remaining']} remaining. Sync allowed to update existing pages."
         )
-        
+
         # IMPORTANT: Update status to PROCESSING immediately so frontend sees it without refresh
         from sqlalchemy import update as sql_update
+
         await db.execute(
             sql_update(KnowledgeSource)
             .where(KnowledgeSource.id == knowledge_source_id)
             .values(
                 status=KnowledgeSourceStatus.PROCESSING,
-                error_message=None  # Clear any previous error
+                error_message=None,  # Clear any previous error
             )
         )
         await db.commit()
-        
+
         # Create crawl history entry
         crawl_history = CrawlHistory(
             knowledge_source_id=knowledge_source_id,
@@ -2609,12 +2887,12 @@ class ChatbotService:
             pages_checked=0,
             pages_added=0,
             pages_updated=0,
-            pages_removed=0
+            pages_removed=0,
         )
         db.add(crawl_history)
         await db.commit()
         await db.refresh(crawl_history)
-        
+
         # Trigger crawl in background with quota enforcement
         background_tasks.add_task(
             CrawlerService.start_crawl,
@@ -2622,21 +2900,17 @@ class ChatbotService:
             base_url=ks.source_url,
             is_recrawl=True,
             crawl_history_id=str(crawl_history.id),
-            quota_limit=quota['total_limit'],  # CRITICAL: Enforce quota on sync
-            background_tasks=background_tasks
+            quota_limit=quota["total_limit"],  # CRITICAL: Enforce quota on sync
+            background_tasks=background_tasks,
         )
-        
+
         return TriggerCrawlResponse(
-            message="Crawl started",
-            crawl_history_id=crawl_history.id
+            message="Crawl started", crawl_history_id=crawl_history.id
         )
 
     @staticmethod
     async def get_crawl_history(
-        db: AsyncSession,
-        knowledge_source_id: UUID,
-        user: User,
-        limit: int = 20
+        db: AsyncSession, knowledge_source_id: UUID, user: User, limit: int = 20
     ) -> List[CrawlHistoryResponse]:
         """Get crawl history for a knowledge source"""
         # Verify access
@@ -2644,18 +2918,21 @@ class ChatbotService:
         ks = (await db.execute(stmt)).scalar_one_or_none()
         if not ks:
             raise NotFoundError("Knowledge source not found")
-        
+
         if user.role != UserRole.ADMIN:
             perm = await ChatbotService._get_user_permission(db, ks.chatbot_id, user)
             if not perm:
                 raise ForbiddenError("Access denied")
-        
+
         # Get history
-        stmt = select(CrawlHistory).where(
-            CrawlHistory.knowledge_source_id == knowledge_source_id
-        ).order_by(CrawlHistory.started_at.desc()).limit(limit)
-        
+        stmt = (
+            select(CrawlHistory)
+            .where(CrawlHistory.knowledge_source_id == knowledge_source_id)
+            .order_by(CrawlHistory.started_at.desc())
+            .limit(limit)
+        )
+
         result = await db.execute(stmt)
         history = result.scalars().all()
-        
+
         return [CrawlHistoryResponse.model_validate(h) for h in history]

@@ -12,12 +12,14 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { MessageSquare, Plus, X, Loader2 } from "lucide-react";
+import { MessageSquare, Plus, X, Bot } from "lucide-react";
+import { SectionLoader, ButtonSpinner } from "@/components/ui/loading";
 import { Textarea } from "@/components/ui/textarea";
 import { apiRequestWithAuth } from "@/lib/api";
 import { getAccessToken } from "@/lib/auth";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
+import { Badge } from "@/components/ui/badge";
 
 interface Chatbot {
   id: string;
@@ -37,7 +39,7 @@ export default function ChatbotsPage() {
   const [isFetchingChatbots, setIsFetchingChatbots] = useState(true);
   const [chatbots, setChatbots] = useState<Chatbot[]>([]);
   const router = useRouter();
-  const { isAdmin, isOrgOwner } = useAuth();
+  const { user, isAdmin, isOrgOwner, loading: authLoading } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [pendingChatbotId, setPendingChatbotId] = useState<string | null>(null);
   const [formData, setFormData] = useState<{
@@ -51,7 +53,8 @@ export default function ChatbotsPage() {
       setIsFetchingChatbots(true);
       const token = getAccessToken();
       if (!token) {
-        router.push("/login");
+        // Token should exist if auth completed successfully
+        // This can happen if auth failed - dashboard layout will redirect
         return;
       }
 
@@ -67,11 +70,13 @@ export default function ChatbotsPage() {
     }
   };
 
-  // Fetch chatbots on mount
+  // Fetch chatbots on mount (after auth is loaded and user exists)
   useEffect(() => {
-    fetchChatbots();
+    if (!authLoading && user) {
+      fetchChatbots();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [authLoading, user]);
 
   const handleCreateChatbot = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -118,8 +123,10 @@ export default function ChatbotsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Chatbots</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
+            Chatbots
+          </h1>
+          <p className="text-muted-foreground mt-1">
             Manage your AI chatbots and conversations
           </p>
         </div>
@@ -127,6 +134,7 @@ export default function ChatbotsPage() {
           onClick={() => setIsModalOpen(true)}
           disabled={!isAdmin}
           title={!isAdmin ? "Only admins can create chatbots" : ""}
+          className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-md shadow-indigo-500/20"
         >
           <Plus className="mr-2 h-4 w-4" />
           Create Chatbot
@@ -135,9 +143,7 @@ export default function ChatbotsPage() {
 
       {/* Chatbots List */}
       {isFetchingChatbots ? (
-        <div className="flex items-center justify-center min-h-[400px]">
-          <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
-        </div>
+        <SectionLoader />
       ) : chatbots.length > 0 ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {chatbots.map((chatbot) => (
@@ -148,34 +154,44 @@ export default function ChatbotsPage() {
             >
               <Card
                 className={
-                  "cursor-pointer hover:shadow-md transition-shadow h-full relative overflow-hidden"
+                  "cursor-pointer hover:shadow-lg hover:border-indigo-200 transition-all duration-200 h-full relative overflow-hidden group"
                 }
               >
                 {pendingChatbotId === chatbot.id && (
                   <div className="loading-shimmer" aria-hidden="true" />
                 )}
                 <CardHeader>
-                  <CardTitle>{chatbot.name}</CardTitle>
-                  <CardDescription>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow">
+                        <Bot className="h-5 w-5 text-white" />
+                      </div>
+                      <CardTitle className="text-lg">{chatbot.name}</CardTitle>
+                    </div>
+                    <Badge
+                      variant={
+                        chatbot.status === "active"
+                          ? "active"
+                          : chatbot.status === "paused"
+                            ? "paused"
+                            : "draft"
+                      }
+                    >
+                      {chatbot.status}
+                    </Badge>
+                  </div>
+                  <CardDescription className="mt-2">
                     {chatbot.welcome_message || "No welcome message"}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center justify-between text-sm text-muted-foreground">
-                    <span>
-                      Account type:{" "}
+                    <span className="flex items-center gap-1.5">
+                      <span className="inline-block w-2 h-2 rounded-full bg-indigo-400"></span>
                       {isOrgOwner ? "Org Owner" : isAdmin ? "Admin" : "Member"}
                     </span>
-                    <span
-                      className={
-                        chatbot.status === "active"
-                          ? "text-green-600"
-                          : chatbot.status === "paused"
-                            ? "text-yellow-600"
-                            : "text-gray-500"
-                      }
-                    >
-                      {chatbot.status}
+                    <span className="text-xs">
+                      {new Date(chatbot.created_at).toLocaleDateString()}
                     </span>
                   </div>
                 </CardContent>
@@ -195,8 +211,8 @@ export default function ChatbotsPage() {
           </CardHeader>
           <CardContent>
             <div className="flex flex-col items-center justify-center py-12 space-y-4">
-              <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center">
-                <MessageSquare className="h-8 w-8 text-muted-foreground" />
+              <div className="h-16 w-16 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center">
+                <MessageSquare className="h-8 w-8 text-indigo-500" />
               </div>
               <div className="text-center space-y-2">
                 <h3 className="text-lg font-semibold">
@@ -250,7 +266,7 @@ export default function ChatbotsPage() {
             <form onSubmit={handleCreateChatbot}>
               <CardContent className="space-y-4">
                 {error && (
-                  <div className="p-3 bg-red-50 border border-red-200 text-red-600 rounded-md text-sm">
+                  <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
                     {error}
                   </div>
                 )}
@@ -305,10 +321,11 @@ export default function ChatbotsPage() {
                 <Button
                   type="submit"
                   disabled={isLoading || !formData.name.trim()}
+                  className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white"
                 >
                   {isLoading ? (
                     <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      <ButtonSpinner />
                       Creating...
                     </>
                   ) : (

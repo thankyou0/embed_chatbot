@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from datetime import datetime
 from typing import Optional, List
 from uuid import UUID
@@ -8,6 +8,7 @@ from app.models.chatbot_appearance import WidgetPosition
 
 
 # ============== Chatbot Schemas ==============
+
 
 class ChatbotCreate(BaseModel):
     name: str
@@ -36,6 +37,7 @@ class ChatbotResponse(BaseModel):
 
 class ChatbotWithPermission(ChatbotResponse):
     """Chatbot response with user's permission level"""
+
     permission_level: PermissionLevel
     can_manage_knowledge: bool = False
     can_manage_appearance: bool = False
@@ -49,6 +51,7 @@ class ChatbotListResponse(BaseModel):
 
 
 # ============== Permission Schemas ==============
+
 
 class PermissionAssign(BaseModel):
     user_id: int
@@ -93,6 +96,7 @@ class PermissionListResponse(BaseModel):
 
 # ============== Appearance Schemas ==============
 
+
 class AppearanceResponse(BaseModel):
     id: UUID
     chatbot_id: UUID
@@ -105,6 +109,13 @@ class AppearanceResponse(BaseModel):
     welcome_message: Optional[str]
     initial_suggestions: List[str]
     show_branding: bool
+    # Personality customization
+    personality_tone: str = "friendly"
+    response_length: str = "balanced"
+    temperature: float = 0.7
+    custom_instructions: Optional[str] = None
+    # Language settings — multi-language list
+    languages: List[str] = ["en"]
     created_at: datetime
     updated_at: datetime
 
@@ -113,7 +124,7 @@ class AppearanceResponse(BaseModel):
 
 
 class AppearanceUpdate(BaseModel):
-    primary_color: Optional[str] = Field(None, pattern=r'^#[0-9A-Fa-f]{6}$')
+    primary_color: Optional[str] = Field(None, pattern=r"^#[0-9A-Fa-f]{6}$")
     header_text: Optional[str] = Field(None, min_length=1, max_length=255)
     avatar_url: Optional[str] = None
     position: Optional[WidgetPosition] = None
@@ -122,15 +133,51 @@ class AppearanceUpdate(BaseModel):
     welcome_message: Optional[str] = None
     initial_suggestions: Optional[List[str]] = None
     show_branding: Optional[bool] = None
+    # Personality customization
+    personality_tone: Optional[str] = Field(
+        None, pattern=r"^(formal|casual|friendly|professional)$"
+    )
+    response_length: Optional[str] = Field(
+        None, pattern=r"^(concise|balanced|detailed)$"
+    )
+    temperature: Optional[float] = Field(None, ge=0.0, le=1.0)
+    custom_instructions: Optional[str] = None
+    # Language settings — list of allowed language codes
+    languages: Optional[List[str]] = Field(
+        None,
+        description="List of allowed language codes. At least 1 required. Valid: en, hi, gu",
+    )
+
+    @field_validator("languages")
+    @classmethod
+    def validate_languages(cls, v):
+        if v is None:
+            return v
+        valid_codes = {"en", "hi", "gu"}
+        if len(v) == 0:
+            raise ValueError("At least one language must be selected")
+        for code in v:
+            if code not in valid_codes:
+                raise ValueError(f"Invalid language code: {code}. Valid: en, hi, gu")
+        # Deduplicate while preserving order
+        seen = set()
+        unique = []
+        for code in v:
+            if code not in seen:
+                seen.add(code)
+                unique.append(code)
+        return unique
 
 
 # ============== Stats & Analytics Schemas ==============
+
 
 class RecentActivity(BaseModel):
     id: UUID
     type: str  # 'knowledge_source', 'conversation', 'status_change'
     description: str
     created_at: datetime
+
 
 class KnowledgeSourceBreakdown(BaseModel):
     total_crawled_urls: int
@@ -139,6 +186,7 @@ class KnowledgeSourceBreakdown(BaseModel):
     total_crawled_pages: int
     total_file_size: int  # in bytes
     total_qa_count: int
+
 
 class ChatbotStatsResponse(BaseModel):
     total_conversations: int
@@ -155,6 +203,7 @@ class RecentActivityListResponse(BaseModel):
     page: int
     page_size: int
     total_pages: int
+
 
 # Analytics moved to app.schemas.analytics
 from app.schemas.analytics import AnalyticsOverviewResponse

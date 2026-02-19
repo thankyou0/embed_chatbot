@@ -473,6 +473,83 @@ def extract_intelligent_title(
     return domain.title()
 
 
+# ---------------------------------------------------------------------------
+#  BeautifulSoup fallback extractor for JS-heavy / low-content pages
+# ---------------------------------------------------------------------------
+
+
+def _extract_with_beautifulsoup(html_content: str, url: str) -> Optional[str]:
+    """
+    Fallback content extractor using BeautifulSoup.
+    Targets semantic HTML elements (article, main, section, headings, paragraphs)
+    to assemble meaningful text when trafilatura fails.
+    """
+    try:
+        soup = BeautifulSoup(html_content, "html.parser")
+
+        # Remove noise elements
+        for tag in soup.find_all(
+            [
+                "script",
+                "style",
+                "noscript",
+                "nav",
+                "footer",
+                "header",
+                "aside",
+                "iframe",
+            ]
+        ):
+            tag.decompose()
+
+        # Try extracting from semantic containers first
+        content_parts = []
+
+        # Priority 1: <main> or <article>
+        for container in soup.find_all(["main", "article"]):
+            text = container.get_text(separator="\n", strip=True)
+            if text and len(text) > 50:
+                content_parts.append(text)
+
+        # Priority 2: Sections with meaningful content
+        if not content_parts:
+            for section in soup.find_all(["section", "div"]):
+                # Skip tiny divs
+                text = section.get_text(separator="\n", strip=True)
+                if text and len(text) > 100:
+                    # Check for meaningful content (has paragraphs or headings)
+                    has_semantic = section.find(["p", "h1", "h2", "h3", "h4", "li"])
+                    if has_semantic:
+                        content_parts.append(text)
+                        if len("\n".join(content_parts)) > 3000:
+                            break
+
+        # Priority 3: Just gather all paragraphs and headings
+        if not content_parts:
+            for tag in soup.find_all(["h1", "h2", "h3", "h4", "p", "li", "td"]):
+                text = tag.get_text(strip=True)
+                if text and len(text) > 10:
+                    content_parts.append(text)
+
+        if content_parts:
+            combined = "\n".join(content_parts)
+            # Deduplicate lines (JS pages often repeat content)
+            seen = set()
+            unique_lines = []
+            for line in combined.split("\n"):
+                line_clean = line.strip()
+                if line_clean and line_clean not in seen:
+                    seen.add(line_clean)
+                    unique_lines.append(line_clean)
+            result = "\n".join(unique_lines)
+            return result if len(result) > 50 else None
+
+    except Exception as e:
+        logger.debug(f"BeautifulSoup fallback extraction failed: {e}")
+
+    return None
+
+
 class WebsiteCrawler:
     def __init__(self, base_url: str, cancel_event: Optional[asyncio.Event] = None):
         """
@@ -638,9 +715,32 @@ class WebsiteCrawler:
 
                     html_content = response.text
 
-                    # Extract content with trafilatura
-                    # favor_precision=True helps getting cleaner main content
+                    # Extract content with trafilatura (multi-strategy)
+                    # Strategy 1: Precision mode (cleanest content)
                     extracted = trafilatura.extract(html_content, favor_precision=True)
+
+                    # Strategy 2: If precision mode got nothing, try recall mode
+                    if not extracted or len(extracted.strip()) < 80:
+                        extracted_recall = trafilatura.extract(
+                            html_content,
+                            favor_recall=True,
+                            include_comments=False,
+                            include_tables=True,
+                        )
+                        if extracted_recall and len(extracted_recall.strip()) > len(
+                            (extracted or "").strip()
+                        ):
+                            extracted = extracted_recall
+
+                    # Strategy 3: BeautifulSoup fallback for JS-heavy pages
+                    # If trafilatura still got minimal content, extract structured
+                    # text from semantic HTML tags directly
+                    if not extracted or len(extracted.strip()) < 80:
+                        bs_extracted = _extract_with_beautifulsoup(html_content, url)
+                        if bs_extracted and len(bs_extracted.strip()) > len(
+                            (extracted or "").strip()
+                        ):
+                            extracted = bs_extracted
 
                     # Metadata extraction
                     metadata = trafilatura.extract_metadata(html_content)
@@ -1248,8 +1348,10 @@ class CrawlerService:
                 # Add user-facing message (quota warning or stopped message)
                 if user_message:
                     update_values["error_message"] = user_message
-                    # Mark as COMPLETED immediately so UI can stop polling
-                    update_values["status"] = KnowledgeSourceStatus.COMPLETED
+                    # Do NOT set COMPLETED here — let embedding service handle the
+                    # status transition: CRAWLING → PROCESSING → COMPLETED.
+                    # This prevents the frontend from showing "completed" while
+                    # embeddings are still being generated.
                 else:
                     # Clear any previous error if crawl was successful
                     update_values["error_message"] = None
@@ -1338,7 +1440,24 @@ class CrawlerService:
 
                 # Trigger embedding process for new/updated pages
                 # Embedding service will update status to COMPLETED on success or FAILED on error
-                if pages_added > 0 or pages_updated > 0:
+                #
+                # CRITICAL: When a sync is stopped by user, we MUST regenerate embeddings to ensure
+                # all crawled pages (including newly discovered ones) have embeddings. The counters
+                # pages_added/pages_updated might not reflect all pages that need embedding if:
+                #   - Pages were added to DB but stop happened before counter increment
+                #   - Content changed but wasn't detected due to caching
+                # Re-crawl with stop = always regenerate embeddings for consistency.
+                should_regenerate_embeddings = pages_added > 0 or pages_updated > 0
+
+                # If crawl was stopped during a re-crawl, always regenerate embeddings
+                # This ensures newly added pages during sync get their embeddings
+                if was_cancelled and is_recrawl:
+                    logger.info(
+                        f"Sync was stopped by user - forcing embedding regeneration for consistency"
+                    )
+                    should_regenerate_embeddings = True
+
+                if should_regenerate_embeddings:
                     await EmbeddingService.process_knowledge_source(knowledge_source_id)
                 else:
                     # If no new/updated pages, check if embeddings exist

@@ -106,3 +106,13 @@ Dev: Volume mounts → hot reload works → local changes instant
 Prod: Code copied at build time → requires rebuild for updates
 
 after changes, site become very slow
+
+
+
+http://localhost:3000/dashboard/chatbots/undefined ------> 
+Access Denied
+path → chatbot_id: Input should be a valid UUID, invalid character: expected an optional prefix of `urn:uuid:` followed by [0-9a-fA-F-], found `u` at 1
+
+
+
+rate limit configuration, language add/remove FROM ENV/DEVELOPER_ACCESS

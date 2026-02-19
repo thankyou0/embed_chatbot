@@ -7,7 +7,6 @@ import {
   TrendingUp,
   MessageSquare,
   Users,
-  Loader2,
   AlertCircle,
   RefreshCcw,
   Database,
@@ -18,6 +17,7 @@ import {
   Calendar,
   CreditCard,
 } from "lucide-react";
+import { PageLoader } from "@/components/ui/loading";
 import {
   Card,
   CardContent,
@@ -260,23 +260,14 @@ export default function UsagePage() {
   };
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4 text-primary" />
-          <p className="text-muted-foreground">
-            Loading usage & billing data...
-          </p>
-        </div>
-      </div>
-    );
+    return <PageLoader message="Loading usage & billing data..." />;
   }
 
   if (!billingData) {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold">Usage & Billing</h1>
+          <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">Usage & Billing</h1>
           <p className="text-muted-foreground mt-2">
             Track your usage and billing information
           </p>
@@ -346,7 +337,7 @@ export default function UsagePage() {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Usage & Billing</h1>
+          <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">Usage & Billing</h1>
           <p className="text-muted-foreground mt-1">
             Track your usage, limits, and billing information
           </p>
@@ -390,14 +381,14 @@ export default function UsagePage() {
 
       {/* Current Plan & Billing Period */}
       <div className="grid gap-4 md:grid-cols-3">
-        <Card>
+        <Card className="border-l-4 border-l-indigo-500">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Current Plan
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold capitalize">
+            <div className="text-2xl font-bold capitalize text-indigo-600">
               {subscription.plan_type}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
@@ -406,7 +397,7 @@ export default function UsagePage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-l-4 border-l-blue-500">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               <Calendar className="h-4 w-4 inline mr-1" />
@@ -423,7 +414,7 @@ export default function UsagePage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-l-4 border-l-emerald-500">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               <CreditCard className="h-4 w-4 inline mr-1" />

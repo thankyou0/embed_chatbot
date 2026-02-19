@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Clock, Calendar, Loader2, History } from "lucide-react";
+import { X, Clock, Calendar, History } from "lucide-react";
+import { SectionLoader, ButtonSpinner } from "@/components/ui/loading";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -217,9 +218,7 @@ export function CrawlScheduleModal({
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
         <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4">
-          <div className="flex justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-          </div>
+          <SectionLoader minHeight="min-h-[200px]" />
         </div>
       </div>
     );
@@ -345,7 +344,7 @@ export function CrawlScheduleModal({
             <Button onClick={handleSave} disabled={isSaving}>
               {isSaving ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <ButtonSpinner />
                   Saving...
                 </>
               ) : (
@@ -359,7 +358,7 @@ export function CrawlScheduleModal({
             >
               {isSyncing ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <ButtonSpinner />
                   Syncing...
                 </>
               ) : (

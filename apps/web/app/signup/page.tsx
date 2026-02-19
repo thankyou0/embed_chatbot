@@ -18,7 +18,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ButtonSpinner } from "@/components/ui/loading";
 import Link from "next/link";
+import { MessageSquare } from "lucide-react";
 
 const signupSchema = z.object({
   tenant_name: z.string().min(2, "Company name must be at least 2 characters"),
@@ -67,9 +69,15 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50 px-4 py-8">
+      <div className="w-full max-w-md">
+        <div className="flex justify-center mb-8">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/25">
+            <MessageSquare className="h-7 w-7 text-white" />
+          </div>
+        </div>
+      <Card className="w-full max-w-md shadow-xl border-0 ring-1 ring-black/5">
+        <CardHeader className="space-y-1 text-center">
           <CardTitle className="text-2xl font-bold">
             Create an account
           </CardTitle>
@@ -151,7 +159,7 @@ export default function SignupPage() {
               className="w-full"
               disabled={isSubmitting || loading}
             >
-              {isSubmitting ? "Creating account..." : "Create account"}
+              {isSubmitting ? (<><ButtonSpinner />Creating account...</>) : "Create account"}
             </Button>
             <p className="text-sm text-center text-muted-foreground">
               Already have an account?{" "}
@@ -162,6 +170,7 @@ export default function SignupPage() {
           </CardFooter>
         </form>
       </Card>
+      </div>
     </div>
   );
 }

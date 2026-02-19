@@ -1,5 +1,5 @@
 import Cookies from "js-cookie";
-import { apiRequest, apiRequestWithAuth } from "./api";
+import { apiRequest, apiRequestWithAuth, ApiHttpError } from "./api";
 
 const ACCESS_TOKEN_KEY = "access_token";
 const REFRESH_TOKEN_KEY = "refresh_token";
@@ -135,21 +135,20 @@ export async function refreshAccessToken(): Promise<string> {
 }
 
 export async function getMe(): Promise<MeResponse> {
-  const token = getAccessToken();
+  let token = getAccessToken();
+
+  // If no access token but refresh token exists, try to refresh
   if (!token) {
-    throw new Error("No access token available");
+    const refreshToken = getRefreshToken();
+    if (refreshToken) {
+      token = await refreshAccessToken();
+    } else {
+      throw new Error("No access token available");
+    }
   }
 
-  try {
-    return await apiRequestWithAuth<MeResponse>("/api/v1/auth/me", token);
-  } catch (error) {
-    // Try to refresh token if access token expired
-    if (error instanceof Error && error.message.includes("401")) {
-      const newToken = await refreshAccessToken();
-      return await apiRequestWithAuth<MeResponse>("/api/v1/auth/me", newToken);
-    }
-    throw error;
-  }
+  // apiRequestWithAuth now handles 401 → refresh → retry automatically
+  return await apiRequestWithAuth<MeResponse>("/api/v1/auth/me", token);
 }
 
 export async function changePassword(

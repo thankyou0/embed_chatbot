@@ -4,7 +4,8 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { getAccessToken } from "@/lib/auth";
 import { apiRequestWithAuth } from "@/lib/api";
-import { Plus, Trash2, X, Loader2, AlertCircle } from "lucide-react";
+import { Plus, Trash2, X, AlertCircle } from "lucide-react";
+import { SectionLoader, ButtonSpinner } from "@/components/ui/loading";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -249,11 +250,7 @@ export function ChatbotTeamSettings({ chatbotId }: ChatbotTeamSettingsProps) {
   );
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
-      </div>
-    );
+    return <SectionLoader />;
   }
 
   return (
@@ -528,7 +525,7 @@ export function ChatbotTeamSettings({ chatbotId }: ChatbotTeamSettingsProps) {
                 >
                   {isSubmitting ? (
                     <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      <ButtonSpinner />
                       Saving...
                     </>
                   ) : (

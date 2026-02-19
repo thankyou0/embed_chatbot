@@ -16,6 +16,8 @@ dist/
 build/
 .next/
 *.egg-info/
+*.tsbuildinfo
+package-lock.json
 
 # IDE
 .vscode/

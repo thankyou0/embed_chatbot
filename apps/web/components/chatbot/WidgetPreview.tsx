@@ -19,6 +19,7 @@ interface WidgetPreviewProps {
   welcomeMessage: string | null;
   initialSuggestions: string[];
   showBranding: boolean;
+  language?: "en" | "hi" | "gu";
   embedded?: boolean;
   initialOpen?: boolean;
   readOnly?: boolean;
@@ -36,6 +37,7 @@ export function ChatbotWidgetPreview({
   welcomeMessage,
   initialSuggestions,
   showBranding,
+  language = "en",
   embedded = false,
   initialOpen = false,
   readOnly = false,
@@ -58,6 +60,7 @@ export function ChatbotWidgetPreview({
     welcomeMessage: welcomeMessage,
     initialSuggestions: initialSuggestions,
     showBranding: showBranding,
+    language: language,
   };
 
   // Container styles for contained mode

@@ -10,13 +10,11 @@ export function middleware(request: NextRequest) {
   // The client-side AuthContext will handle refreshing expired access tokens
   const hasAuth = accessToken || refreshToken;
 
-  // Redirect root based on auth status
-  if (pathname === "/") {
-    if (hasAuth) {
-      return NextResponse.redirect(new URL("/dashboard/chatbots", request.url));
-    } else {
-      return NextResponse.redirect(new URL("/login", request.url));
-    }
+  // Landing page at "/" is public — no redirect needed
+  // Only redirect authenticated users who explicitly navigate to dashboard
+  if (pathname === "/" && hasAuth) {
+    // Let landing page render; users can click "Dashboard" to go to /dashboard
+    return NextResponse.next();
   }
 
   // Redirect /dashboard to /dashboard/chatbots
@@ -62,7 +60,6 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/",
     "/dashboard/:path*",
     "/login",
     "/signup",

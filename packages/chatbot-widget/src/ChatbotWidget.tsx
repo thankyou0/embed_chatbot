@@ -18,10 +18,46 @@ marked.use({
       const href = token.href as string;
       const title = token.title as string | null;
       const text = token.text as string;
-      return `<a href="${href}" ${title ? `title="${title}"` : ""} target="_blank" rel="noopener noreferrer">${text}</a>`;
+      return `<a class="chatbot-message-link" href="${href}" ${title ? `title="${title}"` : ""} target="_blank" rel="noopener noreferrer">${text}</a>`;
     },
   },
 });
+
+const USER_SAFE_RESPONSE_ERROR =
+  "I'm sorry, I can't respond right now. Please try again in a few minutes.";
+
+const sanitizeAssistantErrorMessage = (rawMessage?: string) => {
+  const text = (rawMessage || "").trim();
+  if (!text) return USER_SAFE_RESPONSE_ERROR;
+
+  const lowered = text.toLowerCase();
+  const technicalTokens = [
+    "traceback",
+    "exception",
+    "stack",
+    "http",
+    "status",
+    "api",
+    "groq",
+    "llama",
+    "rate limit",
+    "tokens per day",
+    "tpd",
+    "org_",
+    "service tier",
+    "model",
+  ];
+
+  if (technicalTokens.some((token) => lowered.includes(token))) {
+    return USER_SAFE_RESPONSE_ERROR;
+  }
+
+  if (text.length > 220) {
+    return USER_SAFE_RESPONSE_ERROR;
+  }
+
+  return text;
+};
 
 // Product Carousel Component
 function ProductCarousel({ products }: { products: ProductInfo[] }) {
@@ -211,6 +247,10 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
     new Set(),
   );
   const [toast, setToast] = useState<string | null>(null);
+  // Voice input state
+  const [isListening, setIsListening] = useState(false);
+  const [speechSupported, setSpeechSupported] = useState(false);
+  const recognitionRef = useRef<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -253,11 +293,30 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
     ? config.avatarUrl || null
     : widgetConfig?.avatar_url || config.avatarUrl || null;
 
+  // Language-aware default texts
+  const lang = isPreview ? config.language : widgetConfig?.language;
+  const defaultWelcome =
+    lang === "hi"
+      ? "नमस्ते! मैं आपकी कैसे मदद कर सकता हूँ?"
+      : lang === "gu"
+        ? "નમસ્તે! હું તમને કેવી રીતે મદદ કરી શકું?"
+        : "Hi! How can I help you today?";
+  const defaultPlaceholder =
+    lang === "hi"
+      ? "अपना संदेश लिखें..."
+      : lang === "gu"
+        ? "તમારો સંદેશ લખો..."
+        : "Type your message...";
+  const listeningText =
+    lang === "hi"
+      ? "सुन रहा हूँ..."
+      : lang === "gu"
+        ? "સાંભળી રહ્યું છે..."
+        : "Listening...";
+
   const welcomeMessage = isPreview
-    ? config.welcomeMessage || "Hi! How can I help you today?"
-    : widgetConfig?.welcome_message ||
-      config.welcomeMessage ||
-      "Hi! How can I help you today?";
+    ? config.welcomeMessage || defaultWelcome
+    : widgetConfig?.welcome_message || config.welcomeMessage || defaultWelcome;
 
   const initialSuggestions = isPreview
     ? config.initialSuggestions || []
@@ -281,8 +340,7 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
   useEffect(() => {
     if (isPreview && isOpen && messages.length > 0) {
       // Update welcome message if it changed
-      const welcomeMsg =
-        config.welcomeMessage || "Hi! How can I help you today?";
+      const welcomeMsg = config.welcomeMessage || defaultWelcome;
       const initialSugs = config.initialSuggestions || [];
 
       setMessages((prev: Message[]) => {
@@ -363,8 +421,7 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
               },
             ];
           } else {
-            const welcomeMsg =
-              data.welcome_message || "Hi! How can I help you today?";
+            const welcomeMsg = data.welcome_message || defaultWelcome;
             const initialSugs = data.initial_suggestions || [];
             return [
               {
@@ -386,7 +443,7 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
             {
               id: generateId(),
               role: "assistant",
-              content: "Hi! How can I help you today?",
+              content: defaultWelcome,
               suggestions: [],
               timestamp: new Date(),
             },
@@ -402,7 +459,7 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
           {
             id: generateId(),
             role: "assistant",
-            content: "Hi! How can I help you today?",
+            content: defaultWelcome,
             suggestions: [],
             timestamp: new Date(),
           },
@@ -424,12 +481,80 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
     }
   }, [chatbotId, isPreview, apiUrl]);
 
+  // Initialize Web Speech API for voice input
+  useEffect(() => {
+    // Check if browser supports Web Speech API
+    const SpeechRecognition =
+      (window as any).SpeechRecognition ||
+      (window as any).webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      setSpeechSupported(true);
+      const recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = true;
+      recognition.lang =
+        widgetConfig?.language === "hi"
+          ? "hi-IN"
+          : widgetConfig?.language === "gu"
+            ? "gu-IN"
+            : "en-US";
+
+      recognition.onresult = (event: any) => {
+        const transcript = Array.from(event.results)
+          .map((result: any) => result[0])
+          .map((result: any) => result.transcript)
+          .join("");
+        setInputValue(transcript);
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+      };
+
+      recognition.onerror = (event: any) => {
+        console.error("Speech recognition error:", event.error);
+        setIsListening(false);
+        if (event.error === "not-allowed") {
+          setToast("Microphone access denied. Please allow microphone access.");
+          setTimeout(() => setToast(null), 3000);
+        }
+      };
+
+      recognitionRef.current = recognition;
+    } else {
+      setSpeechSupported(false);
+    }
+
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.abort();
+      }
+    };
+  }, [widgetConfig?.language]);
+
+  // Toggle voice input
+  const toggleVoiceInput = () => {
+    if (!recognitionRef.current) return;
+
+    if (isListening) {
+      recognitionRef.current.stop();
+      setIsListening(false);
+    } else {
+      try {
+        recognitionRef.current.start();
+        setIsListening(true);
+      } catch (error) {
+        console.error("Failed to start speech recognition:", error);
+        setIsListening(false);
+      }
+    }
+  };
+
   // Show welcome message on first open (handles preview mode logic)
   useEffect(() => {
     if (isOpen && messages.length === 0 && isPreview) {
       // In preview mode, use config prop directly
-      const welcomeMsg =
-        config.welcomeMessage || "Hi! How can I help you today?";
+      const welcomeMsg = config.welcomeMessage || defaultWelcome;
       const initialSugs = config.initialSuggestions || [];
 
       setMessages([
@@ -755,6 +880,9 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
       if (sessionId) {
         formData.append("session_id", sessionId);
       }
+      if (isPreview) {
+        formData.append("is_preview", "true");
+      }
 
       // Compress and add image if selected (use stored reference since state is cleared)
       if (currentSelectedImage) {
@@ -804,6 +932,7 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
       let isRendering = false;
       let firstCharShown = false;
       let streamEnded = false;
+      let streamErrorMessage: string | null = null;
 
       // Fix #3: Track if we're still waiting for first content
       let hasReceivedFirstContent = false;
@@ -1003,8 +1132,66 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
         }
       };
 
+      const processSseLine = (line: string): "continue" | "break" => {
+        if (!line.startsWith("data: ")) {
+          return "continue";
+        }
+        const data = line.slice(6).trim();
+        if (!data) {
+          return "continue";
+        }
+        try {
+          const chunk = JSON.parse(data);
+
+          if (chunk.type === "session") {
+            // Update session ID
+            streamSessionId = chunk.session_id;
+            setSessionId(chunk.session_id);
+          } else if (chunk.type === "content") {
+            // Add to sentence buffer for gated rendering
+            addToSentenceBuffer(chunk.content);
+          } else if (chunk.type === "done") {
+            // Stream ended - flush any remaining content
+            streamEnded = true;
+            flushSentenceBuffer();
+
+            // Save final metadata
+            finalSuggestions = chunk.suggestions || [];
+            finalProducts = chunk.products || [];
+
+            // Wait for all rendering to complete
+            const finishAllRendering = async () => {
+              while (renderQueue.length > 0 || isRendering) {
+                await new Promise((r) => setTimeout(r, 100));
+              }
+
+              setMessages((prev: Message[]) => {
+                const newMessages = [...prev];
+                const lastMessage = newMessages[newMessages.length - 1];
+                if (lastMessage && lastMessage.id === assistantMessageId) {
+                  lastMessage.isTyping = false;
+                  lastMessage.suggestions = finalSuggestions;
+                  lastMessage.products = finalProducts;
+                }
+                return newMessages;
+              });
+            };
+            finishAllRendering();
+          } else if (chunk.type === "error") {
+            streamErrorMessage = sanitizeAssistantErrorMessage(
+              chunk.error || "Stream error",
+            );
+            return "break";
+          }
+        } catch (parseError) {
+          console.error("Failed to parse SSE chunk:", parseError);
+        }
+
+        return "continue";
+      };
+
       if (reader) {
-        while (true) {
+        streamLoop: while (true) {
           const { done, value } = await reader.read();
           if (done) break;
 
@@ -1016,57 +1203,31 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
           buffer = lines.pop() || ""; // Keep incomplete line in buffer
 
           for (const line of lines) {
-            if (line.startsWith("data: ")) {
-              const data = line.slice(6);
-              try {
-                const chunk = JSON.parse(data);
-
-                if (chunk.type === "session") {
-                  // Update session ID
-                  streamSessionId = chunk.session_id;
-                  setSessionId(chunk.session_id);
-                } else if (chunk.type === "content") {
-                  // Add to sentence buffer for gated rendering
-                  addToSentenceBuffer(chunk.content);
-                } else if (chunk.type === "done") {
-                  // Stream ended - flush any remaining content
-                  streamEnded = true;
-                  flushSentenceBuffer();
-
-                  // Save final metadata
-                  finalSuggestions = chunk.suggestions || [];
-                  finalProducts = chunk.products || [];
-
-                  // Wait for all rendering to complete
-                  const finishAllRendering = async () => {
-                    while (renderQueue.length > 0 || isRendering) {
-                      await new Promise((r) => setTimeout(r, 100));
-                    }
-
-                    setMessages((prev: Message[]) => {
-                      const newMessages = [...prev];
-                      const lastMessage = newMessages[newMessages.length - 1];
-                      if (
-                        lastMessage &&
-                        lastMessage.id === assistantMessageId
-                      ) {
-                        lastMessage.isTyping = false;
-                        lastMessage.suggestions = finalSuggestions;
-                        lastMessage.products = finalProducts;
-                      }
-                      return newMessages;
-                    });
-                  };
-                  finishAllRendering();
-                } else if (chunk.type === "error") {
-                  throw new Error(chunk.error || "Stream error");
-                }
-              } catch (err) {
-                console.error("Failed to parse SSE chunk:", err);
-              }
+            const action = processSseLine(line);
+            if (action === "break") {
+              break streamLoop;
             }
           }
         }
+
+        // Process any trailing buffer line to avoid missing a final error/done chunk
+        if (buffer.trim()) {
+          const action = processSseLine(buffer.trim());
+          if (action === "break") {
+            streamErrorMessage = streamErrorMessage || USER_SAFE_RESPONSE_ERROR;
+          }
+        }
+      } else {
+        streamErrorMessage = USER_SAFE_RESPONSE_ERROR;
+      }
+
+      if (streamErrorMessage) {
+        throw new Error(streamErrorMessage);
+      }
+
+      // If stream ended without explicit done/error, fail gracefully and stop loader.
+      if (!streamEnded) {
+        throw new Error(USER_SAFE_RESPONSE_ERROR);
       }
 
       abortControllerRef.current = null;
@@ -1083,13 +1244,16 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
       // Image already cleared at start of sendMessage
 
       // Update assistant message with error
+      const userSafeError = sanitizeAssistantErrorMessage(err?.message);
       setMessages((prev: Message[]) => {
         const newMessages = [...prev];
         const lastMessage = newMessages[newMessages.length - 1];
         if (lastMessage && lastMessage.id === assistantMessageId) {
-          lastMessage.content =
-            "I'm sorry, I encountered an error. Please try again.";
+          lastMessage.content = userSafeError;
           lastMessage.isTyping = false;
+          lastMessage.isWaitingForContent = false;
+          lastMessage.suggestions = [];
+          lastMessage.products = [];
         }
         return newMessages;
       });
@@ -1551,13 +1715,52 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
                   <polyline points="21 15 16 10 5 21" />
                 </svg>
               </button>
+              {/* Voice input button - only show if browser supports Web Speech API */}
+              {speechSupported && (
+                <button
+                  type="button"
+                  onClick={toggleVoiceInput}
+                  disabled={!isPreview && widgetConfig?.is_paused}
+                  className={`chatbot-voice-button ${isListening ? "listening" : ""}`}
+                  title={isListening ? "Stop listening" : "Voice input"}
+                  style={
+                    isListening
+                      ? { backgroundColor: "#ef4444", color: "white" }
+                      : {}
+                  }
+                >
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    {isListening ? (
+                      // Stop icon when listening
+                      <rect x="6" y="6" width="12" height="12" rx="1" />
+                    ) : (
+                      // Microphone icon
+                      <>
+                        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                        <line x1="12" y1="19" x2="12" y2="23" />
+                        <line x1="8" y1="23" x2="16" y2="23" />
+                      </>
+                    )}
+                  </svg>
+                </button>
+              )}
               <input
                 type="text"
                 className="chatbot-input"
                 placeholder={
-                  !isPreview && widgetConfig?.is_paused
-                    ? "Chat is temporarily unavailable"
-                    : "Type your message..."
+                  isListening
+                    ? listeningText
+                    : !isPreview && widgetConfig?.is_paused
+                      ? "Chat is temporarily unavailable"
+                      : defaultPlaceholder
                 }
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}

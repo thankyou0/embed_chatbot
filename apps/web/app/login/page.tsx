@@ -18,7 +18,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ButtonSpinner } from "@/components/ui/loading";
 import Link from "next/link";
+import { MessageSquare } from "lucide-react";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -57,9 +59,15 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50 px-4">
+      <div className="w-full max-w-md">
+        <div className="flex justify-center mb-8">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/25">
+            <MessageSquare className="h-7 w-7 text-white" />
+          </div>
+        </div>
+      <Card className="w-full max-w-md shadow-xl border-0 ring-1 ring-black/5">
+        <CardHeader className="space-y-1 text-center">
           <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
           <CardDescription>
             Enter your email and password to sign in
@@ -109,7 +117,7 @@ export default function LoginPage() {
               className="w-full"
               disabled={isSubmitting || loading}
             >
-              {isSubmitting ? "Signing in..." : "Sign in"}
+              {isSubmitting ? (<><ButtonSpinner />Signing in...</>) : "Sign in"}
             </Button>
             <div className="flex flex-col space-y-2 text-sm text-center text-muted-foreground">
               <Link
@@ -128,6 +136,7 @@ export default function LoginPage() {
           </CardFooter>
         </form>
       </Card>
+      </div>
     </div>
   );
 }

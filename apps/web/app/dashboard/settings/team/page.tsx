@@ -12,13 +12,13 @@ import {
   Trash2,
   Check,
   X,
-  Loader2,
   Users,
   AlertCircle,
   MoreVertical,
   Mail,
   Clock,
 } from "lucide-react";
+import { SectionLoader, InlineSpinner } from "@/components/ui/loading";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -193,11 +193,7 @@ export default function TeamPage() {
   };
 
   if (authLoading || loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
-      </div>
-    );
+    return <SectionLoader minHeight="h-64" />;
   }
 
   if (!isAdmin) return null;
@@ -206,7 +202,7 @@ export default function TeamPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Organization Team</h1>
+          <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">Organization Team</h1>
           <p className="text-muted-foreground">
             Manage your organization members and their roles.
           </p>
@@ -236,19 +232,19 @@ export default function TeamPage() {
           <Card key={member.id}>
             <CardContent className="p-4 flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <div className="h-10 w-10 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center text-white font-medium">
+                <div className="h-10 w-10 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 flex items-center justify-center text-white font-medium shadow-sm">
                   {(member.name || member.email)[0].toUpperCase()}
                 </div>
                 <div>
                   <div className="font-medium flex items-center gap-2">
                     {member.name || member.email.split("@")[0] || "No Name"}
                     {member.is_org_owner && (
-                      <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-700">
+                      <Badge variant="secondary" className="text-xs bg-indigo-50 text-indigo-700 border-indigo-200">
                         Org Owner
                       </Badge>
                     )}
                     {!member.is_org_owner && member.role === "admin" && (
-                      <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700">
+                      <Badge variant="secondary" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
                         Admin
                       </Badge>
                     )}
@@ -424,7 +420,7 @@ export default function TeamPage() {
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <InlineSpinner size="sm" />
                   ) : (
                     "Create Account"
                   )}

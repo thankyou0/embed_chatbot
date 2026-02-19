@@ -9,7 +9,9 @@ export default function SettingsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Settings</h1>
+        <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
+          Settings
+        </h1>
         <p className="text-muted-foreground">
           Manage your account and tenant settings
         </p>
@@ -19,7 +21,7 @@ export default function SettingsPage() {
         {/* Profile Card */}
         <div className="bg-card border rounded-xl p-6">
           <div className="flex items-center gap-4 mb-4">
-            <div className="w-12 h-12 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-lg">
+            <div className="w-12 h-12 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold text-lg shadow-md shadow-indigo-500/20">
               {(user?.name ||
                 user?.username ||
                 user?.email ||
@@ -47,11 +49,11 @@ export default function SettingsPage() {
         {/* Team Management Card (Admin only) */}
         {isAdmin && (
           <Link href="/dashboard/settings/team" className="block">
-            <div className="bg-card border rounded-xl p-6 hover:border-purple-500/50 hover:shadow-lg hover:shadow-purple-500/10 transition-all cursor-pointer h-full">
+            <div className="bg-card border rounded-xl p-6 hover:border-indigo-500/50 hover:shadow-lg hover:shadow-indigo-500/10 transition-all cursor-pointer h-full">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center">
                   <svg
-                    className="w-5 h-5 text-purple-500"
+                    className="w-5 h-5 text-indigo-600"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -82,9 +84,9 @@ export default function SettingsPage() {
         {/* Security Card */}
         <div className="bg-card border rounded-xl p-6">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center">
               <svg
-                className="w-5 h-5 text-green-500"
+                className="w-5 h-5 text-emerald-600"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -107,7 +109,7 @@ export default function SettingsPage() {
           </p>
           <Link
             href="/change-password"
-            className="text-sm text-purple-500 hover:text-purple-400 font-medium"
+            className="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
           >
             Change password →
           </Link>
@@ -116,9 +118,9 @@ export default function SettingsPage() {
         {/* API Keys Card (Coming Soon) */}
         <div className="bg-card border rounded-xl p-6 opacity-60">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center">
               <svg
-                className="w-5 h-5 text-amber-500"
+                className="w-5 h-5 text-amber-600"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"

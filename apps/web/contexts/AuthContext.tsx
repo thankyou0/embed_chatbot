@@ -61,6 +61,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
+      // getMe() now handles token refresh internally if needed
       const data = await getMe();
       setUser(data.user);
       setTenant(data.tenant);

@@ -136,6 +136,74 @@ async def get_single_embedding(text: str) -> List[float]:
     return embeddings[0]
 
 
+def enhance_chunk_with_metadata(chunk: str, metadata: Dict[str, Any]) -> str:
+    """
+    Enhance chunk text with structured metadata for better embedding quality.
+
+    This prepends product/page metadata to the chunk content so that embeddings
+    capture both semantic content AND structured attributes like product names,
+    prices, categories, and brands.
+
+    The enhanced text format improves retrieval for queries like:
+    - "Nike shoes under $100"
+    - "Gold earrings from Kalyan"
+    - "Men's formal shirts"
+
+    Args:
+        chunk: Original chunk text content
+        metadata: Dictionary with page/product metadata
+
+    Returns:
+        Enhanced text with metadata prefix (if applicable)
+    """
+    prefix_parts = []
+
+    # Add page title if available
+    title = metadata.get("title")
+    if title and title.strip() and title.lower() not in ["untitled", "undefined"]:
+        prefix_parts.append(f"Page: {title.strip()}")
+
+    # Add product-specific metadata for product pages
+    if metadata.get("is_product") and metadata.get("product"):
+        product = metadata["product"]
+
+        # Product name - most important for retrieval
+        if product.get("name"):
+            prefix_parts.append(f"Product: {product['name']}")
+
+        # Brand - helps with brand-specific queries
+        if product.get("brand"):
+            prefix_parts.append(f"Brand: {product['brand']}")
+
+        # Category if available
+        if product.get("category"):
+            prefix_parts.append(f"Category: {product['category']}")
+
+        # Price - helps with price-filtered queries
+        price = product.get("price")
+        currency = product.get("currency", "")
+        if price:
+            if currency:
+                prefix_parts.append(f"Price: {currency} {price}")
+            else:
+                prefix_parts.append(f"Price: {price}")
+
+        # Availability
+        if product.get("availability"):
+            prefix_parts.append(f"Availability: {product['availability']}")
+
+    # Don't add prefix if no meaningful metadata
+    if not prefix_parts:
+        return chunk
+
+    # Combine prefix with chunk content
+    # Use a clear separator so the model understands the structure
+    metadata_prefix = " | ".join(prefix_parts)
+    enhanced_text = f"[{metadata_prefix}]\n\n{chunk}"
+
+    return enhanced_text
+
+
 class EmbeddingService:
     @staticmethod
     def chunk_text(
@@ -212,34 +280,11 @@ class EmbeddingService:
                     f"Starting embedding pipeline for KS: {ks.id} (Type: {ks.source_type})"
                 )
 
-                # Update status to indicate we're processing embeddings
-                # If the source is already marked COMPLETED with a quota/limit warning,
-                # keep it as COMPLETED so the UI can stop polling.
-                allow_processing_status = True
-                try:
-                    status_stmt = select(
-                        KnowledgeSource.status, KnowledgeSource.error_message
-                    ).where(KnowledgeSource.id == knowledge_source_id)
-                    current_status, current_error = (
-                        await db.execute(status_stmt)
-                    ).one()
-                    if (
-                        current_status == KnowledgeSourceStatus.COMPLETED
-                        and current_error
-                        and any(
-                            keyword in current_error.lower()
-                            for keyword in ["quota", "limit", "stopped"]
-                        )
-                    ):
-                        allow_processing_status = False
-                except Exception:
-                    # Fallback to previous behavior if status lookup fails
-                    allow_processing_status = True
-
-                if (
-                    allow_processing_status
-                    and ks.status != KnowledgeSourceStatus.PROCESSING
-                ):
+                # Update status to PROCESSING so frontend shows accurate state
+                # Always set PROCESSING regardless of current status — the crawl
+                # service no longer sets COMPLETED prematurely, but even for older
+                # knowledge sources we want the correct transition.
+                if ks.status != KnowledgeSourceStatus.PROCESSING:
                     await db.execute(
                         update(KnowledgeSource)
                         .where(KnowledgeSource.id == knowledge_source_id)
@@ -317,8 +362,6 @@ class EmbeddingService:
                     chunks = EmbeddingService.chunk_text(page.content)
 
                     for i, chunk in enumerate(chunks):
-                        all_chunks.append(chunk)
-
                         # Determine if this is a product page
                         # Check both is_product flag AND if product_metadata exists (fallback)
                         has_product_data = (
@@ -355,8 +398,17 @@ class EmbeddingService:
                                 "rating": product_meta.get("rating"),
                                 "review_count": product_meta.get("review_count"),
                                 "brand": product_meta.get("brand"),
+                                "category": product_meta.get("category"),
                             }
 
+                        # === METADATA-ENHANCED EMBEDDINGS ===
+                        # Enhance chunk with metadata for better retrieval
+                        # This prepends product/page info so embeddings capture both
+                        # semantic content AND structured attributes
+                        enhanced_chunk = enhance_chunk_with_metadata(
+                            chunk, chunk_metadata
+                        )
+                        all_chunks.append(enhanced_chunk)
                         all_metadata.append(chunk_metadata)
 
                 # Handle Q&A Pairs

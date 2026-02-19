@@ -89,7 +89,7 @@ class Settings(BaseSettings):
     # Also supports HUGGINGFACE_API_KEY for backward compatibility
     HF_API_KEY: Optional[str] = None
     HUGGINGFACE_API_KEY: Optional[str] = None
-    EMBEDDING_MODEL: str = "BAAI/bge-small-en-v1.5"
+    EMBEDDING_MODEL: str = ""
 
     # Email configuration
     SMTP_HOST: str = "smtp.gmail.com"

@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { apiRequestWithAuth } from "@/lib/api";
 import { getAccessToken } from "@/lib/auth";
 import { AlertCircle, RefreshCcw, ShieldAlert, Wrench } from "lucide-react";
+import { SectionLoader, ButtonSpinner } from "@/components/ui/loading";
 import {
   Card,
   CardContent,
@@ -187,11 +188,7 @@ export default function DeveloperLogsPage() {
   }
 
   if (isLoading) {
-    return (
-      <div className="min-h-[60vh] flex items-center justify-center">
-        <div className="text-sm text-muted-foreground">Loading developer logs...</div>
-      </div>
-    );
+    return <SectionLoader message="Loading developer logs..." minHeight="min-h-[60vh]" />;
   }
 
   if (!isAdmin && accessibleChatbots.length === 0) {
@@ -215,8 +212,8 @@ export default function DeveloperLogsPage() {
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2">
-            <Wrench className="h-5 w-5 text-primary" />
-            Developer Logs
+            <Wrench className="h-5 w-5 text-indigo-600" />
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">Developer Logs</span>
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
             Failures and warnings for knowledge sources with tenant/chatbot context.
@@ -233,6 +230,7 @@ export default function DeveloperLogsPage() {
             onClick={() => void fetchIncidents(false)}
             disabled={isRefreshing}
           >
+            {isRefreshing && <ButtonSpinner className="mr-0" />}
             <RefreshCcw className="h-4 w-4 mr-2" />
             {isRefreshing ? "Refreshing..." : "Refresh"}
           </Button>
@@ -240,19 +238,19 @@ export default function DeveloperLogsPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-        <Card>
+        <Card className="border-l-4 border-l-indigo-500">
           <CardHeader className="pb-2">
             <CardDescription>Total Incidents</CardDescription>
-            <CardTitle className="text-2xl">{summary.total}</CardTitle>
+            <CardTitle className="text-2xl text-indigo-600">{summary.total}</CardTitle>
           </CardHeader>
         </Card>
-        <Card>
+        <Card className="border-l-4 border-l-red-500">
           <CardHeader className="pb-2">
             <CardDescription>Errors</CardDescription>
             <CardTitle className="text-2xl text-red-600">{summary.errors}</CardTitle>
           </CardHeader>
         </Card>
-        <Card>
+        <Card className="border-l-4 border-l-amber-500">
           <CardHeader className="pb-2">
             <CardDescription>Warnings</CardDescription>
             <CardTitle className="text-2xl text-amber-600">
@@ -260,10 +258,10 @@ export default function DeveloperLogsPage() {
             </CardTitle>
           </CardHeader>
         </Card>
-        <Card>
+        <Card className="border-l-4 border-l-purple-500">
           <CardHeader className="pb-2">
             <CardDescription>Impacted Chatbots</CardDescription>
-            <CardTitle className="text-2xl">{summary.impactedChatbots}</CardTitle>
+            <CardTitle className="text-2xl text-purple-600">{summary.impactedChatbots}</CardTitle>
           </CardHeader>
         </Card>
       </div>

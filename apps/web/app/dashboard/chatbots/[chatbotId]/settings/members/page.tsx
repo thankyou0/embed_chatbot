@@ -12,10 +12,10 @@ import {
   Trash2,
   Check,
   X,
-  Loader2,
   Users,
   AlertCircle,
 } from "lucide-react";
+import { SectionLoader, ButtonSpinner } from "@/components/ui/loading";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -257,11 +257,7 @@ export default function ChatbotMembersPage() {
   );
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
-      </div>
-    );
+    return <SectionLoader />;
   }
 
   return (
@@ -570,7 +566,7 @@ export default function ChatbotMembersPage() {
                 >
                   {isSubmitting ? (
                     <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      <ButtonSpinner />
                       Saving...
                     </>
                   ) : (

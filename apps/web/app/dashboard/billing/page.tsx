@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   Check,
-  Loader2,
   TrendingUp,
   Calendar,
   CreditCard,
@@ -18,6 +17,7 @@ import {
   HardDrive,
   Bot,
 } from "lucide-react";
+import { SectionLoader, ButtonSpinner } from "@/components/ui/loading";
 import {
   Card,
   CardContent,
@@ -222,11 +222,7 @@ export default function BillingPage() {
   };
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
+    return <SectionLoader />;
   }
 
   if (!billingData) {
@@ -828,7 +824,7 @@ export default function BillingPage() {
             <Button onClick={handleUpgrade} disabled={isUpgrading}>
               {isUpgrading ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <ButtonSpinner />
                   Changing Plan...
                 </>
               ) : (

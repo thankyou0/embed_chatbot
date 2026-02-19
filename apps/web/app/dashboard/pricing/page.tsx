@@ -5,10 +5,10 @@ import {
   Check,
   Zap,
   Tag,
-  Loader2,
   AlertCircle,
   ArrowRight,
 } from "lucide-react";
+import { PageLoader, ButtonSpinner } from "@/components/ui/loading";
 import {
   Card,
   CardContent,
@@ -127,20 +127,13 @@ export default function PricingPage() {
   };
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4 text-primary" />
-          <p className="text-muted-foreground">Loading pricing plans...</p>
-        </div>
-      </div>
-    );
+    return <PageLoader message="Loading pricing plans..." />;
   }
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Pricing & Plans</h1>
+        <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">Pricing & Plans</h1>
         <p className="text-muted-foreground mt-2">
           Choose the perfect plan for your chatbot needs
         </p>
@@ -241,21 +234,21 @@ export default function PricingPage() {
               <Card
                 className={cn(
                   "flex flex-col h-full",
-                  plan.popular && "border-primary shadow-lg",
-                  isCurrentPlan && "border-green-500",
+                  plan.popular && "border-indigo-500 shadow-lg shadow-indigo-500/10",
+                  isCurrentPlan && "border-emerald-500",
                 )}
               >
                 {/* Popular Badge */}
                 {plan.popular && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <Badge className="bg-primary">Most Popular</Badge>
+                    <Badge className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white border-0">Most Popular</Badge>
                   </div>
                 )}
 
                 {/* Current Plan Badge */}
                 {isCurrentPlan && (
                   <div className="absolute -top-3 right-4">
-                    <Badge className="bg-green-600">Current Plan</Badge>
+                    <Badge className="bg-emerald-600 text-white border-0">Current Plan</Badge>
                   </div>
                 )}
 
@@ -285,13 +278,13 @@ export default function PricingPage() {
                     </Button>
                   ) : (
                     <Button
-                      className="w-full mt-4"
+                      className="w-full mt-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white"
                       disabled={!!upgradingPlan}
                       onClick={() => handleUpgrade(plan.name)}
                     >
                       {upgradingPlan === plan.name ? (
                         <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          <ButtonSpinner />
                           Upgrading...
                         </>
                       ) : (
@@ -315,7 +308,7 @@ export default function PricingPage() {
                             key={idx}
                             className="flex items-start gap-2 text-sm"
                           >
-                            <Check className="h-4 w-4 text-green-600 shrink-0 mt-0.5" />
+                            <Check className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
                             <span>{feature}</span>
                           </li>
                         ))}

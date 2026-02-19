@@ -20,13 +20,22 @@ def get_engine():
     global engine
     if engine is None:
         # Validate DATABASE_URL before creating engine
-        if not settings.DATABASE_URL or settings.DATABASE_URL == "postgresql+asyncpg://postgres:post@localhost:5432/embed_chatbot":
-            logger.warning("DATABASE_URL not set or using default value. Database operations may fail.")
-        
+        if (
+            not settings.DATABASE_URL
+            or settings.DATABASE_URL
+            == "postgresql+asyncpg://postgres:post@localhost:5432/embed_chatbot"
+        ):
+            logger.warning(
+                "DATABASE_URL not set or using default value. Database operations may fail."
+            )
+
         engine = create_async_engine(
             settings.DATABASE_URL,
             echo=False,
             future=True,
+            # pgvector HNSW ef_search is set dynamically per-query in
+            # chat_service via SET LOCAL, scaled to each chatbot's embedding
+            # count.  No fixed global override needed here.
         )
     return engine
 
@@ -54,7 +63,11 @@ async def check_database_connection() -> bool:
             logger.info(f"Connected to database: {conn}")
             await conn.execute(text("SELECT 1"))
             # Extract host info from DATABASE_URL for display
-            db_host = settings.DATABASE_URL.split("@")[-1].split("/")[0] if "@" in settings.DATABASE_URL else "localhost"
+            db_host = (
+                settings.DATABASE_URL.split("@")[-1].split("/")[0]
+                if "@" in settings.DATABASE_URL
+                else "localhost"
+            )
             db_name = settings.DATABASE_URL.split("/")[-1].split("?")[0]
             logger.success(f"Database connected: {db_name}@{db_host}")
             return True
@@ -63,13 +76,24 @@ async def check_database_connection() -> bool:
         # Extract meaningful error message
         if "connection refused" in error_msg or "could not connect" in error_msg:
             logger.error("Database connection refused - is PostgreSQL running?")
-        elif "password authentication failed" in error_msg or "authentication failed" in error_msg:
+        elif (
+            "password authentication failed" in error_msg
+            or "authentication failed" in error_msg
+        ):
             logger.error("Database authentication failed - check credentials in .env")
-        elif "does not exist" in error_msg or "database" in error_msg and "not found" in error_msg:
+        elif (
+            "does not exist" in error_msg
+            or "database" in error_msg
+            and "not found" in error_msg
+        ):
             db_name = settings.DATABASE_URL.split("/")[-1].split("?")[0]
-            logger.error(f"Database '{db_name}' does not exist - create it in pgAdmin first")
+            logger.error(
+                f"Database '{db_name}' does not exist - create it in pgAdmin first"
+            )
         elif "relation" in error_msg and "does not exist" in error_msg:
-            logger.warning("Database connected but tables missing - run migrations: alembic upgrade head")
+            logger.warning(
+                "Database connected but tables missing - run migrations: alembic upgrade head"
+            )
             return True  # Connection works, just missing tables
         else:
             logger.error(f"Database connection failed: {str(e)[:80]}")
@@ -92,4 +116,3 @@ async def get_db() -> AsyncSession:
     except Exception as e:
         # Re-raise to be caught by database exception handler
         raise
-

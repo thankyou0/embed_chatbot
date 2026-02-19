@@ -9,7 +9,6 @@ import {
   Users,
   CheckCircle,
   AlertCircle,
-  Loader2,
   Filter,
   RefreshCcw,
   Download,
@@ -18,6 +17,7 @@ import {
   CheckSquare,
   Square,
 } from "lucide-react";
+import { SectionLoader, ButtonSpinner } from "@/components/ui/loading";
 import {
   Card,
   CardContent,
@@ -329,7 +329,7 @@ export default function AnalyticsPage() {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Analytics</h1>
+          <h1 className="text-3xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">Analytics</h1>
           <p className="text-muted-foreground">
             Monitor your chatbot performance and user engagement
           </p>
@@ -385,21 +385,23 @@ export default function AnalyticsPage() {
 
       {isLoading && !analytics ? (
         <div className="flex items-center justify-center py-24">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <SectionLoader minHeight="min-h-0" />
         </div>
       ) : (
         <>
           {/* Metrics Cards */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-            <Card>
+            <Card className="border-l-4 border-l-indigo-500">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
                   Total Sessions
                 </CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
+                <div className="p-2 rounded-lg bg-indigo-50">
+                  <Users className="h-4 w-4 text-indigo-600" />
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">
+                <div className="text-2xl font-bold text-indigo-600">
                   {analytics?.total_sessions || 0}
                 </div>
                 <p className="text-xs text-muted-foreground">
@@ -408,15 +410,17 @@ export default function AnalyticsPage() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="border-l-4 border-l-blue-500">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
                   Total Messages
                 </CardTitle>
-                <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                <div className="p-2 rounded-lg bg-blue-50">
+                  <MessageSquare className="h-4 w-4 text-blue-600" />
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">
+                <div className="text-2xl font-bold text-blue-600">
                   {analytics?.total_messages || 0}
                 </div>
                 <p className="text-xs text-muted-foreground">
@@ -425,15 +429,17 @@ export default function AnalyticsPage() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="border-l-4 border-l-purple-500">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
                   Avg. Depth
                 </CardTitle>
-                <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                <div className="p-2 rounded-lg bg-purple-50">
+                  <BarChart3 className="h-4 w-4 text-purple-600" />
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">
+                <div className="text-2xl font-bold text-purple-600">
                   {analytics?.avg_messages_per_session || 0}
                 </div>
                 <p className="text-xs text-muted-foreground">
@@ -442,15 +448,17 @@ export default function AnalyticsPage() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="border-l-4 border-l-emerald-500">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
                   Deflection Rate
                 </CardTitle>
-                <CheckCircle className="h-4 w-4 text-green-600" />
+                <div className="p-2 rounded-lg bg-emerald-50">
+                  <CheckCircle className="h-4 w-4 text-emerald-600" />
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-green-600">
+                <div className="text-2xl font-bold text-emerald-600">
                   {analytics?.deflection_rate || 0}%
                 </div>
                 <p className="text-xs text-muted-foreground">
@@ -459,15 +467,17 @@ export default function AnalyticsPage() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="border-l-4 border-l-amber-500">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
                   Unanswered Rate
                 </CardTitle>
-                <AlertCircle className="h-4 w-4 text-orange-600" />
+                <div className="p-2 rounded-lg bg-amber-50">
+                  <AlertCircle className="h-4 w-4 text-amber-600" />
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-orange-600">
+                <div className="text-2xl font-bold text-amber-600">
                   {analytics?.unanswered_rate || 0}%
                 </div>
                 <p className="text-xs text-muted-foreground">
@@ -495,7 +505,7 @@ export default function AnalyticsPage() {
                       {analytics.deflection_rate}%
                     </span>
                   </div>
-                  <Progress value={analytics.deflection_rate} className="h-2" />
+                  <Progress value={analytics.deflection_rate} className="h-2" indicatorClassName="bg-emerald-500" />
                 </div>
                 <p className="text-sm text-muted-foreground">
                   {Math.round(
@@ -608,7 +618,7 @@ export default function AnalyticsPage() {
                               >
                                 {isResolving ? (
                                   <>
-                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    <ButtonSpinner />
                                     Resolving...
                                   </>
                                 ) : (

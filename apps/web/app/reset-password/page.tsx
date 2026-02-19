@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import Link from "next/link";
+import { SectionLoader, ButtonSpinner } from "@/components/ui/loading";
 import { apiRequest } from "@/lib/api";
 
 const resetPasswordSchema = z
@@ -105,10 +106,10 @@ function ResetPasswordForm() {
 
   if (!token && !error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <Card className="w-full max-w-md">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50">
+        <Card className="w-full max-w-md shadow-xl border-0 ring-1 ring-black/5">
           <CardContent className="pt-6">
-            <p className="text-center text-muted-foreground">Loading...</p>
+            <SectionLoader minHeight="min-h-[100px]" />
           </CardContent>
         </Card>
       </div>
@@ -116,9 +117,9 @@ function ResetPasswordForm() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50 px-4">
+      <Card className="w-full max-w-md shadow-xl border-0 ring-1 ring-black/5">
+        <CardHeader className="space-y-1 text-center">
           <CardTitle className="text-2xl font-bold">Reset Password</CardTitle>
           <CardDescription>Enter your new password below.</CardDescription>
         </CardHeader>
@@ -180,7 +181,7 @@ function ResetPasswordForm() {
                 className="w-full"
                 disabled={isSubmitting || success !== null}
               >
-                {isSubmitting ? "Resetting..." : "Reset Password"}
+                {isSubmitting ? (<><ButtonSpinner />Resetting...</>) : "Reset Password"}
               </Button>
             )}
             <div className="flex flex-col space-y-2 text-sm text-center text-muted-foreground">
@@ -211,10 +212,10 @@ export default function ResetPasswordPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-          <Card className="w-full max-w-md">
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50">
+          <Card className="w-full max-w-md shadow-xl border-0 ring-1 ring-black/5">
             <CardContent className="pt-6">
-              <p className="text-center text-muted-foreground">Loading...</p>
+              <SectionLoader minHeight="min-h-[100px]" />
             </CardContent>
           </Card>
         </div>

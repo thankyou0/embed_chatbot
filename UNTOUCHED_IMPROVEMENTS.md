@@ -123,8 +123,6 @@ async def rerank_chunks(query: str, chunks: list, top_k: int = 8):
 
 ---
 
-
-
 ## 🟡 PRIORITY 3: MEDIUM IMPACT (This Month)
 
 ### 6. Metadata-Enhanced Embeddings
@@ -169,13 +167,14 @@ async def cluster_queries(queries: list, embeddings: list):
 ### 8. Chatbot Personality Customization
 
 **Effort:** 2-3 hours | **Impact:** Better client customization  
-**Status:** ❌ NOT IMPLEMENTED  
+**Status:** ✅ IMPLEMENTED  
 **Why it matters:** Let clients customize tone (formal/casual), response length  
-**Files to modify:**
+**Implementation:**
 
-- `apps/api/app/models/chatbot.py` - add tone/style columns
-- `apps/api/app/services/chat_service.py` - modify system prompt
-- `apps/web/app/dashboard/chatbots/[chatbotId]/page.tsx` - add UI
+- Added `personality_tone`, `response_length`, `temperature`, `custom_instructions` fields to `ChatbotAppearance` model
+- Added personality settings to system prompt in `chat_service.py`
+- Added UI controls in appearance tab (tone, length, temperature slider, custom instructions)
+- Temperature now configurable per-chatbot (0.0 - 1.0)
 
 ---
 
@@ -208,26 +207,26 @@ async def cluster_queries(queries: list, embeddings: list):
 ### 11. Multi-Language Support
 
 **Effort:** 4-6 hours | **Impact:** Expand to non-English markets  
-**Status:** ❌ NOT IMPLEMENTED  
-**Why it matters:** Currently English only  
-**Files to modify:**
+**Status:** ✅ IMPLEMENTED (Hindi, Gujarati)  
+**Implementation:**
 
-- `packages/chatbot-widget/src/ChatbotWidget.tsx` - detect language
-- `apps/api/app/services/chat_service.py` - add language to system prompt
+- Added `language` field to `ChatbotAppearance` model (en, hi, gu)
+- Added language instructions to system prompt in `chat_service.py`
+- Added language selector in appearance tab
+- Voice recognition language auto-detects based on chatbot language setting
 
 ---
 
 ### 12. Voice Input (Web Speech API)
 
 **Effort:** 2-3 hours | **Impact:** Mobile accessibility  
-**Status:** ❌ NOT IMPLEMENTED  
-**Files to modify:** `packages/chatbot-widget/src/ChatbotWidget.tsx`  
+**Status:** ✅ IMPLEMENTED  
 **Implementation:**
 
-```typescript
-const recognition = new webkitSpeechRecognition();
-recognition.onresult = (e) => setInputValue(e.results[0][0].transcript);
-```
+- Added Web Speech API integration to `ChatbotWidget.tsx`
+- Voice input button appears next to image upload button (only on browsers that support it)
+- Supports English, Hindi, and Gujarati based on chatbot language setting
+- Visual feedback with pulsing animation when listening
 
 ---
 
@@ -357,11 +356,11 @@ recognition.onresult = (e) => setInputValue(e.results[0][0].transcript);
 | **P2**   | Playwright JS Crawler        | 4-6h   | 90% more sites   | ❌     |
 | **P3**   | Metadata-Enhanced Embeddings | 2-3h   | 12-18% relevance | ❌     |
 | **P3**   | Query Clustering             | 3-4h   | Better analytics | ❌     |
-| **P3**   | Personality Customization    | 2-3h   | Client UX        | ❌     |
+| **P3**   | Personality Customization    | 2-3h   | Client UX        | ✅     |
 | **P4**   | Celery Task Queue            | 8-12h  | Scalability      | ❌     |
 | **P4**   | Human Handoff                | 10-15h | UX               | ❌     |
-| **P4**   | Multi-Language               | 4-6h   | Market expansion | ❌     |
-| **P4**   | Voice Input                  | 2-3h   | Accessibility    | ❌     |
+| **P4**   | Multi-Language               | 4-6h   | Market expansion | ✅     |
+| **P4**   | Voice Input                  | 2-3h   | Accessibility    | ✅     |
 | **P4**   | A/B Testing                  | 6-8h   | Optimization     | ❌     |
 | **P4**   | Webhooks                     | 4-6h   | Integrations     | ❌     |
 | **P4**   | Bulk Q&A Upload              | 3-4h   | Onboarding       | ❌     |

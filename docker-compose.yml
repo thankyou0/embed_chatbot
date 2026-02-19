@@ -192,6 +192,8 @@ services:
       SENTRY_DSN: ${SENTRY_DSN:-}
       SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-development}
       SENTRY_TRACES_SAMPLE_RATE: ${SENTRY_TRACES_SAMPLE_RATE:-0.1}
+      # Force polling-based file watching for Windows Docker volume mounts
+      WATCHFILES_FORCE_POLLING: "true"
     depends_on:
       postgres:
         condition: service_healthy

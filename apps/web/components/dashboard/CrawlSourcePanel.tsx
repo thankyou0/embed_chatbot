@@ -6,7 +6,6 @@ import {
   ChevronUp,
   Trash2,
   Globe,
-  Loader2,
   AlertCircle,
   Clock,
   Tag,
@@ -18,6 +17,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
+import { InlineSpinner, Spinner } from "@/components/ui/loading";
 
 interface CrawledPage {
   id: string;
@@ -59,10 +59,14 @@ export function CrawlSourcePanel({
 }: CrawlSourcePanelProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isStopping, setIsStopping] = useState(false);
+  const [wasStopped, setWasStopped] = useState(false);
 
+  const isCrawling = source.status?.toLowerCase() === "crawling";
   const isActiveCrawl = ["pending", "processing", "crawling"].includes(
     source.status?.toLowerCase(),
   );
+  // Only show stop button during active crawling, not processing, and not after being stopped
+  const showStopButton = isCrawling && onStopCrawl && !wasStopped;
 
   // Pages belonging to this panel
   const panelPageIds = pages.map((p) => p.id);
@@ -110,8 +114,8 @@ export function CrawlSourcePanel({
         source.status === "failed"
           ? "border-l-red-500"
           : source.status === "completed"
-            ? "border-l-green-500"
-            : "border-l-blue-500",
+            ? "border-l-emerald-500"
+            : "border-l-indigo-500",
       )}
     >
       <CardHeader className="py-3 px-4 bg-muted/20 flex flex-row items-center justify-between space-y-0">
@@ -151,7 +155,7 @@ export function CrawlSourcePanel({
             {source.status === "failed" && (
               <AlertCircle className="h-3 w-3 mr-1" />
             )}
-            {isActiveCrawl && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
+            {isActiveCrawl && <InlineSpinner size="xs" className="mr-1" />}
             {source.status}
           </Badge>
           <Badge variant="outline" className="text-xs font-normal">
@@ -159,14 +163,15 @@ export function CrawlSourcePanel({
           </Badge>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          {isActiveCrawl && onStopCrawl && (
+          {showStopButton && (
             <Button
               size="sm"
               variant="destructive"
               onClick={async () => {
                 setIsStopping(true);
                 try {
-                  await onStopCrawl(source.id);
+                  await onStopCrawl!(source.id);
+                  setWasStopped(true);
                 } finally {
                   setIsStopping(false);
                 }
@@ -175,7 +180,7 @@ export function CrawlSourcePanel({
               className="h-8 text-xs"
             >
               {isStopping ? (
-                <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                <InlineSpinner size="sm" className="mr-1.5" />
               ) : (
                 <StopCircle className="h-3.5 w-3.5 mr-1.5" />
               )}
@@ -211,15 +216,17 @@ export function CrawlSourcePanel({
         </div>
       )}
 
-      {/* Show warning message (JS-heavy, quota, stopped) for completed sources */}
-      {source.status === "completed" && source.error_message && (
-        <div className="px-4 py-2 bg-amber-50 border-t border-amber-100">
-          <div className="flex items-start gap-2 text-sm text-amber-800">
-            <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
-            <p className="whitespace-pre-line">{source.error_message}</p>
+      {/* Show warning message (JS-heavy, quota) for completed sources - exclude "stopped" messages (shown as toast) */}
+      {source.status === "completed" &&
+        source.error_message &&
+        !source.error_message.toLowerCase().includes("stopped") && (
+          <div className="px-4 py-2 bg-amber-50 border-t border-amber-100">
+            <div className="flex items-start gap-2 text-sm text-amber-800">
+              <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+              <p className="whitespace-pre-line">{source.error_message}</p>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
       {/* Show info message during active crawl (JS-heavy detection, sitemap usage) */}
       {isActiveCrawl && source.error_message && (
@@ -311,7 +318,7 @@ export function CrawlSourcePanel({
               </div>
             ) : (
               <div className="p-8 text-center text-muted-foreground text-sm flex flex-col items-center gap-2">
-                <Loader2 className="h-8 w-8 animate-spin opacity-20" />
+                <Spinner size="lg" className="opacity-20" />
                 <p>Waiting for pages...</p>
               </div>
             )}
