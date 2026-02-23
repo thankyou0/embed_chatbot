@@ -329,7 +329,7 @@ export default function AnalyticsPage() {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">Analytics</h1>
+          <h1 className="text-3xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 to-teal-600">Analytics</h1>
           <p className="text-muted-foreground">
             Monitor your chatbot performance and user engagement
           </p>
@@ -341,17 +341,17 @@ export default function AnalyticsPage() {
             <select
               value={selectedChatbot}
               onChange={(e) => handleChatbotChange(e.target.value)}
-              className="bg-transparent border-0 focus:ring-0 text-sm h-8 outline-none cursor-pointer min-w-[150px]"
+              className="bg-transparent border-0 focus:ring-0 text-sm h-8 outline-none cursor-pointer min-w-[150px] text-foreground"
             >
               {/* Admins and members with all chatbots' analytics permission can see "All Chatbots" option */}
               {(isAdmin ||
                 (!isAdmin &&
                   filteredChatbots.length > 0 &&
                   filteredChatbots.length === chatbots.length)) && (
-                <option value="all">All Chatbots</option>
+                <option value="all" className="bg-background text-foreground">All Chatbots</option>
               )}
               {filteredChatbots.map((bot) => (
-                <option key={bot.id} value={bot.id}>
+                <option key={bot.id} value={bot.id} className="bg-background text-foreground">
                   {bot.name}
                 </option>
               ))}
@@ -391,17 +391,17 @@ export default function AnalyticsPage() {
         <>
           {/* Metrics Cards */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-            <Card className="border-l-4 border-l-indigo-500">
+            <Card className="border-l-4 border-l-emerald-500">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
                   Total Sessions
                 </CardTitle>
-                <div className="p-2 rounded-lg bg-indigo-50">
-                  <Users className="h-4 w-4 text-indigo-600" />
+                <div className="p-2 rounded-lg bg-emerald-50">
+                  <Users className="h-4 w-4 text-emerald-600" />
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-indigo-600">
+                <div className="text-2xl font-bold text-emerald-600">
                   {analytics?.total_sessions || 0}
                 </div>
                 <p className="text-xs text-muted-foreground">
@@ -429,17 +429,17 @@ export default function AnalyticsPage() {
               </CardContent>
             </Card>
 
-            <Card className="border-l-4 border-l-purple-500">
+            <Card className="border-l-4 border-l-teal-500">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
                   Avg. Depth
                 </CardTitle>
-                <div className="p-2 rounded-lg bg-purple-50">
-                  <BarChart3 className="h-4 w-4 text-purple-600" />
+                <div className="p-2 rounded-lg bg-teal-50">
+                  <BarChart3 className="h-4 w-4 text-teal-600" />
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-purple-600">
+                <div className="text-2xl font-bold text-teal-600">
                   {analytics?.avg_messages_per_session || 0}
                 </div>
                 <p className="text-xs text-muted-foreground">

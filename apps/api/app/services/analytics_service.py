@@ -283,60 +283,64 @@ class AnalyticsService:
         messages_result = await db.execute(messages_query)
         all_messages = messages_result.scalars().all()
 
+        # Build a per-session ordered list for position-based pairing
+        # This avoids timestamp-equality bugs when user+assistant messages
+        # are committed in the same transaction (identical created_at).
+        session_messages: dict = {}
+        for m in all_messages:
+            session_messages.setdefault(m.session_id, []).append(m)
+
         # Find TRUE knowledge gap queries (is_missing_info=True)
         # This excludes:
         # - Greetings (LLM handles these, no tags)
         # - Out-of-scope queries (is_irrelevant=True)
         # - Successfully answered queries (was_answered=True, no is_missing_info)
         unanswered_messages = []
-        user_messages = [m for m in all_messages if m.role == MessageRole.USER]
 
-        for user_msg in user_messages:
-            # Find the corresponding bot response
-            bot_response = next(
-                (
-                    m
-                    for m in all_messages
-                    if m.session_id == user_msg.session_id
-                    and m.role == MessageRole.ASSISTANT
-                    and m.created_at > user_msg.created_at
-                ),
-                None,
-            )
-
-            if not bot_response:
-                continue
-
-            metadata = bot_response.metadata_json or {}
-
-            # Skip if this query has been manually marked as resolved
-            if metadata.get("resolved", False):
-                continue
-
-            # Filter based on query_type parameter
-            is_missing_info = metadata.get("is_missing_info", False)
-            is_reported = metadata.get("user_reported", False)
-
-            # Apply filter based on query_type
-            if query_type == "missing_info":
-                if not is_missing_info:
+        for sid, msgs in session_messages.items():
+            for i, msg in enumerate(msgs):
+                if msg.role != MessageRole.USER:
                     continue
-            elif query_type == "reported":
-                if not is_reported:
-                    continue
-            else:
-                # If no type specified, include both
-                if not (is_missing_info or is_reported):
+                # Find the immediately following assistant message in this session
+                bot_response = None
+                for j in range(i + 1, len(msgs)):
+                    if msgs[j].role == MessageRole.ASSISTANT:
+                        bot_response = msgs[j]
+                        break
+
+                if not bot_response:
                     continue
 
-            confidence = metadata.get("retrieval_confidence", 0.0)
-            unanswered_messages.append(
-                {
-                    "message": user_msg,
-                    "bot_response": bot_response.content if bot_response else None,
-                    "confidence": confidence,
-                }
-            )
+                metadata = bot_response.metadata_json or {}
+
+                # Skip if this query has been manually marked as resolved
+                if metadata.get("resolved", False):
+                    continue
+
+                # Filter based on query_type parameter
+                is_missing_info = metadata.get("is_missing_info", False)
+                is_reported = metadata.get("user_reported", False)
+
+                # Apply filter based on query_type
+                if query_type == "missing_info":
+                    if not is_missing_info:
+                        continue
+                elif query_type == "reported":
+                    if not is_reported:
+                        continue
+                else:
+                    # If no type specified, include both
+                    if not (is_missing_info or is_reported):
+                        continue
+
+                confidence = metadata.get("retrieval_confidence", 0.0)
+                unanswered_messages.append(
+                    {
+                        "message": msg,
+                        "bot_response": bot_response.content if bot_response else None,
+                        "confidence": confidence,
+                    }
+                )
 
         # Group by exact query text (simple grouping, no clustering yet)
         query_groups = {}
@@ -571,7 +575,12 @@ class AnalyticsService:
             user_msg = user_msg_result.scalar_one_or_none()
 
             if not user_msg:
-                raise ValueError("No user messages found in session")
+                # Streaming failures can leave an empty session; reporting should stay
+                # non-fatal for clients in that case.
+                logger.warning(
+                    f"Report skipped for session {session_id}: no user messages found"
+                )
+                return
 
         # Find the corresponding assistant response
         assistant_stmt = (
@@ -608,7 +617,10 @@ class AnalyticsService:
             assistant_msg = assistant_result.scalar_one_or_none()
 
             if not assistant_msg:
-                raise ValueError("No assistant messages found in session")
+                logger.warning(
+                    f"Report skipped for session {session_id}: no assistant messages found"
+                )
+                return
 
         # Update the assistant message metadata to mark as reported
         metadata = assistant_msg.metadata_json or {}

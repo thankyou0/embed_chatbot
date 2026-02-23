@@ -202,7 +202,7 @@ export default function TeamPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">Organization Team</h1>
+          <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 to-teal-600">Organization Team</h1>
           <p className="text-muted-foreground">
             Manage your organization members and their roles.
           </p>
@@ -232,14 +232,14 @@ export default function TeamPage() {
           <Card key={member.id}>
             <CardContent className="p-4 flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <div className="h-10 w-10 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 flex items-center justify-center text-white font-medium shadow-sm">
+                <div className="h-10 w-10 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 flex items-center justify-center text-white font-medium shadow-sm">
                   {(member.name || member.email)[0].toUpperCase()}
                 </div>
                 <div>
                   <div className="font-medium flex items-center gap-2">
                     {member.name || member.email.split("@")[0] || "No Name"}
                     {member.is_org_owner && (
-                      <Badge variant="secondary" className="text-xs bg-indigo-50 text-indigo-700 border-indigo-200">
+                      <Badge variant="secondary" className="text-xs bg-emerald-50 text-emerald-700 border-emerald-200">
                         Org Owner
                       </Badge>
                     )}
@@ -362,7 +362,7 @@ export default function TeamPage() {
               <div className="space-y-2">
                 <Label>Role</Label>
                 <select
-                  className="w-full h-10 px-3 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full h-10 px-3 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
                   value={newMember.role}
                   onChange={(e) =>
                     setNewMember({

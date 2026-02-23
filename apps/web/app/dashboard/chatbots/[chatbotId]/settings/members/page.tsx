@@ -292,7 +292,7 @@ export default function ChatbotMembersPage() {
           <Card key={perm.id}>
             <CardContent className="p-4 flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <div className="h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 font-semibold">
+                <div className="h-10 w-10 rounded-full bg-teal-100 flex items-center justify-center text-teal-600 font-semibold">
                   {(perm.user_username || perm.user_email)[0].toUpperCase()}
                 </div>
                 <div>
@@ -398,7 +398,7 @@ export default function ChatbotMembersPage() {
                 <div className="space-y-2">
                   <Label>Select Member</Label>
                   <select
-                    className="w-full h-10 px-3 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className="w-full h-10 px-3 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
                     value={selectedMemberId}
                     onChange={(e) => setSelectedMemberId(e.target.value)}
                   >
@@ -415,7 +415,7 @@ export default function ChatbotMembersPage() {
               <div className="space-y-2">
                 <Label>Access Level</Label>
                 <select
-                  className="w-full h-10 px-3 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full h-10 px-3 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
                   value={selectedPreset}
                   onChange={(e) => setSelectedPreset(e.target.value)}
                 >

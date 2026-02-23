@@ -1,0 +1,1 @@
+﻿what is the dicision criteria about whether to change model from BAAI/bge-small-en-v1.5  →  BAAI/bge-large-en-v1.5. like if for particular chatbot, if the size of the embeddings are more so to handle that i should change model like that.

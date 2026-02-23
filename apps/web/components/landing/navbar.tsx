@@ -41,7 +41,7 @@ export function LandingNavbar() {
           <div className="flex items-center justify-between h-16 lg:h-20">
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2.5 group">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/25 group-hover:shadow-indigo-500/40 transition-shadow">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/25 group-hover:shadow-emerald-500/40 transition-shadow">
                 <MessageSquare className="h-5 w-5 text-white" />
               </div>
               <span className="text-lg font-bold bg-gradient-to-r from-white to-white/70 bg-clip-text text-transparent">
@@ -67,7 +67,7 @@ export function LandingNavbar() {
               {!loading && user ? (
                 <Link
                   href="/dashboard/chatbots"
-                  className="px-5 py-2.5 text-sm font-medium bg-gradient-to-r from-indigo-500 to-purple-600 rounded-lg hover:from-indigo-400 hover:to-purple-500 transition-all shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40"
+                  className="px-5 py-2.5 text-sm font-medium bg-gradient-to-r from-emerald-500 to-teal-600 rounded-lg hover:from-emerald-400 hover:to-teal-500 transition-all shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40"
                 >
                   Go to Dashboard
                 </Link>
@@ -81,7 +81,7 @@ export function LandingNavbar() {
                   </Link>
                   <Link
                     href="/signup"
-                    className="px-5 py-2.5 text-sm font-medium bg-gradient-to-r from-indigo-500 to-purple-600 rounded-lg hover:from-indigo-400 hover:to-purple-500 transition-all shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40"
+                    className="px-5 py-2.5 text-sm font-medium bg-gradient-to-r from-emerald-500 to-teal-600 rounded-lg hover:from-emerald-400 hover:to-teal-500 transition-all shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40"
                   >
                     Get Started Free
                   </Link>
@@ -124,7 +124,7 @@ export function LandingNavbar() {
                 {!loading && user ? (
                   <Link
                     href="/dashboard/chatbots"
-                    className="px-4 py-3 text-center font-medium bg-gradient-to-r from-indigo-500 to-purple-600 rounded-lg"
+                    className="px-4 py-3 text-center font-medium bg-gradient-to-r from-emerald-500 to-teal-600 rounded-lg"
                   >
                     Go to Dashboard
                   </Link>
@@ -138,7 +138,7 @@ export function LandingNavbar() {
                     </Link>
                     <Link
                       href="/signup"
-                      className="px-4 py-3 text-center font-medium bg-gradient-to-r from-indigo-500 to-purple-600 rounded-lg"
+                      className="px-4 py-3 text-center font-medium bg-gradient-to-r from-emerald-500 to-teal-600 rounded-lg"
                     >
                       Get Started Free
                     </Link>

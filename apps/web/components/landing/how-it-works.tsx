@@ -24,7 +24,7 @@ const steps = [
           <div className="text-xs text-green-400">✓</div>
         </div>
         <div className="flex items-center gap-3 p-3 rounded-lg bg-white/5 border border-white/5">
-          <div className="w-8 h-8 rounded bg-purple-500/20 flex items-center justify-center text-xs">
+          <div className="w-8 h-8 rounded bg-teal-500/20 flex items-center justify-center text-xs">
             🌐
           </div>
           <div className="flex-1">
@@ -57,7 +57,7 @@ const steps = [
         <div className="flex items-center gap-3">
           <span className="text-xs text-white/40 w-16">Theme</span>
           <div className="flex gap-2">
-            {["#6366f1", "#8b5cf6", "#ec4899", "#f59e0b", "#10b981"].map(
+            {["#10b981", "#14b8a6", "#ec4899", "#f59e0b", "#3b82f6"].map(
               (c) => (
                 <div
                   key={c}
@@ -71,7 +71,7 @@ const steps = [
         <div className="flex items-center gap-3">
           <span className="text-xs text-white/40 w-16">Position</span>
           <div className="flex gap-2">
-            <div className="px-3 py-1 text-xs rounded bg-indigo-600 text-white">
+            <div className="px-3 py-1 text-xs rounded bg-emerald-600 text-white">
               Bottom Right
             </div>
             <div className="px-3 py-1 text-xs rounded bg-white/5 text-white/50">
@@ -125,7 +125,7 @@ const steps = [
             <span className="text-pink-400">{"></script>"}</span>
           </div>
         </div>
-        <div className="absolute top-2 right-2 px-2 py-1 text-[10px] rounded bg-indigo-600/80 text-white cursor-pointer hover:bg-indigo-500/80 transition">
+        <div className="absolute top-2 right-2 px-2 py-1 text-[10px] rounded bg-emerald-600/80 text-white cursor-pointer hover:bg-emerald-500/80 transition">
           Copy
         </div>
       </div>
@@ -171,7 +171,7 @@ export function HowItWorks() {
     <section
       id="how-it-works"
       ref={ref}
-      className="relative py-24 lg:py-32 bg-gradient-to-b from-transparent via-indigo-500/[0.03] to-transparent"
+      className="relative py-24 lg:py-32 bg-gradient-to-b from-transparent via-emerald-500/[0.03] to-transparent"
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section header */}
@@ -181,12 +181,12 @@ export function HowItWorks() {
           transition={{ duration: 0.6 }}
           className="text-center mb-16 lg:mb-20"
         >
-          <p className="text-sm font-medium text-indigo-400 tracking-wider uppercase mb-3">
+          <p className="text-sm font-medium text-emerald-400 tracking-wider uppercase mb-3">
             How It Works
           </p>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-4">
             Live in{" "}
-            <span className="bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
               Four Simple Steps
             </span>
           </h2>
@@ -214,7 +214,7 @@ export function HowItWorks() {
                   <span className="text-5xl font-bold bg-gradient-to-b from-white/20 to-white/5 bg-clip-text text-transparent">
                     {step.step}
                   </span>
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
                     <step.icon className="w-5 h-5 text-white" />
                   </div>
                 </div>

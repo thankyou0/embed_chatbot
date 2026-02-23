@@ -18,10 +18,9 @@ WORKDIR /app
 
 ENV NODE_ENV=development
 ENV NEXT_TELEMETRY_DISABLED=1
-# Disable polling - use inotify for better performance
-# If file watching doesn't work, enable polling per-user basis
-ENV WATCHPACK_POLLING=false
-ENV CHOKIDAR_USEPOLLING=false
+# Enable polling for file watching in Docker (required for Windows volume mounts)
+ENV WATCHPACK_POLLING=true
+ENV CHOKIDAR_USEPOLLING=true
 
 EXPOSE 3000
 

@@ -115,7 +115,7 @@ export function CrawlSourcePanel({
           ? "border-l-red-500"
           : source.status === "completed"
             ? "border-l-emerald-500"
-            : "border-l-indigo-500",
+            : "border-l-emerald-500",
       )}
     >
       <CardHeader className="py-3 px-4 bg-muted/20 flex flex-row items-center justify-between space-y-0">

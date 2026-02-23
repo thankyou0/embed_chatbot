@@ -1,0 +1,471 @@
+{
+  "bot": "tentree",
+  "total_queries": 93,
+  "queries": [
+    {
+      "type": "greeting",
+      "lang": "en",
+      "query": "Hi there!"
+    },
+    {
+      "type": "greeting",
+      "lang": "en",
+      "query": "Hey, what's up?"
+    },
+    {
+      "type": "greeting",
+      "lang": "en",
+      "query": "Good morning! Can you help me?"
+    },
+    {
+      "type": "greeting",
+      "lang": "gu",
+      "query": "નમસ્તે! કેમ છો?"
+    },
+    {
+      "type": "greeting",
+      "lang": "gu",
+      "query": "હેલો! મને હેલ્પ કરો"
+    },
+    {
+      "type": "product_browse",
+      "lang": "en",
+      "query": "Show me your t-shirts"
+    },
+    {
+      "type": "product_browse",
+      "lang": "en",
+      "query": "What hoodies do you have?"
+    },
+    {
+      "type": "product_browse",
+      "lang": "en",
+      "query": "I want to browse your collection"
+    },
+    {
+      "type": "product_browse",
+      "lang": "en",
+      "query": "What's popular right now?"
+    },
+    {
+      "type": "product_browse",
+      "lang": "en",
+      "query": "Show me your best sellers"
+    },
+    {
+      "type": "product_browse",
+      "lang": "gu",
+      "query": "તમારા t-shirts બતાવો"
+    },
+    {
+      "type": "product_browse",
+      "lang": "gu",
+      "query": "શું hoodies available છે?"
+    },
+    {
+      "type": "product_browse",
+      "lang": "gu",
+      "query": "તમારા best selling products કયા છે?"
+    },
+    {
+      "type": "specific_product",
+      "lang": "en",
+      "query": "I need a premium t-shirts"
+    },
+    {
+      "type": "specific_product",
+      "lang": "en",
+      "query": "Looking for joggers for daily use"
+    },
+    {
+      "type": "specific_product",
+      "lang": "en",
+      "query": "Do you have jackets in stock?"
+    },
+    {
+      "type": "specific_product",
+      "lang": "gu",
+      "query": "મને t-shirts જોઈએ છે"
+    },
+    {
+      "type": "price_filter",
+      "lang": "en",
+      "query": "Show me t-shirts under $50"
+    },
+    {
+      "type": "price_filter",
+      "lang": "en",
+      "query": "t-shirts between $20 and $100"
+    },
+    {
+      "type": "price_filter",
+      "lang": "en",
+      "query": "What's the cheapest hoodies?"
+    },
+    {
+      "type": "price_filter",
+      "lang": "en",
+      "query": "Budget t-shirts under 500"
+    },
+    {
+      "type": "price_filter",
+      "lang": "en",
+      "query": "Most expensive t-shirts you have?"
+    },
+    {
+      "type": "price_filter",
+      "lang": "gu",
+      "query": "₹500 થી ઓછા t-shirts બતાવો"
+    },
+    {
+      "type": "price_filter",
+      "lang": "gu",
+      "query": "સસ્તા t-shirts છે?"
+    },
+    {
+      "type": "color_filter",
+      "lang": "en",
+      "query": "Show me t-shirts in blue"
+    },
+    {
+      "type": "color_filter",
+      "lang": "en",
+      "query": "Do you have black t-shirts?"
+    },
+    {
+      "type": "color_filter",
+      "lang": "en",
+      "query": "I want a red hoodies"
+    },
+    {
+      "type": "color_filter",
+      "lang": "gu",
+      "query": "લાલ રંગના t-shirts બતાવો"
+    },
+    {
+      "type": "non_product",
+      "lang": "en",
+      "query": "What is your return policy?"
+    },
+    {
+      "type": "non_product",
+      "lang": "en",
+      "query": "How long does shipping take?"
+    },
+    {
+      "type": "non_product",
+      "lang": "en",
+      "query": "Do you offer free delivery?"
+    },
+    {
+      "type": "non_product",
+      "lang": "en",
+      "query": "What payment methods do you accept?"
+    },
+    {
+      "type": "non_product",
+      "lang": "en",
+      "query": "Where are you located?"
+    },
+    {
+      "type": "non_product",
+      "lang": "en",
+      "query": "Do you have a physical store?"
+    },
+    {
+      "type": "non_product",
+      "lang": "gu",
+      "query": "રિટર્ન પોલિસી શું છે?"
+    },
+    {
+      "type": "non_product",
+      "lang": "gu",
+      "query": "ડિલિવરી કેટલા દિવસમાં થાય?"
+    },
+    {
+      "type": "irrelevant",
+      "lang": "en",
+      "query": "Can you write me a Python script to sort a list?"
+    },
+    {
+      "type": "irrelevant",
+      "lang": "en",
+      "query": "Who is the Prime Minister of India?"
+    },
+    {
+      "type": "irrelevant",
+      "lang": "en",
+      "query": "What is the capital of France?"
+    },
+    {
+      "type": "irrelevant",
+      "lang": "en",
+      "query": "Tell me a joke about programming"
+    },
+    {
+      "type": "irrelevant",
+      "lang": "en",
+      "query": "Explain quantum physics to me"
+    },
+    {
+      "type": "irrelevant",
+      "lang": "en",
+      "query": "What's the weather like today?"
+    },
+    {
+      "type": "irrelevant",
+      "lang": "en",
+      "query": "Who won the FIFA World Cup 2022?"
+    },
+    {
+      "type": "irrelevant",
+      "lang": "en",
+      "query": "How do I make pasta at home?"
+    },
+    {
+      "type": "irrelevant",
+      "lang": "en",
+      "query": "What is blockchain technology?"
+    },
+    {
+      "type": "irrelevant",
+      "lang": "en",
+      "query": "Solve this math: 25 x 48"
+    },
+    {
+      "type": "irrelevant",
+      "lang": "gu",
+      "query": "ભારતના વડાપ્રધાન કોણ છે?"
+    },
+    {
+      "type": "irrelevant",
+      "lang": "gu",
+      "query": "મને એક જોક કહો"
+    },
+    {
+      "type": "unsupported_lang",
+      "lang": "fr",
+      "query": "Bonjour, montrez-moi vos produits les plus populaires"
+    },
+    {
+      "type": "unsupported_lang",
+      "lang": "ja",
+      "query": "こんにちは、人気商品を教えてください"
+    },
+    {
+      "type": "unsupported_lang",
+      "lang": "es",
+      "query": "Hola, muéstrame tus productos más vendidos"
+    },
+    {
+      "type": "unsupported_lang",
+      "lang": "zh",
+      "query": "你好，给我看看你们最好的产品"
+    },
+    {
+      "type": "unsupported_lang_hindi",
+      "lang": "hi",
+      "query": "नमस्ते! आपके पास कौन से t-shirts हैं?"
+    },
+    {
+      "type": "unsupported_lang_hindi",
+      "lang": "hi",
+      "query": "500 रुपये से कम में क्या मिलेगा?"
+    },
+    {
+      "type": "missing_info",
+      "lang": "en",
+      "query": "Show me your product warranty certificates"
+    },
+    {
+      "type": "missing_info",
+      "lang": "en",
+      "query": "What is the GSM rating of your cotton fabric?"
+    },
+    {
+      "type": "missing_info",
+      "lang": "en",
+      "query": "What are your CEO's contact details?"
+    },
+    {
+      "type": "missing_info",
+      "lang": "en",
+      "query": "What year was your company founded?"
+    },
+    {
+      "type": "missing_info",
+      "lang": "en",
+      "query": "Can you show your ISO certification?"
+    },
+    {
+      "type": "missing_info",
+      "lang": "en",
+      "query": "What's the thread count of your premium fabric?"
+    },
+    {
+      "type": "missing_info",
+      "lang": "gu",
+      "query": "તમારી company નો GST number શું છે?"
+    },
+    {
+      "type": "suggestions_test",
+      "lang": "en",
+      "query": "I'm new here, what t-shirts do you sell?"
+    },
+    {
+      "type": "suggestions_test",
+      "lang": "en",
+      "query": "What do you recommend for a gift?"
+    },
+    {
+      "type": "suggestions_test",
+      "lang": "gu",
+      "query": "gift માટે શું recommend કરો?"
+    },
+    {
+      "type": "romanized",
+      "lang": "gu-Latn",
+      "query": "mane t-shirts batavo"
+    },
+    {
+      "type": "romanized",
+      "lang": "gu-Latn",
+      "query": "sasta wala shu chhe?"
+    },
+    {
+      "type": "romanized",
+      "lang": "gu-Latn",
+      "query": "tamari best products batavo"
+    },
+    {
+      "type": "mixed_lang",
+      "lang": "gu-mix",
+      "query": "Mane t-shirts joiye affordable wala"
+    },
+    {
+      "type": "mixed_lang",
+      "lang": "gu-mix",
+      "query": "tumhare best products shu chhe?"
+    },
+    {
+      "type": "ambiguous",
+      "lang": "en",
+      "query": "something nice"
+    },
+    {
+      "type": "ambiguous",
+      "lang": "en",
+      "query": "I need help"
+    },
+    {
+      "type": "ambiguous",
+      "lang": "en",
+      "query": "What do you have?"
+    },
+    {
+      "type": "ambiguous",
+      "lang": "en",
+      "query": "show me options"
+    },
+    {
+      "type": "ambiguous",
+      "lang": "en",
+      "query": "gift ideas"
+    },
+    {
+      "type": "comparison",
+      "lang": "en",
+      "query": "Which t-shirts is better quality?"
+    },
+    {
+      "type": "comparison",
+      "lang": "en",
+      "query": "What's the difference between your t-shirts and hoodies?"
+    },
+    {
+      "type": "comparison",
+      "lang": "en",
+      "query": "Which t-shirts would you recommend?"
+    },
+    {
+      "type": "edge_case",
+      "lang": "en",
+      "query": "ok"
+    },
+    {
+      "type": "edge_case",
+      "lang": "en",
+      "query": "thanks"
+    },
+    {
+      "type": "edge_case",
+      "lang": "en",
+      "query": "yes"
+    },
+    {
+      "type": "edge_case",
+      "lang": "en",
+      "query": "no"
+    },
+    {
+      "type": "edge_case",
+      "lang": "en",
+      "query": "hmm"
+    },
+    {
+      "type": "edge_case",
+      "lang": "en",
+      "query": "???"
+    },
+    {
+      "type": "edge_case",
+      "lang": "en",
+      "query": "lol"
+    },
+    {
+      "type": "edge_case",
+      "lang": "en",
+      "query": "t-shirts"
+    },
+    {
+      "type": "about_brand",
+      "lang": "en",
+      "query": "Tell me about tentree"
+    },
+    {
+      "type": "about_brand",
+      "lang": "en",
+      "query": "Who are you and what do you sell?"
+    },
+    {
+      "type": "complaint",
+      "lang": "en",
+      "query": "Your products are too expensive"
+    },
+    {
+      "type": "complaint",
+      "lang": "en",
+      "query": "I had a bad experience with my last order"
+    },
+    {
+      "type": "complaint",
+      "lang": "en",
+      "query": "Why is the quality so poor?"
+    },
+    {
+      "type": "price_format",
+      "lang": "en",
+      "query": "Show me t-shirts with prices"
+    },
+    {
+      "type": "price_format",
+      "lang": "en",
+      "query": "What's the price range of your products?"
+    },
+    {
+      "type": "price_format",
+      "lang": "gu",
+      "query": "t-shirts ની price શું છે?"
+    }
+  ]
+}

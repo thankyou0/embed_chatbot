@@ -106,7 +106,7 @@ function ResetPasswordForm() {
 
   if (!token && !error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 via-white to-teal-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
         <Card className="w-full max-w-md shadow-xl border-0 ring-1 ring-black/5">
           <CardContent className="pt-6">
             <SectionLoader minHeight="min-h-[100px]" />
@@ -117,7 +117,7 @@ function ResetPasswordForm() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 via-white to-teal-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 px-4">
       <Card className="w-full max-w-md shadow-xl border-0 ring-1 ring-black/5">
         <CardHeader className="space-y-1 text-center">
           <CardTitle className="text-2xl font-bold">Reset Password</CardTitle>
@@ -212,7 +212,7 @@ export default function ResetPasswordPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50">
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 via-white to-teal-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
           <Card className="w-full max-w-md shadow-xl border-0 ring-1 ring-black/5">
             <CardContent className="pt-6">
               <SectionLoader minHeight="min-h-[100px]" />

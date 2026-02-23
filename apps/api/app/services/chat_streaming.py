@@ -21,7 +21,7 @@ from app.services.chat_service import (
     extract_products_from_chunks,
     is_likely_non_product_url
 )
-from app.core.config import settings
+from app.core.config import settings, get_groq_api_key
 from app.core.logging import get_logger
 from app.schemas.chat import ChatSource, ImageAnalysisResult, ProductInfo
 
@@ -321,7 +321,7 @@ class ChatStreamingService:
                     "POST",
                     "https://api.groq.com/openai/v1/chat/completions",
                     headers={
-                        "Authorization": f"Bearer {settings.GROQ_API_KEY}",
+                        "Authorization": f"Bearer {get_groq_api_key()}",
                         "Content-Type": "application/json"
                     },
                     json={

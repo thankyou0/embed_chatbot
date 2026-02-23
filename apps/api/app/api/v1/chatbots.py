@@ -288,6 +288,89 @@ async def list_knowledge_sources(
     )
 
 
+@router.get("/{chatbot_id}/knowledge-sources/status-stream")
+async def knowledge_sources_status_stream(
+    chatbot_id: UUID,
+    token: str = Query(..., description="JWT access token for SSE auth"),
+):
+    """
+    SSE endpoint: streams all knowledge-source statuses for a chatbot every 2 s.
+    Fires a 'done' event when every source has reached a terminal state
+    (completed / failed).  The frontend subscribes here during the 'processing'
+    phase so it can avoid polling and instead receive a push notification when
+    embedding finishes.
+    """
+    import asyncio
+    import json as _json
+    from app.core.security import decode_token
+    from app.core.database import get_session_factory
+    from app.models.knowledge import KnowledgeSource as KSModel
+
+    # --- validate token outside the generator so we can return early ---
+    payload = decode_token(token)
+    if payload is None or payload.get("type") != "access":
+        async def _unauthorized():
+            yield 'event: error\ndata: {"error":"unauthorized"}\n\n'
+        return StreamingResponse(_unauthorized(), media_type="text/event-stream")
+
+    async def event_generator():
+        session_factory = get_session_factory()
+        from sqlalchemy import select as sqlsel
+        max_ticks = 150          # 5 minutes max (2 s × 150)
+        tick = 0
+
+        while tick < max_ticks:
+            try:
+                async with session_factory() as db:
+                    res = await db.execute(
+                        sqlsel(KSModel).where(KSModel.chatbot_id == chatbot_id)
+                    )
+                    sources = res.scalars().all()
+
+                sources_data = [
+                    {
+                        "id": str(s.id),
+                        "status": s.status.value if hasattr(s.status, "value") else str(s.status),
+                        "source_url": s.source_url,
+                        "source_type": s.source_type.value if hasattr(s.source_type, "value") else str(s.source_type),
+                        "pages_found": s.pages_found or 0,
+                        "error_message": s.error_message,
+                        "updated_at": s.updated_at.isoformat() if s.updated_at else None,
+                    }
+                    for s in sources
+                ]
+
+                yield f"data: {_json.dumps(sources_data)}\n\n"
+
+                terminal = {"completed", "failed"}
+                all_done = len(sources_data) > 0 and all(
+                    s["status"] in terminal for s in sources_data
+                )
+                if all_done:
+                    yield "event: done\ndata: {}\n\n"
+                    return
+
+            except Exception as exc:
+                yield f"event: error\ndata: {_json.dumps({'error': str(exc)[:200]})}\n\n"
+                return
+
+            await asyncio.sleep(2)
+            tick += 1
+
+        # Reached 5-min limit
+        yield "event: timeout\ndata: {}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
 @router.get("/knowledge-sources/{source_id}/status", response_model=CrawlStatusResponse)
 async def get_knowledge_source_status(
     source_id: UUID,

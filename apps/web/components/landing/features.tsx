@@ -27,14 +27,14 @@ const features = [
     title: "Embed in One Line",
     description:
       "Copy a single script tag and paste it into any website. Works with React, WordPress, Shopify, or plain HTML.",
-    gradient: "from-indigo-500 to-purple-500",
+    gradient: "from-emerald-500 to-teal-500",
   },
   {
     icon: Palette,
     title: "Fully Customizable",
     description:
       "Match your brand — custom colors, logo, welcome messages, position, and more. Make it yours.",
-    gradient: "from-purple-500 to-pink-500",
+    gradient: "from-teal-500 to-pink-500",
   },
   {
     icon: MessageSquare,
@@ -69,7 +69,7 @@ const features = [
     title: "Multi-Bot Management",
     description:
       "Create and manage multiple chatbots from a single dashboard. Different bots for different purposes.",
-    gradient: "from-violet-500 to-indigo-500",
+    gradient: "from-teal-500 to-emerald-500",
   },
   {
     icon: Zap,
@@ -88,7 +88,7 @@ export function FeaturesSection() {
     <section id="features" ref={ref} className="relative py-24 lg:py-32">
       {/* Background decoration */}
       <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[2px] bg-gradient-to-r from-transparent via-indigo-500/20 to-transparent" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[2px] bg-gradient-to-r from-transparent via-emerald-500/20 to-transparent" />
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -99,12 +99,12 @@ export function FeaturesSection() {
           transition={{ duration: 0.6 }}
           className="text-center mb-16 lg:mb-20"
         >
-          <p className="text-sm font-medium text-indigo-400 tracking-wider uppercase mb-3">
+          <p className="text-sm font-medium text-emerald-400 tracking-wider uppercase mb-3">
             Features
           </p>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-4">
             Everything You Need to{" "}
-            <span className="bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
               Engage Visitors
             </span>
           </h2>

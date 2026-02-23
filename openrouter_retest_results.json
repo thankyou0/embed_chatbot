@@ -1,0 +1,1165 @@
+{
+  "timestamp": "2026-02-21T16:39:40",
+  "call1_new": {
+    "OR-gemini-2.5-flash": {
+      "model_id": "google/gemini-2.5-flash",
+      "tested": 14,
+      "rate_limited": 0,
+      "errors": 7,
+      "avg_score": 3.7857142857142856,
+      "avg_latency": 959.0714285714286,
+      "json_pct": 100.0,
+      "lang_pct": 85.71428571428571,
+      "prod_pct": 100.0
+    },
+    "OR-gemini-2.5-flash-lite": {
+      "model_id": "google/gemini-2.5-flash-lite",
+      "tested": 14,
+      "rate_limited": 0,
+      "errors": 7,
+      "avg_score": 3.642857142857143,
+      "avg_latency": 742.5714285714286,
+      "json_pct": 100.0,
+      "lang_pct": 71.42857142857143,
+      "prod_pct": 100.0
+    }
+  },
+  "call2_new": {
+    "OR-gemini-2.0-flash": {
+      "model_id": "google/gemini-2.0-flash-001",
+      "tested": 14,
+      "rate_limited": 0,
+      "errors": 7,
+      "avg_score": 4.785714285714286,
+      "avg_latency": 1309.9285714285713,
+      "lang_pct": 100.0,
+      "irrel_pct": 85.71428571428571,
+      "sugg_pct": 92.85714285714286,
+      "no_leak_pct": 100.0
+    },
+    "OR-gemini-2.5-flash": {
+      "model_id": "google/gemini-2.5-flash",
+      "tested": 14,
+      "rate_limited": 0,
+      "errors": 7,
+      "avg_score": 4.857142857142857,
+      "avg_latency": 1382.7142857142858,
+      "lang_pct": 100.0,
+      "irrel_pct": 85.71428571428571,
+      "sugg_pct": 100.0,
+      "no_leak_pct": 100.0
+    },
+    "OR-gemini-2.5-flash-lite": {
+      "model_id": "google/gemini-2.5-flash-lite",
+      "tested": 14,
+      "rate_limited": 0,
+      "errors": 7,
+      "avg_score": 5.0,
+      "avg_latency": 1034.9285714285713,
+      "lang_pct": 100.0,
+      "irrel_pct": 100.0,
+      "sugg_pct": 100.0,
+      "no_leak_pct": 100.0
+    }
+  },
+  "call2_per_query": {
+    "OR-gemini-2.0-flash": [
+      {
+        "query": {
+          "type": "product_browse",
+          "lang": "en",
+          "query": "Show me your best sellers",
+          "bot": "deathwish",
+          "expected_lang": "english",
+          "product": true
+        },
+        "score": null,
+        "status": "error:HTTP 402 (credits exhausted) {\"error\":{\"message\":\"This request requires more credits, or fewer max_tokens. You requested up to 1024 tokens, but can o"
+      },
+      {
+        "query": {
+          "type": "product_browse",
+          "lang": "hi",
+          "query": "मुझे ground coffee दिखाओ",
+          "bot": "deathwish",
+          "expected_lang": "hindi",
+          "product": true
+        },
+        "score": 5,
+        "details": {
+          "has_response": true,
+          "lang_ok": true,
+          "irrel_ok": true,
+          "sugg_ok": true,
+          "no_leak": true
+        },
+        "latency": 1653,
+        "response": "ज़रूर! हमारे पास डेथ विश ग्राउंड कॉफ़ी $19.99 में उपलब्ध है। क्या आप इसके बारे में और जानना चाहेंगे?\n\n---SUGGESTIONS---\nक्या आप जानना चाहेंगे कि एस्प्रेसो रोस्ट की कीमत क्या है?\nक्या आप जानना चाहेंगे कि कोल्ड ब्रू कैसे बनाया जाता है?\nक्या आप हमारी वापसी नीति के बारे में जानना चाहेंगे?\n---END---\n"
+      },
+      {
+        "query": {
+          "type": "product_browse",
+          "lang": "gu",
+          "query": "તમારા bracelets બતાવો",
+          "bot": "zevaramaze",
+          "expected_lang": "gujarati",
+          "product": true
+        },
+        "score": 5,
+        "details": {
+          "has_response": true,
+          "lang_ok": true,
+          "irrel_ok": true,
+          "sugg_ok": true,
+          "no_leak": true
+        },
+        "latency": 2034,
+        "response": "ઝેવરામાઝે જ્વેલરીમાં આપનું સ્વાગત છે! અમારી પાસે સિલ્વર બંગડી બ્રેસલેટ (₹1,499), ગોલ્ડ પ્લેટેડ ચાર્મ બ્રેસલેટ (₹2,999), અને પર્લ સ્ટ્રિંગ બ્રેસલેટ (₹899) ઉપલબ્ધ છે. તમને કયું બ્રેસલેટ જોઈએ છે?\n\n---SUGGESTIONS---\nશું તમે કિંમત જાણવા માંગો છો?\nશું તમે કોઈ ખાસ બ્રેસલેટ વિશે વધુ માહિતી મેળવવા માંગો છો?\n"
+      },
+      {
+        "query": {
+          "type": "price_filter",
+          "lang": "en",
+          "query": "Show me coffee under $50",
+          "bot": "deathwish",
+          "expected_lang": "english",
+          "product": true
+        },
+        "score": null,
+        "status": "error:HTTP 402 (credits exhausted) {\"error\":{\"message\":\"This request requires more credits, or fewer max_tokens. You requested up to 1024 tokens, but can o"
+      },
+      {
+        "query": {
+          "type": "price_filter",
+          "lang": "hi",
+          "query": "500 रुपये से कम के coffee बताओ",
+          "bot": "deathwish",
+          "expected_lang": "hindi",
+          "product": true
+        },
+        "score": 5,
+        "details": {
+          "has_response": true,
+          "lang_ok": true,
+          "irrel_ok": true,
+          "sugg_ok": true,
+          "no_leak": true
+        },
+        "latency": 1310,
+        "response": "ज़रूर! डेथ विश कॉफी में, 500 रुपये से कम में हमारे पास कोल्ड ब्रू है, जिसकी कीमत $14.99 है। क्या आप इसके बारे में और जानना चाहेंगे?\n\n---SUGGESTIONS---\nक्या आप ग्राउंड कॉफी के बारे में जानना चाहेंगे?\nक्या आप एस्प्रेसो रोस्ट के बारे में जानना चाहेंगे?\nक्या आप क-कप्स के बारे में जानना चाहेंगे?\n---END--"
+      },
+      {
+        "query": {
+          "type": "price_filter",
+          "lang": "gu",
+          "query": "₹500 થી ઓછા bracelets બતાવો",
+          "bot": "zevaramaze",
+          "expected_lang": "gujarati",
+          "product": true
+        },
+        "score": 5,
+        "details": {
+          "has_response": true,
+          "lang_ok": true,
+          "irrel_ok": true,
+          "sugg_ok": true,
+          "no_leak": true
+        },
+        "latency": 1668,
+        "response": "માફ કરશો, મારી પાસે ₹500 થી ઓછાના બ્રેસલેટ નથી. અમારી પાસે હાલમાં મોતીની દોરી બ્રેસલેટ ₹899 માં અને ચાંદીની બંગડી બ્રેસલેટ ₹1,499 માં ઉપલબ્ધ છે. શું હું તમને અમારી અન્ય પ્રોડક્ટ્સ બતાવવામાં મદદ કરી શકું છુ?\n\n---SUGGESTIONS---\nશું તમે બ્રેસલેટ જોવા માંગો છો?\nશું તમે નેકલેસ જોવા માંગો છો?\nશું તમે earr"
+      },
+      {
+        "query": {
+          "type": "irrelevant",
+          "lang": "en",
+          "query": "Who is the Prime Minister of India?",
+          "bot": "deathwish",
+          "expected_lang": "english",
+          "product": false
+        },
+        "score": null,
+        "status": "error:HTTP 402 (credits exhausted) {\"error\":{\"message\":\"This request requires more credits, or fewer max_tokens. You requested up to 1024 tokens, but can o"
+      },
+      {
+        "query": {
+          "type": "irrelevant",
+          "lang": "hi",
+          "query": "चांद पर कौन गया था?",
+          "bot": "deathwish",
+          "expected_lang": "hindi",
+          "product": false
+        },
+        "score": 5,
+        "details": {
+          "has_response": true,
+          "lang_ok": true,
+          "irrel_ok": true,
+          "sugg_ok": true,
+          "no_leak": true
+        },
+        "latency": 1199,
+        "response": "[IRRELEVANT_QUERY] मैं केवल डेथ विश कॉफ़ी उत्पादों और सेवाओं के बारे में सवालों में मदद कर सकता हूँ।\n\n---SUGGESTIONS---\nक्या आप हमारे ग्राउंड कॉफ़ी के बारे में जानना चाहेंगे?\nक्या आप जानना चाहेंगे कि कोल्ड ब्रू कैसे बनाते हैं?\nक्या आप जानना चाहेंगे कि हम शिपिंग कैसे करते हैं?\n---END---\n"
+      },
+      {
+        "query": {
+          "type": "irrelevant",
+          "lang": "gu",
+          "query": "ભારતના વડાપ્રધાન કોણ છે?",
+          "bot": "zevaramaze",
+          "expected_lang": "gujarati",
+          "product": false
+        },
+        "score": 5,
+        "details": {
+          "has_response": true,
+          "lang_ok": true,
+          "irrel_ok": true,
+          "sugg_ok": true,
+          "no_leak": true
+        },
+        "latency": 1008,
+        "response": "[IRRELEVANT_QUERY] હું ફક્ત ઝવેરામાઝે જ્વેલરી પ્રોડક્ટ્સ અને સેવાઓ વિશેના પ્રશ્નોમાં જ મદદ કરી શકું છું.\n\n---SUGGESTIONS---\nસૂચન 1\nસૂચન 2\nસૂચન 3\n---END---"
+      },
+      {
+        "query": {
+          "type": "missing_info",
+          "lang": "en",
+          "query": "What are your CEO's contact details?",
+          "bot": "deathwish",
+          "expected_lang": "english",
+          "product": false
+        },
+        "score": null,
+        "status": "error:HTTP 402 (credits exhausted) {\"error\":{\"message\":\"This request requires more credits, or fewer max_tokens. You requested up to 1024 tokens, but can o"
+      },
+      {
+        "query": {
+          "type": "missing_info",
+          "lang": "hi",
+          "query": "आपकी कंपनी का GSTIN नंबर क्या है?",
+          "bot": "deathwish",
+          "expected_lang": "hindi",
+          "product": false
+        },
+        "score": 4,
+        "details": {
+          "has_response": true,
+          "lang_ok": true,
+          "irrel_ok": false,
+          "sugg_ok": true,
+          "no_leak": true
+        },
+        "latency": 903,
+        "response": "[IRRELEVANT_QUERY] मैं केवल डेथ विश कॉफ़ी उत्पादों और सेवाओं के बारे में सवालों में मदद कर सकता हूँ।\n\n---SUGGESTIONS---\nsuggestion 1\nsuggestion 2\nsuggestion 3\n---END---\n"
+      },
+      {
+        "query": {
+          "type": "greeting",
+          "lang": "en",
+          "query": "Hi there!",
+          "bot": "deathwish",
+          "expected_lang": "english",
+          "product": false
+        },
+        "score": 5,
+        "details": {
+          "has_response": true,
+          "lang_ok": true,
+          "irrel_ok": true,
+          "sugg_ok": true,
+          "no_leak": true
+        },
+        "latency": 1051,
+        "response": "Hi! How can I help you with Death Wish Coffee today?\n\n---SUGGESTIONS---\nsuggestion 1: What kind of coffee do you sell?\nsuggestion 2: Where can I find the Espresso Roast?\nsuggestion 3: Do you have any merchandise?\n---END---"
+      },
+      {
+        "query": {
+          "type": "greeting",
+          "lang": "hi",
+          "query": "नमस्ते!",
+          "bot": "deathwish",
+          "expected_lang": "hindi",
+          "product": false
+        },
+        "score": null,
+        "status": "error:HTTP 402 (credits exhausted) {\"error\":{\"message\":\"This request requires more credits, or fewer max_tokens. You requested up to 1024 tokens, but can o"
+      },
+      {
+        "query": {
+          "type": "greeting",
+          "lang": "gu",
+          "query": "નમસ્તે! કેમ છો?",
+          "bot": "zevaramaze",
+          "expected_lang": "gujarati",
+          "product": false
+        },
+        "score": 4,
+        "details": {
+          "has_response": true,
+          "lang_ok": true,
+          "irrel_ok": true,
+          "sugg_ok": false,
+          "no_leak": true
+        },
+        "latency": 1177,
+        "response": "હું સારો છું, આભાર! હું ઝેવરામાઝ જ્વેલરી પ્રોડક્ટ્સ અને સેવાઓ વિશેના પ્રશ્નોમાં તમને મદદ કરી શકું છું.\n\n---સૂચનો---\nસૂચન 1\nસૂચન 2\nસૂચન 3\n---અંત---"
+      },
+      {
+        "query": {
+          "type": "romanized",
+          "lang": "hi-Latn",
+          "query": "mujhe coffee dikhao",
+          "bot": "deathwish",
+          "expected_lang": "hindi-latin",
+          "product": true
+        },
+        "score": 5,
+        "details": {
+          "has_response": true,
+          "lang_ok": true,
+          "irrel_ok": true,
+          "sugg_ok": true,
+          "no_leak": true
+        },
+        "latency": 1447,
+        "response": "hamare paas Death Wish Ground ($19.99), Espresso Roast ($21.99), Pumpkin Chai Latte ($15.99), aur Cold Brew ($14.99) coffee hain. Kya aap ground, whole bean, K-Cups, ya cold brew mein se kuch dekhna chahenge?\n\n---SUGGESTIONS---\nDeath Wish Ground coffee dekhiye\nEspresso Roast ke baare mein jaaniye\nPu"
+      },
+      {
+        "query": {
+          "type": "romanized",
+          "lang": "gu-Latn",
+          "query": "mane bracelets batavo",
+          "bot": "zevaramaze",
+          "expected_lang": "gujarati-latin",
+          "product": true
+        },
+        "score": null,
+        "status": "error:HTTP 402 (credits exhausted) {\"error\":{\"message\":\"This request requires more credits, or fewer max_tokens. You requested up to 1024 tokens, but can o"
+      },
+      {
+        "query": {
+          "type": "non_product",
+          "lang": "en",
+          "query": "What is your return policy?",
+          "bot": "deathwish",
+          "expected_lang": "english",
+          "product": false
+        },
+        "score": 5,
+        "details": {
+          "has_response": true,
+          "lang_ok": true,
+          "irrel_ok": true,
+          "sugg_ok": true,
+          "no_leak": true
+        },
+        "latency": 943,
+        "response": "I do not have access to the return policy. However, I can help you with questions about Death Wish Coffee products and services.\n---SUGGESTIONS---\nsuggestion 1\nsuggestion 2\nsuggestion 3\n---END---"
+      },
+      {
+        "query": {
+          "type": "non_product",
+          "lang": "hi",
+          "query": "delivery कितने दिन में होती है?",
+          "bot": "deathwish",
+          "expected_lang": "hindi",
+          "product": false
+        },
+        "score": 5,
+        "details": {
+          "has_response": true,
+          "lang_ok": true,
+          "irrel_ok": true,
+          "sugg_ok": true,
+          "no_leak": true
+        },
+        "latency": 1218,
+        "response": "मुझे आपकी डिलीवरी के समय के बारे में सटीक जानकारी नहीं है, लेकिन मैं आपको डेथ विश कॉफी उत्पादों के बारे में बता सकता हूँ। क्या आप ग्राउंड कॉफी, एस्प्रेसो रोस्ट, या कोल्ड ब्रू में रुचि रखते हैं?\n\n---SUGGESTIONS---\nsuggestion 1\nsuggestion 2\nsuggestion 3\n---END---\n"
+      },
+      {
+        "query": {
+          "type": "ambiguous",
+          "lang": "en",
+          "query": "something nice",
+          "bot": "deathwish",
+          "expected_lang": "english",
+          "product": false
+        },
+        "score": null,
+        "status": "error:HTTP 402 (credits exhausted) {\"error\":{\"message\":\"This request requires more credits, or fewer max_tokens. You requested up to 1024 tokens, but can o"
+      },
+      {
+        "query": {
+          "type": "edge_case",
+          "lang": "en",
+          "query": "ok",
+          "bot": "deathwish",
+          "expected_lang": "english",
+          "product": false
+        },
+        "score": 5,
+        "details": {
+          "has_response": true,
+          "lang_ok": true,
+          "irrel_ok": true,
+          "sugg_ok": true,
+          "no_leak": true
+        },
+        "latency": 1301,
+        "response": "How can I help you with Death Wish Coffee today?\n\n---SUGGESTIONS---\nsuggestion 1\nsuggestion 2\nsuggestion 3\n---END---"
+      },
+      {
+        "query": {
+          "type": "unsupported_lang",
+          "lang": "fr",
+          "query": "Bonjour, montrez-moi vos produits les plus populaires",
+          "bot": "deathwish",
+          "expected_lang": "other",
+          "product": true
+        },
+        "score": 4,
+        "details": {
+          "has_response": true,
+          "lang_ok": true,
+          "irrel_ok": false,
+          "sugg_ok": true,
+          "no_leak": true
+        },
+        "latency": 1427,
+        "response": "[IRRELEVANT_QUERY] Je ne peux répondre qu'aux questions sur les produits et services de Death Wish Coffee.\n---SUGGESTIONS---\nsuggestion 1\nsuggestion 2\nsuggestion 3\n---END---"
+      }
+    ],
+    "OR-gemini-2.5-flash": [
+      {
+        "query": {
+          "type": "product_browse",
+          "lang": "en",
+          "query": "Show me your best sellers",
+          "bot": "deathwish",
+          "expected_lang": "english",
+          "product": true
+        },
+        "score": null,
+        "status": "error:HTTP 402 (credits exhausted) {\"error\":{\"message\":\"This request requires more credits, or fewer max_tokens. You requested up to 1024 tokens, but can o"
+      },
+      {
+        "query": {
+          "type": "product_browse",
+          "lang": "hi",
+          "query": "मुझे ground coffee दिखाओ",
+          "bot": "deathwish",
+          "expected_lang": "hindi",
+          "product": true
+        },
+        "score": 5,
+        "details": {
+          "has_response": true,
+          "lang_ok": true,
+          "irrel_ok": true,
+          "sugg_ok": true,
+          "no_leak": true
+        },
+        "latency": 1332,
+        "response": "हमारे पास ग्राउंड कॉफी में Death Wish Ground ($19.99) उपलब्ध है।\n\n---SUGGESTIONS---\nक्या आप और ग्राउंड कॉफी विकल्प देखना चाहेंगे?\nक्या आप अन्य प्रकार की कॉफी देखना चाहेंगे?\nक्या आप हमारे किसी अन्य उत्पाद के बारे में जानना चाहेंगे?\n---END---"
+      },
+      {
+        "query": {
+          "type": "product_browse",
+          "lang": "gu",
+          "query": "તમારા bracelets બતાવો",
+          "bot": "zevaramaze",
+          "expected_lang": "gujarati",
+          "product": true
+        },
+        "score": 5,
+        "details": {
+          "has_response": true,
+          "lang_ok": true,
+          "irrel_ok": true,
+          "sugg_ok": true,
+          "no_leak": true
+        },
+        "latency": 1447,
+        "response": "અમારી પાસે સુંદર હાથથી બનાવેલા બ્રેસલેટની શ્રેણી છે:\n\n*   સિલ્વર બેંગલ બ્રેસલેટ (₹1,499)\n*   ગોલ્ડ પ્લેટેડ ચાર્મ બ્રેસલેટ (₹2,999)\n*   પર્લ સ્ટ્રિંગ બ્રેસલેટ (₹899)\n\n---SUGGESTIONS---\nઅમારા નેકલેસ કલેક્શન જુઓ\nઅમારા ઇયરિંગ્સ વિશે પૂછો\nઅમારા એન્કલેટ્સ જુઓ\n---END---"
+      },
+      {
+        "query": {
+          "type": "price_filter",
+          "lang": "en",
+          "query": "Show me coffee under $50",
+          "bot": "deathwish",
+          "expected_lang": "english",
+          "product": true
+        },
+        "score": null,
+        "status": "error:HTTP 402 (credits exhausted) {\"error\":{\"message\":\"This request requires more credits, or fewer max_tokens. You requested up to 1024 tokens, but can o"
+      },
+      {
+        "query": {
+          "type": "price_filter",
+          "lang": "hi",
+          "query": "500 रुपये से कम के coffee बताओ",
+          "bot": "deathwish",
+          "expected_lang": "hindi",
+          "product": true
+        },
+        "score": 5,
+        "details": {
+          "has_response": true,
+          "lang_ok": true,
+          "irrel_ok": true,
+          "sugg_ok": true,
+          "no_leak": true
+        },
+        "latency": 1671,
+        "response": "क्षमा करें, मेरे पास 500 रुपये से कम की कोई कॉफी नहीं है। क्या आप किसी और चीज़ में मेरी मदद करना चाहेंगे?\n\n---SUGGESTIONS---\nक्या आप मुझे अपनी सबसे लोकप्रिय कॉफी के बारे में बता सकते हैं?\nक्या आपके पास कोई डिकैफ़िनेटेड कॉफ़ी है?\nमैं अपना ऑर्डर कैसे ट्रैक कर सकता हूँ?\n---END---"
+      },
+      {
+        "query": {
+          "type": "price_filter",
+          "lang": "gu",
+          "query": "₹500 થી ઓછા bracelets બતાવો",
+          "bot": "zevaramaze",
+          "expected_lang": "gujarati",
+          "product": true
+        },
+        "score": 5,
+        "details": {
+          "has_response": true,
+          "lang_ok": true,
+          "irrel_ok": true,
+          "sugg_ok": true,
+          "no_leak": true
+        },
+        "latency": 1538,
+        "response": "માફ કરશો, હાલમાં અમારી પાસે ₹500 થી ઓછા ભાવના કોઈ બ્રેસલેટ ઉપલબ્ધ નથી.\n\nઅમારી પાસે આ બ્રેસલેટ ઉપલબ્ધ છે:\n* સિલ્વર બેંગલ બ્રેસલેટ (₹1,499)\n* ગોલ્ડ પ્લેટેડ ચાર્મ બ્રેસલેટ (₹2,999)\n* પર્લ સ્ટ્રિંગ બ્રેસલેટ (₹899)\n\nશું તમે અન્ય કોઈ શ્રેણીમાં મદદ કરવા માંગો છો?\n---SUGGESTIONS---\nઅમારા નેકલેસ કલેક્શન જુઓ."
+      },
+      {
+        "query": {
+          "type": "irrelevant",
+          "lang": "en",
+          "query": "Who is the Prime Minister of India?",
+          "bot": "deathwish",
+          "expected_lang": "english",
+          "product": false
+        },
+        "score": null,
+        "status": "error:HTTP 402 (credits exhausted) {\"error\":{\"message\":\"This request requires more credits, or fewer max_tokens. You requested up to 1024 tokens, but can o"
+      },
+      {
+        "query": {
+          "type": "irrelevant",
+          "lang": "hi",
+          "query": "चांद पर कौन गया था?",
+          "bot": "deathwish",
+          "expected_lang": "hindi",
+          "product": false
+        },
+        "score": 5,
+        "details": {
+          "has_response": true,
+          "lang_ok": true,
+          "irrel_ok": true,
+          "sugg_ok": true,
+          "no_leak": true
+        },
+        "latency": 957,
+        "response": "[IRRELEVANT_QUERY] मैं केवल डेथ विश कॉफी उत्पादों और सेवाओं के बारे में सवालों के साथ मदद कर सकता हूँ।\n---SUGGESTIONS---\nक्या आप हमारे किसी उत्पाद के बारे में जानना चाहेंगे?\nक्या आप हमारे किसी उत्पाद की कीमत जानना चाहेंगे?\nक्या आप हमारे कोल्ड ब्रू के बारे में जानना चाहेंगे?\n---END---"
+      },
+      {
+        "query": {
+          "type": "irrelevant",
+          "lang": "gu",
+          "query": "ભારતના વડાપ્રધાન કોણ છે?",
+          "bot": "zevaramaze",
+          "expected_lang": "gujarati",
+          "product": false
+        },
+        "score": 5,
+        "details": {
+          "has_response": true,
+          "lang_ok": true,
+          "irrel_ok": true,
+          "sugg_ok": true,
+          "no_leak": true
+        },
+        "latency": 1378,
+        "response": "[IRRELEVANT_QUERY] હું ફક્ત ઝવેરામાઝ જ્વેલરીના ઉત્પાદનો અને સેવાઓ વિશેના પ્રશ્નોમાં જ મદદ કરી શકું છું.\n---SUGGESTIONS---\nઅમારા કડા સંગ્રહનું અન્વેષણ કરો\nઅમારા ગળાનો હાર સંગ્રહ જુઓ\nઅમારા કાનની બુટ્ટી સંગ્રહનું અન્વેષણ કરો\n---END---"
+      },
+      {
+        "query": {
+          "type": "missing_info",
+          "lang": "en",
+          "query": "What are your CEO's contact details?",
+          "bot": "deathwish",
+          "expected_lang": "english",
+          "product": false
+        },
+        "score": null,
+        "status": "error:HTTP 402 (credits exhausted) {\"error\":{\"message\":\"This request requires more credits, or fewer max_tokens. You requested up to 1024 tokens, but can o"
+      },
+      {
+        "query": {
+          "type": "missing_info",
+          "lang": "hi",
+          "query": "आपकी कंपनी का GSTIN नंबर क्या है?",
+          "bot": "deathwish",
+          "expected_lang": "hindi",
+          "product": false
+        },
+        "score": 4,
+        "details": {
+          "has_response": true,
+          "lang_ok": true,
+          "irrel_ok": false,
+          "sugg_ok": true,
+          "no_leak": true
+        },
+        "latency": 1250,
+        "response": "[IRRELEVANT_QUERY] मैं केवल डेथ विश कॉफी उत्पादों और सेवाओं के बारे में प्रश्नों में मदद कर सकता हूँ।\n---SUGGESTIONS---\nक्या आप हमारे ग्राउंड कॉफी के बारे में जानना चाहेंगे?\nक्या आप हमारे एस्प्रेसो रोस्ट के बारे में जानना चाहेंगे?\nक्या आप हमारे कोल्ड ब्रू के बारे में जानना चाहेंगे?\n---END---"
+      },
+      {
+        "query": {
+          "type": "greeting",
+          "lang": "en",
+          "query": "Hi there!",
+          "bot": "deathwish",
+          "expected_lang": "english",
+          "product": false
+        },
+        "score": 5,
+        "details": {
+          "has_response": true,
+          "lang_ok": true,
+          "irrel_ok": true,
+          "sugg_ok": true,
+          "no_leak": true
+        },
+        "latency": 933,
+        "response": "Hello! How can I help you with Death Wish Coffee today?\n\n---SUGGESTIONS---\nCheck out our best-selling ground coffee!\nExplore our different coffee categories.\nLearn more about Death Wish Coffee.\n---END---"
+      },
+      {
+        "query": {
+          "type": "greeting",
+          "lang": "hi",
+          "query": "नमस्ते!",
+          "bot": "deathwish",
+          "expected_lang": "hindi",
+          "product": false
+        },
+        "score": null,
+        "status": "error:HTTP 402 (credits exhausted) {\"error\":{\"message\":\"This request requires more credits, or fewer max_tokens. You requested up to 1024 tokens, but can o"
+      },
+      {
+        "query": {
+          "type": "greeting",
+          "lang": "gu",
+          "query": "નમસ્તે! કેમ છો?",
+          "bot": "zevaramaze",
+          "expected_lang": "gujarati",
+          "product": false
+        },
+        "score": 4,
+        "details": {
+          "has_response": true,
+          "lang_ok": true,
+          "irrel_ok": false,
+          "sugg_ok": true,
+          "no_leak": true
+        },
+        "latency": 1276,
+        "response": "[IRRELEVANT_QUERY] હું ફક્ત ઝેવરમેઝ જ્વેલરીના ઉત્પાદનો અને સેવાઓ વિશેના પ્રશ્નોમાં જ મદદ કરી શકું છું.\n---SUGGESTIONS---\nઅમારા કડા જુઓ\nઅમારા નેકલેસ જુઓ\nઅમારા એરિંગ્સ જુઓ\n---END---"
+      },
+      {
+        "query": {
+          "type": "romanized",
+          "lang": "hi-Latn",
+          "query": "mujhe coffee dikhao",
+          "bot": "deathwish",
+          "expected_lang": "hindi-latin",
+          "product": true
+        },
+        "score": 5,
+        "details": {
+          "has_response": true,
+          "lang_ok": true,
+          "irrel_ok": true,
+          "sugg_ok": true,
+          "no_leak": true
+        },
+        "latency": 1843,
+        "response": "Humare paas kai tarah ki coffee hai! Aap kis tarah ki coffee dekhna chahte hain? Jaise ki:\n\n*   **Ground Coffee:** Death Wish Ground ($19.99)\n*   **Espresso Roast:** Espresso Roast ($21.99)\n*   **Seasonal:** Pumpkin Chai Latte ($15.99)\n*   **Cold Brew:** Cold Brew ($14.99)\n\nAapko aur kis category me"
+      },
+      {
+        "query": {
+          "type": "romanized",
+          "lang": "gu-Latn",
+          "query": "mane bracelets batavo",
+          "bot": "zevaramaze",
+          "expected_lang": "gujarati-latin",
+          "product": true
+        },
+        "score": null,
+        "status": "error:HTTP 402 (credits exhausted) {\"error\":{\"message\":\"This request requires more credits, or fewer max_tokens. You requested up to 1024 tokens, but can o"
+      },
+      {
+        "query": {
+          "type": "non_product",
+          "lang": "en",
+          "query": "What is your return policy?",
+          "bot": "deathwish",
+          "expected_lang": "english",
+          "product": false
+        },
+        "score": 5,
+        "details": {
+          "has_response": true,
+          "lang_ok": true,
+          "irrel_ok": true,
+          "sugg_ok": true,
+          "no_leak": true
+        },
+        "latency": 1729,
+        "response": "We want you to be happy with your Death Wish Coffee! If you're not satisfied with your purchase, please contact our customer service team within 30 days of your order date for a refund or exchange.\n\n---SUGGESTIONS---\nWhat are your most popular products?\nDo you offer free shipping?\nHow can I contact "
+      },
+      {
+        "query": {
+          "type": "non_product",
+          "lang": "hi",
+          "query": "delivery कितने दिन में होती है?",
+          "bot": "deathwish",
+          "expected_lang": "hindi",
+          "product": false
+        },
+        "score": 5,
+        "details": {
+          "has_response": true,
+          "lang_ok": true,
+          "irrel_ok": true,
+          "sugg_ok": true,
+          "no_leak": true
+        },
+        "latency": 1684,
+        "response": "मुझे डिलीवरी के समय के बारे में सटीक जानकारी नहीं है। मैं आपको Death Wish Coffee के उत्पादों और सेवाओं के बारे में मदद कर सकता हूँ।\n\n---SUGGESTIONS---\nक्या आप हमारे उत्पादों के बारे में जानना चाहेंगे?\nक्या आप हमारे किसी विशेष उत्पाद की कीमत जानना चाहेंगे?\nक्या आप हमारे स्टोर के बारे में जानना चाहेंग"
+      },
+      {
+        "query": {
+          "type": "ambiguous",
+          "lang": "en",
+          "query": "something nice",
+          "bot": "deathwish",
+          "expected_lang": "english",
+          "product": false
+        },
+        "score": null,
+        "status": "error:HTTP 402 (credits exhausted) {\"error\":{\"message\":\"This request requires more credits, or fewer max_tokens. You requested up to 1024 tokens, but can o"
+      },
+      {
+        "query": {
+          "type": "edge_case",
+          "lang": "en",
+          "query": "ok",
+          "bot": "deathwish",
+          "expected_lang": "english",
+          "product": false
+        },
+        "score": 5,
+        "details": {
+          "has_response": true,
+          "lang_ok": true,
+          "irrel_ok": true,
+          "sugg_ok": true,
+          "no_leak": true
+        },
+        "latency": 936,
+        "response": "Hello! How can I help you with Death Wish Coffee today?\n\n---SUGGESTIONS---\nExplore our coffee products\nLearn about our different roasts\nFind out about shipping\n---END---"
+      },
+      {
+        "query": {
+          "type": "unsupported_lang",
+          "lang": "fr",
+          "query": "Bonjour, montrez-moi vos produits les plus populaires",
+          "bot": "deathwish",
+          "expected_lang": "other",
+          "product": true
+        },
+        "score": 5,
+        "details": {
+          "has_response": true,
+          "lang_ok": true,
+          "irrel_ok": true,
+          "sugg_ok": true,
+          "no_leak": true
+        },
+        "latency": 1384,
+        "response": "Bonjour ! Je peux certainement vous aider avec ça.\n\nNos produits les plus populaires incluent :\n\n*   **Death Wish Ground Coffee** pour 19,99 $\n*   **Death Wish Espresso Roast** pour 21,99 $\n*   **Death Wish Cold Brew** pour 14,99 $\n\n---SUGGESTIONS---\nPuis-je vous donner plus de détails sur un produi"
+      }
+    ],
+    "OR-gemini-2.5-flash-lite": [
+      {
+        "query": {
+          "type": "product_browse",
+          "lang": "en",
+          "query": "Show me your best sellers",
+          "bot": "deathwish",
+          "expected_lang": "english",
+          "product": true
+        },
+        "score": null,
+        "status": "error:HTTP 402 (credits exhausted) {\"error\":{\"message\":\"This request requires more credits, or fewer max_tokens. You requested up to 1024 tokens, but can o"
+      },
+      {
+        "query": {
+          "type": "product_browse",
+          "lang": "hi",
+          "query": "मुझे ground coffee दिखाओ",
+          "bot": "deathwish",
+          "expected_lang": "hindi",
+          "product": true
+        },
+        "score": 5,
+        "details": {
+          "has_response": true,
+          "lang_ok": true,
+          "irrel_ok": true,
+          "sugg_ok": true,
+          "no_leak": true
+        },
+        "latency": 833,
+        "response": "नमस्ते! Death Wish Coffee में Ground Coffee के कई विकल्प उपलब्ध हैं।\n\nहमारे पास **Death Wish Ground** है, जिसकी कीमत ₹19.99 है।\n\nक्या आप किसी खास तरह की Ground Coffee के बारे में जानना चाहेंगे?\n\n---SUGGESTIONS---\nDeath Wish Ground के बारे में और जानें\nहमारे अन्य कॉफी रोस्ट देखें\nहमारे मर्चेंडाइज देख"
+      },
+      {
+        "query": {
+          "type": "product_browse",
+          "lang": "gu",
+          "query": "તમારા bracelets બતાવો",
+          "bot": "zevaramaze",
+          "expected_lang": "gujarati",
+          "product": true
+        },
+        "score": 5,
+        "details": {
+          "has_response": true,
+          "lang_ok": true,
+          "irrel_ok": true,
+          "sugg_ok": true,
+          "no_leak": true
+        },
+        "latency": 1182,
+        "response": "અમારી પાસે બ્રેસલેટની ઘણી સુંદર શ્રેણી છે!\n\nઅહીં અમારા કેટલાક લોકપ્રિય બ્રેસલેટ છે:\n\n*   **સિલ્વર બંગલ બ્રેસલેટ:** ₹૧,૪૯૯\n*   **ગોલ્ડ પ્લેટેડ ચાર્મ બ્રેસલેટ:** ₹૨,૯૯૯\n*   **પર્લ સ્ટ્રિંગ બ્રેસલેટ:** ₹૮૯૯\n\nશું તમે કોઈ ચોક્કસ પ્રકારનું બ્રેસલેટ શોધી રહ્યા છો?\n\n---SUGGESTIONS---\nબ્રેસલેટ જુઓ\nનવા આવનારા"
+      },
+      {
+        "query": {
+          "type": "price_filter",
+          "lang": "en",
+          "query": "Show me coffee under $50",
+          "bot": "deathwish",
+          "expected_lang": "english",
+          "product": true
+        },
+        "score": null,
+        "status": "error:HTTP 402 (credits exhausted) {\"error\":{\"message\":\"This request requires more credits, or fewer max_tokens. You requested up to 1024 tokens, but can o"
+      },
+      {
+        "query": {
+          "type": "price_filter",
+          "lang": "hi",
+          "query": "500 रुपये से कम के coffee बताओ",
+          "bot": "deathwish",
+          "expected_lang": "hindi",
+          "product": true
+        },
+        "score": 5,
+        "details": {
+          "has_response": true,
+          "lang_ok": true,
+          "irrel_ok": true,
+          "sugg_ok": true,
+          "no_leak": true
+        },
+        "latency": 1406,
+        "response": "नमस्ते! डेथ विश कॉफ़ी में, हमारे पास 500 रुपये से कम में कई बेहतरीन कॉफ़ी विकल्प हैं:\n\n*   **डेथ विश ग्राउंड (Death Wish Ground):** यह हमारी सिग्नेचर कॉफ़ी है और इसकी कीमत ₹19.99 (लगभग 1650 रुपये) है, जो आपके बजट से थोड़ी ज़्यादा है।\n*   **एस्प्रेसो रोस्ट (Espresso Roast):** इसकी कीमत ₹21.99 (लगभग 1"
+      },
+      {
+        "query": {
+          "type": "price_filter",
+          "lang": "gu",
+          "query": "₹500 થી ઓછા bracelets બતાવો",
+          "bot": "zevaramaze",
+          "expected_lang": "gujarati",
+          "product": true
+        },
+        "score": 5,
+        "details": {
+          "has_response": true,
+          "lang_ok": true,
+          "irrel_ok": true,
+          "sugg_ok": true,
+          "no_leak": true
+        },
+        "latency": 910,
+        "response": "માફ કરશો, અમારી પાસે ₹500 થી ઓછી કિંમતના બ્રેસલેટ ઉપલબ્ધ નથી. અમારી પાસે ₹599 થી શરૂ થતી બીડેડ એન્કલેટ છે.\n\nશું તમે અમારા અન્ય બ્રેસલેટ અથવા એન્કલેટ વિશે જાણવા માંગો છો?\n\n---SUGGESTIONS---\nબ્રેસલેટ\nનેકલેસ\nકાનની બુટ્ટી\n---END---"
+      },
+      {
+        "query": {
+          "type": "irrelevant",
+          "lang": "en",
+          "query": "Who is the Prime Minister of India?",
+          "bot": "deathwish",
+          "expected_lang": "english",
+          "product": false
+        },
+        "score": null,
+        "status": "error:HTTP 402 (credits exhausted) {\"error\":{\"message\":\"This request requires more credits, or fewer max_tokens. You requested up to 1024 tokens, but can o"
+      },
+      {
+        "query": {
+          "type": "irrelevant",
+          "lang": "hi",
+          "query": "चांद पर कौन गया था?",
+          "bot": "deathwish",
+          "expected_lang": "hindi",
+          "product": false
+        },
+        "score": 5,
+        "details": {
+          "has_response": true,
+          "lang_ok": true,
+          "irrel_ok": true,
+          "sugg_ok": true,
+          "no_leak": true
+        },
+        "latency": 762,
+        "response": "[IRRELEVANT_QUERY] मैं केवल डेथ विश कॉफ़ी उत्पादों और सेवाओं के बारे में सवालों में मदद कर सकता हूँ।\n---SUGGESTIONS---\nहमारे कॉफ़ी के बारे में जानें\nहमारे मर्चेंडाइज देखें\nहमारे सबसे ज़्यादा बिकने वाले उत्पाद\n---END---"
+      },
+      {
+        "query": {
+          "type": "irrelevant",
+          "lang": "gu",
+          "query": "ભારતના વડાપ્રધાન કોણ છે?",
+          "bot": "zevaramaze",
+          "expected_lang": "gujarati",
+          "product": false
+        },
+        "score": 5,
+        "details": {
+          "has_response": true,
+          "lang_ok": true,
+          "irrel_ok": true,
+          "sugg_ok": true,
+          "no_leak": true
+        },
+        "latency": 945,
+        "response": "[IRRELEVANT_QUERY] હું ફક્ત Zevaramaze Jewelry ના ઉત્પાદનો અને સેવાઓ વિશેના પ્રશ્નોમાં મદદ કરી શકું છું.\n---SUGGESTIONS---\nમારી પાસે કયા પ્રકારના ઘરેણાં ઉપલબ્ધ છે?\nશું તમે મને બ્રેસલેટ વિશે વધુ જણાવી શકો છો?\nશું તમારી પાસે કોઈ નવી ઓફર છે?\n---END---"
+      },
+      {
+        "query": {
+          "type": "missing_info",
+          "lang": "en",
+          "query": "What are your CEO's contact details?",
+          "bot": "deathwish",
+          "expected_lang": "english",
+          "product": false
+        },
+        "score": null,
+        "status": "error:HTTP 402 (credits exhausted) {\"error\":{\"message\":\"This request requires more credits, or fewer max_tokens. You requested up to 1024 tokens, but can o"
+      },
+      {
+        "query": {
+          "type": "missing_info",
+          "lang": "hi",
+          "query": "आपकी कंपनी का GSTIN नंबर क्या है?",
+          "bot": "deathwish",
+          "expected_lang": "hindi",
+          "product": false
+        },
+        "score": 5,
+        "details": {
+          "has_response": true,
+          "lang_ok": true,
+          "irrel_ok": true,
+          "sugg_ok": true,
+          "no_leak": true
+        },
+        "latency": 772,
+        "response": "मुझे आपकी कंपनी के GSTIN नंबर के बारे में जानकारी नहीं है। मैं केवल Death Wish Coffee के उत्पादों और सेवाओं के बारे में आपके सवालों में मदद कर सकता हूँ।\n\n---SUGGESTIONS---\nहमारे सबसे लोकप्रिय कॉफी के बारे में जानें\nहमारे नए उत्पादों की जाँच करें\nहमारे मर्चेंडाइज देखें\n---END---"
+      },
+      {
+        "query": {
+          "type": "greeting",
+          "lang": "en",
+          "query": "Hi there!",
+          "bot": "deathwish",
+          "expected_lang": "english",
+          "product": false
+        },
+        "score": 5,
+        "details": {
+          "has_response": true,
+          "lang_ok": true,
+          "irrel_ok": true,
+          "sugg_ok": true,
+          "no_leak": true
+        },
+        "latency": 716,
+        "response": "Hello! How can I help you with Death Wish Coffee today?\n\n---SUGGESTIONS---\nbrowse products\nview current deals\nlearn about our coffee\n---END---"
+      },
+      {
+        "query": {
+          "type": "greeting",
+          "lang": "hi",
+          "query": "नमस्ते!",
+          "bot": "deathwish",
+          "expected_lang": "hindi",
+          "product": false
+        },
+        "score": null,
+        "status": "error:HTTP 402 (credits exhausted) {\"error\":{\"message\":\"This request requires more credits, or fewer max_tokens. You requested up to 1024 tokens, but can o"
+      },
+      {
+        "query": {
+          "type": "greeting",
+          "lang": "gu",
+          "query": "નમસ્તે! કેમ છો?",
+          "bot": "zevaramaze",
+          "expected_lang": "gujarati",
+          "product": false
+        },
+        "score": 5,
+        "details": {
+          "has_response": true,
+          "lang_ok": true,
+          "irrel_ok": true,
+          "sugg_ok": true,
+          "no_leak": true
+        },
+        "latency": 1364,
+        "response": "નમસ્તે! હું Zevaramaze Jewelry માં તમારી મદદ કરવા માટે અહીં છું. તમે શું શોધી રહ્યા છો?\n\n---SUGGESTIONS---\nમારી પાસે કયા પ્રકારના બ્રેસલેટ ઉપલબ્ધ છે?\nમારી પાસે કયા પ્રકારના એન્કલેટ ઉપલબ્ધ છે?\nમારા ઉત્પાદનોની કિંમત શું છે?\n---END---"
+      },
+      {
+        "query": {
+          "type": "romanized",
+          "lang": "hi-Latn",
+          "query": "mujhe coffee dikhao",
+          "bot": "deathwish",
+          "expected_lang": "hindi-latin",
+          "product": true
+        },
+        "score": 5,
+        "details": {
+          "has_response": true,
+          "lang_ok": true,
+          "irrel_ok": true,
+          "sugg_ok": true,
+          "no_leak": true
+        },
+        "latency": 1712,
+        "response": "Namaste! Death Wish Coffee mein aapka swagat hai. Humare paas kai shaandaar coffee options hain.\n\nKya aapko **Ground Coffee** chahiye, **Espresso Roast**, **Pumpkin Chai Latte**, ya **Cold Brew**?\n\nHumare paas **Ground**, **Whole Bean**, **K-Cups**, aur **Cold Brew** ke alawa **Merchandise** bhi hai"
+      },
+      {
+        "query": {
+          "type": "romanized",
+          "lang": "gu-Latn",
+          "query": "mane bracelets batavo",
+          "bot": "zevaramaze",
+          "expected_lang": "gujarati-latin",
+          "product": true
+        },
+        "score": null,
+        "status": "error:HTTP 402 (credits exhausted) {\"error\":{\"message\":\"This request requires more credits, or fewer max_tokens. You requested up to 1024 tokens, but can o"
+      },
+      {
+        "query": {
+          "type": "non_product",
+          "lang": "en",
+          "query": "What is your return policy?",
+          "bot": "deathwish",
+          "expected_lang": "english",
+          "product": false
+        },
+        "score": 5,
+        "details": {
+          "has_response": true,
+          "lang_ok": true,
+          "irrel_ok": true,
+          "sugg_ok": true,
+          "no_leak": true
+        },
+        "latency": 1518,
+        "response": "I can only help with questions about Death Wish Coffee products and services.\n\n---SUGGESTIONS---\nSee our coffee selection\nLearn about our subscription options\nCheck out our merchandise\n---END---"
+      },
+      {
+        "query": {
+          "type": "non_product",
+          "lang": "hi",
+          "query": "delivery कितने दिन में होती है?",
+          "bot": "deathwish",
+          "expected_lang": "hindi",
+          "product": false
+        },
+        "score": 5,
+        "details": {
+          "has_response": true,
+          "lang_ok": true,
+          "irrel_ok": true,
+          "sugg_ok": true,
+          "no_leak": true
+        },
+        "latency": 779,
+        "response": "नमस्ते! डेथ विश कॉफ़ी की डिलीवरी में आमतौर पर 3-5 व्यावसायिक दिन लगते हैं।\n\n---SUGGESTIONS---\nहमारे सबसे ज़्यादा बिकने वाले कॉफ़ी के बारे में जानें\nहमारे नए उत्पादों की जाँच करें\nहमारे मर्चेंडाइज को ब्राउज़ करें\n---END---"
+      },
+      {
+        "query": {
+          "type": "ambiguous",
+          "lang": "en",
+          "query": "something nice",
+          "bot": "deathwish",
+          "expected_lang": "english",
+          "product": false
+        },
+        "score": null,
+        "status": "error:HTTP 402 (credits exhausted) {\"error\":{\"message\":\"This request requires more credits, or fewer max_tokens. You requested up to 1024 tokens, but can o"
+      },
+      {
+        "query": {
+          "type": "edge_case",
+          "lang": "en",
+          "query": "ok",
+          "bot": "deathwish",
+          "expected_lang": "english",
+          "product": false
+        },
+        "score": 5,
+        "details": {
+          "has_response": true,
+          "lang_ok": true,
+          "irrel_ok": true,
+          "sugg_ok": true,
+          "no_leak": true
+        },
+        "latency": 720,
+        "response": "Hello! How can I help you with Death Wish Coffee today?\n\n---SUGGESTIONS---\nSee our coffee selection\nLearn about our subscription options\nBrowse our merchandise\n---END---"
+      },
+      {
+        "query": {
+          "type": "unsupported_lang",
+          "lang": "fr",
+          "query": "Bonjour, montrez-moi vos produits les plus populaires",
+          "bot": "deathwish",
+          "expected_lang": "other",
+          "product": true
+        },
+        "score": 5,
+        "details": {
+          "has_response": true,
+          "lang_ok": true,
+          "irrel_ok": true,
+          "sugg_ok": true,
+          "no_leak": true
+        },
+        "latency": 870,
+        "response": "Bonjour ! Voici nos cafés les plus populaires :\n\n*   **Death Wish Ground** : 19,99 $\n*   **Espresso Roast** : 21,99 $\n*   **Pumpkin Chai Latte** : 15,99 $\n*   **Cold Brew** : 14,99 $\n\nNous avons également des grains entiers, des K-Cups et des produits dérivés.\n\n---SUGGESTIONS---\nsuggestion 1\nsuggest"
+      }
+    ]
+  }
+}

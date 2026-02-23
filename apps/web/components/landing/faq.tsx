@@ -54,12 +54,12 @@ export function FAQSection() {
           transition={{ duration: 0.6 }}
           className="text-center mb-12"
         >
-          <p className="text-sm font-medium text-indigo-400 tracking-wider uppercase mb-3">
+          <p className="text-sm font-medium text-emerald-400 tracking-wider uppercase mb-3">
             FAQ
           </p>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-4">
             Frequently Asked{" "}
-            <span className="bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
               Questions
             </span>
           </h2>
@@ -75,7 +75,7 @@ export function FAQSection() {
               transition={{ duration: 0.5, delay: i * 0.05 }}
               className={`rounded-xl border transition-colors ${
                 openIndex === i
-                  ? "border-indigo-500/20 bg-indigo-500/[0.04]"
+                  ? "border-emerald-500/20 bg-emerald-500/[0.04]"
                   : "border-white/5 bg-white/[0.01] hover:bg-white/[0.03]"
               }`}
             >

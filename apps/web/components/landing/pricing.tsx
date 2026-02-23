@@ -68,7 +68,7 @@ export function PricingSection() {
     <section
       id="pricing"
       ref={ref}
-      className="relative py-24 lg:py-32 bg-gradient-to-b from-transparent via-indigo-500/[0.03] to-transparent"
+      className="relative py-24 lg:py-32 bg-gradient-to-b from-transparent via-emerald-500/[0.03] to-transparent"
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
@@ -78,12 +78,12 @@ export function PricingSection() {
           transition={{ duration: 0.6 }}
           className="text-center mb-12"
         >
-          <p className="text-sm font-medium text-indigo-400 tracking-wider uppercase mb-3">
+          <p className="text-sm font-medium text-emerald-400 tracking-wider uppercase mb-3">
             Pricing
           </p>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-4">
             Simple,{" "}
-            <span className="bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
               Transparent
             </span>{" "}
             Pricing
@@ -98,7 +98,7 @@ export function PricingSection() {
               onClick={() => setYearly(false)}
               className={`px-4 py-2 text-sm rounded-full transition-all ${
                 !yearly
-                  ? "bg-indigo-600 text-white shadow-lg"
+                  ? "bg-emerald-600 text-white shadow-lg"
                   : "text-white/50 hover:text-white/70"
               }`}
             >
@@ -108,7 +108,7 @@ export function PricingSection() {
               onClick={() => setYearly(true)}
               className={`px-4 py-2 text-sm rounded-full transition-all flex items-center gap-1.5 ${
                 yearly
-                  ? "bg-indigo-600 text-white shadow-lg"
+                  ? "bg-emerald-600 text-white shadow-lg"
                   : "text-white/50 hover:text-white/70"
               }`}
             >
@@ -130,12 +130,12 @@ export function PricingSection() {
               transition={{ duration: 0.6, delay: i * 0.1 }}
               className={`relative p-6 lg:p-8 rounded-2xl border transition-all ${
                 plan.popular
-                  ? "border-indigo-500/40 bg-indigo-500/[0.08] scale-[1.02] shadow-xl shadow-indigo-500/10"
+                  ? "border-emerald-500/40 bg-emerald-500/[0.08] scale-[1.02] shadow-xl shadow-emerald-500/10"
                   : "border-white/5 bg-white/[0.02] hover:border-white/10"
               }`}
             >
               {plan.popular && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 text-xs font-medium text-white">
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-emerald-500 to-teal-600 text-xs font-medium text-white">
                   <Sparkles className="w-3 h-3" />
                   Most Popular
                 </div>
@@ -164,7 +164,7 @@ export function PricingSection() {
               <ul className="space-y-3 mb-8">
                 {plan.features.map((f) => (
                   <li key={f} className="flex items-start gap-2.5">
-                    <Check className="w-4 h-4 text-indigo-400 mt-0.5 flex-shrink-0" />
+                    <Check className="w-4 h-4 text-emerald-400 mt-0.5 flex-shrink-0" />
                     <span className="text-sm text-white/60">{f}</span>
                   </li>
                 ))}
@@ -174,7 +174,7 @@ export function PricingSection() {
                 href={plan.href}
                 className={`block w-full text-center py-3 rounded-xl text-sm font-medium transition-all ${
                   plan.popular
-                    ? "bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40"
+                    ? "bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40"
                     : "border border-white/10 text-white/70 hover:bg-white/5 hover:text-white"
                 }`}
               >

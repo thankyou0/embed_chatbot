@@ -98,7 +98,63 @@ function ProductCarousel({ products }: { products: ProductInfo[] }) {
 
   const formatPrice = (price?: string | null, currency?: string | null) => {
     if (!price) return null;
-    return currency ? `${currency}${price}` : price;
+
+    // Normalize currency codes/names to proper symbols
+    const currencyMap: Record<string, string> = {
+      inr: "₹",
+      INR: "₹",
+      "₹": "₹",
+      rs: "₹",
+      "rs.": "₹",
+      rupee: "₹",
+      rupees: "₹",
+      usd: "$",
+      USD: "$",
+      $: "$",
+      dollar: "$",
+      dollars: "$",
+      eur: "€",
+      EUR: "€",
+      "€": "€",
+      gbp: "£",
+      GBP: "£",
+      "£": "£",
+    };
+
+    const trimmed = (currency || "").trim();
+    let symbol = currencyMap[trimmed] || currencyMap[trimmed.toLowerCase()] || trimmed;
+    
+    // If no currency field, try to detect from the price string itself
+    if (!symbol) {
+      if (price.includes("₹")) symbol = "₹";
+      else if (price.includes("$")) symbol = "$";
+      else if (price.includes("€")) symbol = "€";
+      else if (price.includes("£")) symbol = "£";
+    }
+
+    // Format number with commas (Indian style for ₹, Western for others)
+    // Safety: strip any currency symbols that may still be embedded in the price string
+    const cleanPrice = price.replace(/[₹$€£]/g, "").replace(/,/g, "").trim();
+    const numericPrice = parseFloat(cleanPrice);
+    let formatted: string;
+    if (!isNaN(numericPrice)) {
+      if (symbol === "₹") {
+        // Indian numbering: 1,00,000
+        formatted = numericPrice.toLocaleString("en-IN", {
+          maximumFractionDigits: 2,
+          minimumFractionDigits: numericPrice % 1 === 0 ? 0 : 2,
+        });
+      } else {
+        formatted = numericPrice.toLocaleString("en-US", {
+          maximumFractionDigits: 2,
+          minimumFractionDigits: numericPrice % 1 === 0 ? 0 : 2,
+        });
+      }
+    } else {
+      formatted = price;
+    }
+
+    return symbol ? `${symbol}${formatted}` : formatted;
   };
 
   // Handle image drag start - allows dragging product images to chatbot input
@@ -138,14 +194,30 @@ function ProductCarousel({ products }: { products: ProductInfo[] }) {
 
       {/* Carousel Container */}
       <div ref={scrollContainerRef} className="product-carousel-container">
-        {products.map((product, index) => (
-          <a
+        {products.map((product, index) => {
+          // Validate product URL — skip link wrapper for empty/invalid/internal URLs
+          const hasValidUrl =
+            product.url &&
+            product.url.startsWith("http") &&
+            !product.url.includes("localhost") &&
+            !product.url.includes("/dashboard/") &&
+            !product.url.includes("undefined");
+
+          const CardWrapper = hasValidUrl ? "a" : "div";
+          const linkProps = hasValidUrl
+            ? {
+                href: product.url,
+                target: "_blank" as const,
+                rel: "noopener noreferrer",
+              }
+            : {};
+
+          return (
+          <CardWrapper
             key={index}
-            href={product.url}
-            target="_blank"
-            rel="noopener noreferrer"
+            {...linkProps}
             className="product-card"
-            onDragStart={(e) => {
+            onDragStart={(e: React.DragEvent) => {
               // Prevent the entire link from being dragged
               e.preventDefault();
             }}
@@ -205,8 +277,9 @@ function ProductCarousel({ products }: { products: ProductInfo[] }) {
                 </div>
               )}
             </div>
-          </a>
-        ))}
+          </CardWrapper>
+          );
+        })}
       </div>
 
       {/* Right Arrow */}
@@ -232,6 +305,125 @@ function ProductCarousel({ products }: { products: ProductInfo[] }) {
   );
 }
 
+// --- Welcome Typewriter Animation Component ---
+// Cycles through multi-language greetings with a typing → deleting animation
+function WelcomeTypewriter({
+  greetings,
+  staticContent,
+}: {
+  greetings: string[];
+  staticContent: string;
+}) {
+  const [displayText, setDisplayText] = useState("");
+  const [greetingIndex, setGreetingIndex] = useState(0);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [charIndex, setCharIndex] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+
+  useEffect(() => {
+    if (greetings.length <= 1) {
+      // Single language — just show static content, no animation
+      setDisplayText(greetings[0] || staticContent);
+      return;
+    }
+
+    const currentGreeting = greetings[greetingIndex];
+
+    if (isPaused) {
+      // Pause after fully typed before starting to delete
+      const pauseTimer = setTimeout(() => {
+        setIsPaused(false);
+        setIsDeleting(true);
+      }, 1800);
+      return () => clearTimeout(pauseTimer);
+    }
+
+    if (!isDeleting) {
+      // Typing forward
+      if (charIndex < currentGreeting.length) {
+        const timer = setTimeout(() => {
+          setDisplayText(currentGreeting.slice(0, charIndex + 1));
+          setCharIndex(charIndex + 1);
+        }, 30); // typing speed
+        return () => clearTimeout(timer);
+      } else {
+        // Finished typing — pause before deleting
+        setIsPaused(true);
+      }
+    } else {
+      // Deleting backward
+      if (charIndex > 0) {
+        const timer = setTimeout(() => {
+          setDisplayText(currentGreeting.slice(0, charIndex - 1));
+          setCharIndex(charIndex - 1);
+        }, 16); // deleting speed (faster than typing)
+        return () => clearTimeout(timer);
+      } else {
+        // Finished deleting — move to next greeting
+        setIsDeleting(false);
+        setGreetingIndex((prev) => (prev + 1) % greetings.length);
+      }
+    }
+  }, [charIndex, isDeleting, isPaused, greetingIndex, greetings, staticContent]);
+
+  return (
+    <span>
+      {displayText}
+      <span className="typewriter-cursor">|</span>
+    </span>
+  );
+}
+
+// --- Thinking Indicator Component ---
+// Shows real-time backend status while the bot is processing.
+// Falls back to a timed cycle if no status events arrive.
+const FALLBACK_THINKING = "Thinking...";
+
+function ThinkingIndicator({ status }: { status?: string | null }) {
+  const [fallbackText, setFallbackText] = useState(FALLBACK_THINKING);
+  const [visible, setVisible] = useState(true);
+
+  // Fallback cycle only when no backend status has been received
+  useEffect(() => {
+    if (status) return;              // backend is driving the text
+    const cycle = ["Thinking...", "Searching knowledge base...", "Crafting a response..."];
+    let idx = 0;
+    const timer = setInterval(() => {
+      setVisible(false);
+      const swap = setTimeout(() => {
+        idx = (idx + 1) % cycle.length;
+        setFallbackText(cycle[idx]);
+        setVisible(true);
+      }, 300);
+      return () => clearTimeout(swap);
+    }, 2200);
+    return () => clearInterval(timer);
+  }, [status]);
+
+  // Animate when backend status changes
+  useEffect(() => {
+    if (!status) return;
+    setVisible(false);
+    const t = setTimeout(() => setVisible(true), 120);
+    return () => clearTimeout(t);
+  }, [status]);
+
+  const displayText = status || fallbackText;
+
+  return (
+    <div className="thinking-indicator">
+      <div className="thinking-dots">
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+      <span className={`thinking-text${visible ? " visible" : ""}`}>
+        {displayText}
+      </span>
+    </div>
+  );
+}
+
 export function ChatbotWidget({ config }: ChatbotWidgetProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -242,14 +434,35 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [widgetConfig, setWidgetConfig] = useState<any>(null);
+  const [thinkingStatus, setThinkingStatus] = useState<string | null>(null);
   const [_error, setError] = useState<string | null>(null);
   const [reportedMessages, setReportedMessages] = useState<Set<string>>(
     new Set(),
   );
   const [toast, setToast] = useState<string | null>(null);
+  // Dark mode state — auto-detect from host page / OS preference, allow manual override
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    try {
+      // 1. Check if user previously made an explicit override choice
+      const stored = localStorage.getItem('chatbot-dark-mode');
+      if (stored !== null) return stored === 'true';
+    } catch {}
+    // 2. Check host page <html> or <body> for 'dark' class (Tailwind convention)
+    if (document.documentElement.classList.contains('dark') || document.body.classList.contains('dark')) return true;
+    // 3. Detect OS/browser preference via media query
+    if (typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: dark)').matches) return true;
+    return false;
+  });
+  // Track whether user has manually overridden (so we stop auto-syncing)
+  const [darkModeOverridden, setDarkModeOverridden] = useState(() => {
+    try { return localStorage.getItem('chatbot-dark-mode') !== null; } catch { return false; }
+  });
   // Voice input state
   const [isListening, setIsListening] = useState(false);
   const [speechSupported, setSpeechSupported] = useState(false);
+  const [speechLangIdx, setSpeechLangIdx] = useState(0);
+  const [speechLangChosen, setSpeechLangChosen] = useState(false); // true once user picks a language this conversation
+  const [showLangPicker, setShowLangPicker] = useState(false); // language picker popup visibility
   const recognitionRef = useRef<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -294,29 +507,89 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
     : widgetConfig?.avatar_url || config.avatarUrl || null;
 
   // Language-aware default texts
-  const lang = isPreview ? config.language : widgetConfig?.language;
-  const defaultWelcome =
-    lang === "hi"
-      ? "नमस्ते! मैं आपकी कैसे मदद कर सकता हूँ?"
-      : lang === "gu"
-        ? "નમસ્તે! હું તમને કેવી રીતે મદદ કરી શકું?"
-        : "Hi! How can I help you today?";
+  // Support both singular 'language' (preview/config) and plural 'languages' (API response)
+  const configLanguagesRaw: string[] = isPreview
+    ? (config.languages || (config.language ? [config.language] : ["en"]))
+    : (widgetConfig?.languages || (widgetConfig?.language ? [widgetConfig.language] : ["en"]));
+  // Memoize by *content* (not reference) so downstream useMemos/effects don't re-trigger on every render
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const configLanguages = useMemo(() => configLanguagesRaw, [configLanguagesRaw.join(",")]);
+  const lang = configLanguages[0] || "en";
+
+  // Speech recognition language options — one per base language (Latn variants share base lang recognition)
+  const speechLangOptions = useMemo(() => {
+    const speechMap: Record<string, { code: string; label: string }> = {
+      en: { code: "en-US", label: "EN" },
+      hi: { code: "hi-IN", label: "हि" },
+      gu: { code: "gu-IN", label: "ગુ" },
+    };
+    return configLanguages.filter((l) => speechMap[l]).map((l) => speechMap[l]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [configLanguages]);
+
+  // Multi-language welcome greetings — fallback when server translations aren't available
+  const welcomeGreetingsFallback: Record<string, string> = {
+    en: "Hi! How can I help you today?",
+    hi: "नमस्ते! मैं आपकी कैसे मदद कर सकता हूँ?",
+    gu: "નમસ્તે! હું તમને કેવી રીતે મદદ કરી શકું?",
+  };
+
+  const defaultWelcome = welcomeGreetingsFallback[lang] || welcomeGreetingsFallback.en;
+
+  // Compute the actual welcome message (needed before greetingsArray so it can be included)
+  const welcomeMessage = isPreview
+    ? config.welcomeMessage || defaultWelcome
+    : widgetConfig?.welcome_message || config.welcomeMessage || defaultWelcome;
+
+  // Server-provided translations of the welcome message (keyed by lang code)
+  const serverTranslations: Record<string, string> | null = isPreview
+    ? config.welcomeMessageTranslations || null
+    : widgetConfig?.welcome_message_translations || null;
+
+  // Build the sequence of greetings for the typewriter animation:
+  // User's configured welcome message → translated variants for each enabled language.
+  // Uses real LLM translations from the server when available, otherwise falls back
+  // to generic native-script greetings.
+  const greetingsArray = useMemo(() => {
+    const hasGu = configLanguages.includes("gu");
+    const hasHi = configLanguages.includes("hi");
+
+    // Only animate if at least one non-English language is allowed
+    if (!hasGu && !hasHi) return [welcomeMessage].filter(Boolean);
+
+    const seq: string[] = [];
+
+    // 1. User's configured welcome message (always first)
+    seq.push(welcomeMessage);
+
+    // 2. Translated variants — prefer server translations, fall back to fixed greetings
+    if (hasGu) {
+      const guText = serverTranslations?.gu || welcomeGreetingsFallback.gu;
+      if (welcomeMessage !== guText) seq.push(guText);
+    }
+    if (hasHi) {
+      const hiText = serverTranslations?.hi || welcomeGreetingsFallback.hi;
+      if (welcomeMessage !== hiText) seq.push(hiText);
+    }
+
+    return seq.filter(Boolean);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [configLanguages, welcomeMessage, serverTranslations]);
+
   const defaultPlaceholder =
     lang === "hi"
       ? "अपना संदेश लिखें..."
       : lang === "gu"
         ? "તમારો સંદેશ લખો..."
         : "Type your message...";
+
+  // listeningText based on primary configured language
   const listeningText =
     lang === "hi"
       ? "सुन रहा हूँ..."
       : lang === "gu"
         ? "સાંભળી રહ્યું છે..."
         : "Listening...";
-
-  const welcomeMessage = isPreview
-    ? config.welcomeMessage || defaultWelcome
-    : widgetConfig?.welcome_message || config.welcomeMessage || defaultWelcome;
 
   const initialSuggestions = isPreview
     ? config.initialSuggestions || []
@@ -430,6 +703,7 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
                 content: welcomeMsg,
                 suggestions: initialSugs,
                 timestamp: new Date(),
+                isWelcome: true,
               },
             ];
           }
@@ -446,6 +720,7 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
               content: defaultWelcome,
               suggestions: [],
               timestamp: new Date(),
+              isWelcome: true,
             },
           ];
         });
@@ -462,6 +737,7 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
             content: defaultWelcome,
             suggestions: [],
             timestamp: new Date(),
+            isWelcome: true,
           },
         ];
       });
@@ -481,73 +757,153 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
     }
   }, [chatbotId, isPreview, apiUrl]);
 
-  // Initialize Web Speech API for voice input
+  // Initialize Web Speech API ONCE on mount – never recreate the recognition
+  // object, so ongoing recordings aren't aborted by React re-renders.
   useEffect(() => {
-    // Check if browser supports Web Speech API
-    const SpeechRecognition =
+    const SR =
       (window as any).SpeechRecognition ||
       (window as any).webkitSpeechRecognition;
-    if (SpeechRecognition) {
-      setSpeechSupported(true);
-      const recognition = new SpeechRecognition();
-      recognition.continuous = false;
-      recognition.interimResults = true;
-      recognition.lang =
-        widgetConfig?.language === "hi"
-          ? "hi-IN"
-          : widgetConfig?.language === "gu"
-            ? "gu-IN"
-            : "en-US";
-
-      recognition.onresult = (event: any) => {
-        const transcript = Array.from(event.results)
-          .map((result: any) => result[0])
-          .map((result: any) => result.transcript)
-          .join("");
-        setInputValue(transcript);
-      };
-
-      recognition.onend = () => {
-        setIsListening(false);
-      };
-
-      recognition.onerror = (event: any) => {
-        console.error("Speech recognition error:", event.error);
-        setIsListening(false);
-        if (event.error === "not-allowed") {
-          setToast("Microphone access denied. Please allow microphone access.");
-          setTimeout(() => setToast(null), 3000);
-        }
-      };
-
-      recognitionRef.current = recognition;
-    } else {
+    if (!SR) {
       setSpeechSupported(false);
+      return;
     }
+    setSpeechSupported(true);
+    const rec = new SR();
+    rec.continuous = false;
+    rec.interimResults = true;
+    rec.lang = "en-US"; // initial default; updated by the lang-sync effect below
 
-    return () => {
-      if (recognitionRef.current) {
-        recognitionRef.current.abort();
+    rec.onresult = (event: any) => {
+      const transcript = Array.from(event.results)
+        .map((r: any) => r[0])
+        .map((r: any) => r.transcript)
+        .join("");
+      setInputValue(transcript);
+    };
+
+    rec.onend = () => {
+      setIsListening(false);
+    };
+
+    rec.onerror = (event: any) => {
+      console.error("Speech recognition error:", event.error);
+      setIsListening(false);
+      if (event.error === "not-allowed") {
+        setToast("Microphone access denied. Please allow microphone access.");
+        setTimeout(() => setToast(null), 3000);
       }
     };
-  }, [widgetConfig?.language]);
 
-  // Toggle voice input
-  const toggleVoiceInput = () => {
-    if (!recognitionRef.current) return;
+    recognitionRef.current = rec;
 
-    if (isListening) {
-      recognitionRef.current.stop();
-      setIsListening(false);
-    } else {
-      try {
-        recognitionRef.current.start();
-        setIsListening(true);
-      } catch (error) {
-        console.error("Failed to start speech recognition:", error);
-        setIsListening(false);
-      }
+    return () => {
+      rec.abort();
+      recognitionRef.current = null;
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // mount-only — object is reused across lang changes
+
+  // Keep recognition.lang synced with the user-selected language index.
+  // Each language has its own BCP-47 code so the Web Speech API outputs the
+  // correct script (English → Latin, Gujarati → ગુજરાતી, Hindi → हिन्दी).
+  useEffect(() => {
+    if (recognitionRef.current && !isListening) {
+      const code = speechLangOptions[speechLangIdx]?.code || "en-US";
+      recognitionRef.current.lang = code;
     }
+  }, [speechLangOptions, speechLangIdx, isListening]);
+
+  // Persist dark mode preference
+  useEffect(() => {
+    try { localStorage.setItem('chatbot-dark-mode', String(isDarkMode)); } catch {}
+  }, [isDarkMode]);
+
+  // Auto-sync dark mode from host page (MutationObserver on <html> class)
+  // and OS preference changes — only if user hasn't manually overridden
+  useEffect(() => {
+    if (darkModeOverridden) return; // user toggled manually, respect their choice
+
+    // Watch for host page <html> class changes (e.g. Tailwind dark mode toggle)
+    const observer = new MutationObserver(() => {
+      const hostDark = document.documentElement.classList.contains('dark') || document.body.classList.contains('dark');
+      setIsDarkMode(hostDark);
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+
+    // Watch for OS/browser preference changes
+    const mediaQuery = window.matchMedia?.('(prefers-color-scheme: dark)');
+    const handleMediaChange = (e: MediaQueryListEvent) => setIsDarkMode(e.matches);
+    mediaQuery?.addEventListener?.('change', handleMediaChange);
+
+    return () => {
+      observer.disconnect();
+      mediaQuery?.removeEventListener?.('change', handleMediaChange);
+    };
+  }, [darkModeOverridden]);
+
+  // Close language picker when clicking outside
+  useEffect(() => {
+    if (!showLangPicker) return;
+    const handleClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('.chatbot-action-button-wrapper')) {
+        setShowLangPicker(false);
+      }
+    };
+    document.addEventListener('click', handleClick, true);
+    return () => document.removeEventListener('click', handleClick, true);
+  }, [showLangPicker]);
+
+  // Cycle to next speech language (called separately from start/stop)
+  // (kept for single-language fallback but not used in multi-language UI)
+
+  // Start speech recognition with the currently selected language
+  // Accepts an optional index override for cases where React state hasn't updated yet
+  const startListening = (langIdxOverride?: number) => {
+    if (!recognitionRef.current) return;
+    const idx = langIdxOverride !== undefined ? langIdxOverride : speechLangIdx;
+    const code = speechLangOptions[idx]?.code || "en-US";
+    recognitionRef.current.lang = code;
+    try {
+      recognitionRef.current.start();
+      setIsListening(true);
+    } catch (error) {
+      console.error("Failed to start speech recognition:", error);
+      setIsListening(false);
+    }
+  };
+
+  // Stop speech recognition
+  const stopListening = () => {
+    if (!recognitionRef.current) return;
+    recognitionRef.current.stop();
+    setIsListening(false);
+  };
+
+  // Handle mic button click — show lang picker or start/stop listening
+  const handleMicClick = () => {
+    if (!recognitionRef.current) return;
+    if (isListening) {
+      stopListening();
+      return;
+    }
+    // If only one language or already chosen → start directly
+    if (speechLangOptions.length <= 1 || speechLangChosen) {
+      startListening();
+    } else {
+      // Show language picker popup
+      setShowLangPicker(true);
+    }
+  };
+
+  // Handle language selection from picker popup
+  const handleLangSelect = (idx: number) => {
+    setSpeechLangIdx(idx);
+    setSpeechLangChosen(true);
+    setShowLangPicker(false);
+    // Start listening immediately with the selected index (don't rely on state)
+    setTimeout(() => startListening(idx), 50);
   };
 
   // Show welcome message on first open (handles preview mode logic)
@@ -564,6 +920,7 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
           content: welcomeMsg,
           suggestions: initialSugs,
           timestamp: new Date(),
+          isWelcome: true,
         },
       ]);
     }
@@ -642,6 +999,22 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
     const relatedTarget = e.relatedTarget as HTMLElement | null;
     if (relatedTarget === null || !windowRef.current?.contains(relatedTarget)) {
       setIsDragging(false);
+    }
+  };
+
+  // Handle clipboard paste — extract images from Ctrl+V
+  const handlePaste = (e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.startsWith("image/")) {
+        e.preventDefault(); // prevent pasting the image as text
+        const file = items[i].getAsFile();
+        if (file) {
+          processImageFile(file); // replaces any existing image (single image only)
+        }
+        return; // only process the first image
+      }
     }
   };
 
@@ -816,6 +1189,16 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
       return;
     }
 
+    // Stop the welcome typewriter animation on first user message
+    setMessages((prev: Message[]) => {
+      if (prev.length > 0 && prev[0].isWelcome) {
+        const updated = [...prev];
+        updated[0] = { ...updated[0], isWelcome: false, content: welcomeMessage };
+        return updated;
+      }
+      return prev;
+    });
+
     // If a previous stream is still running, abort it and finalize that message
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -854,6 +1237,7 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
     removeImage();
 
     setIsTyping(true);
+    setThinkingStatus(null);
     setError(null);
 
     // Fix #1: Scroll to bottom immediately when user sends message
@@ -1147,7 +1531,12 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
             // Update session ID
             streamSessionId = chunk.session_id;
             setSessionId(chunk.session_id);
+          } else if (chunk.type === "status") {
+            // Backend is reporting its current processing stage
+            setThinkingStatus(chunk.status || null);
           } else if (chunk.type === "content") {
+            // First content arrives — clear thinking status
+            setThinkingStatus(null);
             // Add to sentence buffer for gated rendering
             addToSentenceBuffer(chunk.content);
           } else if (chunk.type === "done") {
@@ -1308,10 +1697,13 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
           content: welcomeMessage,
           suggestions: initialSuggestions,
           timestamp: new Date(),
+          isWelcome: true,
         },
       ]);
       setSessionId(null);
       removeImage();
+      setSpeechLangChosen(false);
+      setShowLangPicker(false);
     }, 300);
   };
 
@@ -1386,7 +1778,7 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
       {isOpen ? (
         <div
           ref={windowRef}
-          className="chatbot-window"
+          className={`chatbot-window${isDarkMode ? " dark" : ""}`}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
@@ -1444,6 +1836,34 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
               </div>
             </div>
             <div className="chatbot-header-actions">
+              {/* Dark mode toggle */}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsDarkMode((prev) => !prev);
+                  setDarkModeOverridden(true);
+                }}
+                title={isDarkMode ? "Light mode" : "Dark mode"}
+                className="chatbot-header-button"
+              >
+                {isDarkMode ? (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="5" />
+                    <line x1="12" y1="1" x2="12" y2="3" />
+                    <line x1="12" y1="21" x2="12" y2="23" />
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                    <line x1="1" y1="12" x2="3" y2="12" />
+                    <line x1="21" y1="12" x2="23" y2="12" />
+                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+                  </svg>
+                ) : (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                  </svg>
+                )}
+              </button>
               <button
                 type="button"
                 onClick={handleMinimize}
@@ -1534,21 +1954,16 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
                           : {}
                       }
                     >
-                      {/* Fix #3: Enhanced typing animation with smooth crossfade */}
+                      {/* Contextual thinking animation while waiting for response */}
                       {msg.isWaitingForContent ? (
-                        <div className="typing-skeleton-wrapper">
-                          <div className="typing-bubble">
-                            <div className="typing-dots">
-                              <span className="dot"></span>
-                              <span className="dot"></span>
-                              <span className="dot"></span>
-                            </div>
-                            <div className="skeleton-lines">
-                              <div className="line lg"></div>
-                              <div className="line md"></div>
-                              <div className="line sm"></div>
-                            </div>
-                          </div>
+                        <ThinkingIndicator status={thinkingStatus} />
+                      ) : msg.isWelcome && greetingsArray.length > 1 ? (
+                        <div className="chatbot-message-text">
+                          <WelcomeTypewriter
+                            key={welcomeMessage}
+                            greetings={greetingsArray}
+                            staticContent={welcomeMessage}
+                          />
                         </div>
                       ) : (
                         <div
@@ -1657,33 +2072,33 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
           <div
             className={`chatbot-input-area ${isDragging ? "drag-active" : ""}`}
           >
-            {/* Image Preview */}
+            {/* Image Preview — compact thumbnail with top-left remove button */}
             {imagePreview && (
               <div className="chatbot-image-preview">
-                <img
-                  src={imagePreview}
-                  alt="Selected"
-                  className="chatbot-image-preview-img"
-                />
-                <span className="chatbot-image-preview-text">
-                  Image selected
-                </span>
-                <button
-                  type="button"
-                  onClick={removeImage}
-                  className="chatbot-image-preview-remove"
-                >
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
+                <div className="chatbot-image-preview-thumb">
+                  <img
+                    src={imagePreview}
+                    alt="Selected"
+                    className="chatbot-image-preview-img"
+                  />
+                  <button
+                    type="button"
+                    onClick={removeImage}
+                    className="chatbot-image-preview-remove"
+                    title="Remove image"
                   >
-                    <path d="M18 6L6 18M6 6l12 12" />
-                  </svg>
-                </button>
+                    <svg
+                      width="10"
+                      height="10"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                    >
+                      <path d="M18 6L6 18M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
               </div>
             )}
 
@@ -1699,12 +2114,12 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={!isPreview && widgetConfig?.is_paused}
-                className="chatbot-image-button"
+                className="chatbot-image-button chatbot-image-button-sm"
                 title="Upload image"
               >
                 <svg
-                  width="16"
-                  height="16"
+                  width="14"
+                  height="14"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
@@ -1715,43 +2130,6 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
                   <polyline points="21 15 16 10 5 21" />
                 </svg>
               </button>
-              {/* Voice input button - only show if browser supports Web Speech API */}
-              {speechSupported && (
-                <button
-                  type="button"
-                  onClick={toggleVoiceInput}
-                  disabled={!isPreview && widgetConfig?.is_paused}
-                  className={`chatbot-voice-button ${isListening ? "listening" : ""}`}
-                  title={isListening ? "Stop listening" : "Voice input"}
-                  style={
-                    isListening
-                      ? { backgroundColor: "#ef4444", color: "white" }
-                      : {}
-                  }
-                >
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  >
-                    {isListening ? (
-                      // Stop icon when listening
-                      <rect x="6" y="6" width="12" height="12" rx="1" />
-                    ) : (
-                      // Microphone icon
-                      <>
-                        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-                        <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-                        <line x1="12" y1="19" x2="12" y2="23" />
-                        <line x1="8" y1="23" x2="16" y2="23" />
-                      </>
-                    )}
-                  </svg>
-                </button>
-              )}
               <input
                 type="text"
                 className="chatbot-input"
@@ -1770,29 +2148,85 @@ export function ChatbotWidget({ config }: ChatbotWidgetProps) {
                     sendMessage();
                   }
                 }}
+                onPaste={handlePaste}
                 disabled={!isPreview && widgetConfig?.is_paused}
               />
-              <button
-                type="button"
-                disabled={
-                  (!inputValue.trim() && !selectedImage) ||
-                  (!isPreview && widgetConfig?.is_paused)
-                }
-                onClick={() => sendMessage()}
-                className="chatbot-send-button"
-                style={{ backgroundColor: primaryColor }}
-              >
-                <svg
-                  width="12"
-                  height="12"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
-                </svg>
-              </button>
+              {/* Unified action button: Send / Mic / Stop — based on current state */}
+              <div className="chatbot-action-button-wrapper">
+                {/* Language picker popup — shown above the action button */}
+                {showLangPicker && (
+                  <div className="chatbot-lang-picker">
+                    <div className="chatbot-lang-picker-title">Select language</div>
+                    {speechLangOptions.map((opt, idx) => (
+                      <button
+                        key={opt.code}
+                        type="button"
+                        className="chatbot-lang-picker-option"
+                        onClick={() => handleLangSelect(idx)}
+                      >
+                        <span className="chatbot-lang-picker-label">{opt.label}</span>
+                        <span className="chatbot-lang-picker-code">{opt.code}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {inputValue.trim() || selectedImage ? (
+                  /* SEND button — when there is text or image */
+                  <button
+                    type="button"
+                    disabled={!isPreview && widgetConfig?.is_paused}
+                    onClick={() => sendMessage()}
+                    className="chatbot-send-button"
+                    style={{ backgroundColor: primaryColor }}
+                    title="Send message"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
+                    </svg>
+                  </button>
+                ) : isListening ? (
+                  /* STOP button — while listening */
+                  <button
+                    type="button"
+                    onClick={handleMicClick}
+                    className="chatbot-send-button chatbot-stop-button"
+                    title="Stop listening"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="6" y="6" width="12" height="12" rx="1" />
+                    </svg>
+                  </button>
+                ) : speechSupported ? (
+                  /* MIC button — when textbox is empty and not listening */
+                  <button
+                    type="button"
+                    onClick={handleMicClick}
+                    disabled={!isPreview && widgetConfig?.is_paused}
+                    className="chatbot-send-button chatbot-mic-button"
+                    style={{ backgroundColor: primaryColor }}
+                    title="Voice input"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                      <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                      <line x1="12" y1="19" x2="12" y2="23" />
+                      <line x1="8" y1="23" x2="16" y2="23" />
+                    </svg>
+                  </button>
+                ) : (
+                  /* Fallback SEND button — when no speech support */
+                  <button
+                    type="button"
+                    disabled
+                    className="chatbot-send-button"
+                    style={{ backgroundColor: primaryColor }}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
+                    </svg>
+                  </button>
+                )}
+              </div>
             </div>
 
             {showBranding && (

@@ -148,6 +148,18 @@ async def report_message(
             session_id=request.session_id,
             message_content=request.message_content
         )
+    except ValueError as e:
+        # If chat streaming failed before persistence, reporting should be a no-op.
+        if str(e) in {
+            "No user messages found in session",
+            "No assistant messages found in session",
+        }:
+            return
+        detail = sanitize_error_message(
+            str(e),
+            fallback="Unable to report the message. Please try again."
+        )
+        raise HTTPException(status_code=400, detail=detail)
     except Exception as e:
         detail = sanitize_error_message(
             str(e),

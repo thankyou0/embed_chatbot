@@ -31,7 +31,7 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50/80 via-gray-50/50 to-emerald-50/40 dark:from-gray-950 dark:via-gray-950 dark:to-gray-950">
       <Sidebar isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />
       <div
         className={cn(

@@ -1,0 +1,75 @@
+{
+  "bot": "kriyanta",
+  "bot_id": "1cb18dc0-4909-409d-ab03-0436524fcec4",
+  "allowed_languages": ["en", "gu"],
+  "focus": "language_compliance",
+  "total_queries": 50,
+  "queries": [
+
+    {"id": "K-L01", "type": "english_greeting",        "lang": "en",      "expected_script": "latin",     "query": "Hi! What do you sell?"},
+    {"id": "K-L02", "type": "native_greeting_gu",      "lang": "gu",      "expected_script": "gujarati",  "query": "નમસ્તે! તમારી પાસે શું છે?"},
+    {"id": "K-L03", "type": "romanized_greeting_gu",   "lang": "gu-Latn", "expected_script": "latin",     "query": "kem chho! tamne su male chhe?"},
+    {"id": "K-L04", "type": "hindi_rejection",         "lang": "hi",      "expected_script": "latin",     "query": "नमस्ते! आपके पास क्या है?"},
+
+    {"id": "K-L05", "type": "english_product",         "lang": "en",      "expected_script": "latin",     "query": "Show me your wall clocks"},
+    {"id": "K-L06", "type": "native_product_gu",       "lang": "gu",      "expected_script": "gujarati",  "query": "વોલ ક્લોક બતાવો"},
+    {"id": "K-L07", "type": "romanized_product_gu",    "lang": "gu-Latn", "expected_script": "latin",     "query": "wall clock batavo"},
+    {"id": "K-L08", "type": "english_product_detail",  "lang": "en",      "expected_script": "latin",     "query": "Do you have wooden wall art?"},
+    {"id": "K-L09", "type": "native_product_detail",   "lang": "gu",      "expected_script": "gujarati",  "query": "વુડન વોલ આર્ટ છે?"},
+    {"id": "K-L10", "type": "romanized_product_detail","lang": "gu-Latn", "expected_script": "latin",     "query": "Wooden wall art chhe?"},
+
+    {"id": "K-L11", "type": "english_price",           "lang": "en",      "expected_script": "latin",     "query": "Show me home decor under 1000 rupees"},
+    {"id": "K-L12", "type": "native_price_gu",         "lang": "gu",      "expected_script": "gujarati",  "query": "1000 રૂપિયાથી ઓછી હોમ ડેકોર વસ્તુઓ બતાવો"},
+    {"id": "K-L13", "type": "romanized_price_gu",      "lang": "gu-Latn", "expected_script": "latin",     "query": "1000 rupiya thi ochi home decor batavo"},
+
+    {"id": "K-L14", "type": "english_policy",          "lang": "en",      "expected_script": "latin",     "query": "What is your return policy?"},
+    {"id": "K-L15", "type": "native_policy_gu",        "lang": "gu",      "expected_script": "gujarati",  "query": "રિટર્ન પોલિસી શું છે?"},
+    {"id": "K-L16", "type": "romanized_policy_gu",     "lang": "gu-Latn", "expected_script": "latin",     "query": "return policy su chhe?"},
+
+    {"id": "K-L17", "type": "english_missing_info",    "lang": "en",      "expected_script": "latin",     "query": "Do you offer customization?"},
+    {"id": "K-L18", "type": "native_missing_gu",       "lang": "gu",      "expected_script": "gujarati",  "query": "કસ્ટમ ડિઝાઇન ઓર્ડર કરી શકાય?"},
+    {"id": "K-L19", "type": "romanized_missing_gu",    "lang": "gu-Latn", "expected_script": "latin",     "query": "custom design order kari shakay?"},
+
+    {"id": "K-L20", "type": "english_irrelevant",      "lang": "en",      "expected_script": "latin",     "query": "Who is the prime minister of India?"},
+    {"id": "K-L21", "type": "native_irrelevant_gu",    "lang": "gu",      "expected_script": "gujarati",  "query": "ભારતના વડા પ્રધાન કોણ છે?"},
+    {"id": "K-L22", "type": "romanized_irrelevant_gu", "lang": "gu-Latn", "expected_script": "latin",     "query": "india na pm kaun chhe?"},
+
+    {"id": "K-L23", "type": "mixed_gu_english",        "lang": "gu",      "expected_script": "gujarati",  "query": "એક્રેલિક વોલ આર્ટની વિગત આપો"},
+    {"id": "K-L24", "type": "mixed_romanized_english", "lang": "gu-Latn", "expected_script": "latin",     "query": "acrylic wall art ni detail apo"},
+    {"id": "K-L25", "type": "pure_gujarati",           "lang": "gu",      "expected_script": "gujarati",  "query": "ઘર સજાવટ માટે કઈ ચીજો છે?"},
+
+    {"id": "K-L26", "type": "short_native_gu",         "lang": "gu",      "expected_script": "gujarati",  "query": "ઘડિયાળ"},
+    {"id": "K-L27", "type": "short_romanized_gu",      "lang": "gu-Latn", "expected_script": "latin",     "query": "clock batavo"},
+    {"id": "K-L28", "type": "short_english",           "lang": "en",      "expected_script": "latin",     "query": "wall clocks"},
+
+    {"id": "K-L29", "type": "continuation_gu",         "lang": "gu",      "expected_script": "gujarati",  "query": "એ માંથી સૌથી સસ્તું કયું?"},
+    {"id": "K-L30", "type": "continuation_gu_latn",    "lang": "gu-Latn", "expected_script": "latin",     "query": "ama thi saukhi sasto kyu?"},
+    {"id": "K-L31", "type": "continuation_en",         "lang": "en",      "expected_script": "latin",     "query": "Which one is the cheapest?"},
+
+    {"id": "K-L32", "type": "emoji_native_gu",         "lang": "gu",      "expected_script": "gujarati",  "query": "🏡 ઘર સજાવટ માટે ભેટની વસ્તુઓ બતાવો"},
+    {"id": "K-L33", "type": "emoji_romanized_gu",      "lang": "gu-Latn", "expected_script": "latin",     "query": "🏡 ghar sajawat mate gift items batavo"},
+    {"id": "K-L34", "type": "emoji_english",           "lang": "en",      "expected_script": "latin",     "query": "🏡 Show me gift items for home decor"},
+
+    {"id": "K-L35", "type": "complex_native_gu",       "lang": "gu",      "expected_script": "gujarati",  "query": "મારે ₹500 ની અંદર જન્મદિવસની ભેટ જોઈએ, ઘર સજાવટની વસ્તુઓ છે?"},
+    {"id": "K-L36", "type": "complex_romanized_gu",    "lang": "gu-Latn", "expected_script": "latin",     "query": "mare 500 rupiya ni achi birthday gift joie, home decor chhe?"},
+    {"id": "K-L37", "type": "complex_english",         "lang": "en",      "expected_script": "latin",     "query": "I need a birthday gift under 500 rupees, do you have home decor items?"},
+
+    {"id": "K-L38", "type": "gujarati_context",        "lang": "gu",      "expected_script": "gujarati",  "query": "ઘર ડિલિવરી મળે?"},
+    {"id": "K-L39", "type": "romanized_context",       "lang": "gu-Latn", "expected_script": "latin",     "query": "ghar delivery male?"},
+    {"id": "K-L40", "type": "english_context",         "lang": "en",      "expected_script": "latin",     "query": "Do you offer home delivery?"},
+
+    {"id": "K-L41", "type": "number_in_native_gu",     "lang": "gu",      "expected_script": "gujarati",  "query": "500 થી 2000 ની રેન્જમાં ઘડિયાળો છે?"},
+    {"id": "K-L42", "type": "number_in_romanized_gu",  "lang": "gu-Latn", "expected_script": "latin",     "query": "500 thi 2000 ni range ma clocks chhe?"},
+
+    {"id": "K-L43", "type": "sentiment_native_gu",     "lang": "gu",      "expected_script": "gujarati",  "query": "ઘણો સારો! બીજું શું છે?"},
+    {"id": "K-L44", "type": "sentiment_romanized_gu",  "lang": "gu-Latn", "expected_script": "latin",     "query": "ghano saaro! biju su chhe?"},
+
+    {"id": "K-L45", "type": "unsupported_hindi_native","lang": "hi",      "expected_script": "latin",     "query": "मुझे दीवार की घड़ी दिखाओ"},
+    {"id": "K-L46", "type": "unsupported_french",      "lang": "fr",      "expected_script": "latin",     "query": "Bonjour, montrez-moi vos produits"},
+
+    {"id": "K-L47", "type": "gujarati_gift_query",     "lang": "gu",      "expected_script": "gujarati",  "query": "ભાઈ માટે જન્મદિવસની ભેટના આઈડિયા આપો"},
+    {"id": "K-L48", "type": "romanized_gift_query",    "lang": "gu-Latn", "expected_script": "latin",     "query": "bhai mate birthday gift idea apo"},
+    {"id": "K-L49", "type": "english_gift_idea",       "lang": "en",      "expected_script": "latin",     "query": "Give me gift ideas for my brother's birthday"},
+    {"id": "K-L50", "type": "whatsapp_style_gu",       "lang": "gu-Latn", "expected_script": "latin",     "query": "yaar ek saras clock joie chhe ghar mate 🏡 budget 1500 chhe"}
+  ]
+}

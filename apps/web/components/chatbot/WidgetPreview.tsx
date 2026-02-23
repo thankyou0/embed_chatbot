@@ -20,6 +20,8 @@ interface WidgetPreviewProps {
   initialSuggestions: string[];
   showBranding: boolean;
   language?: "en" | "hi" | "gu";
+  languages?: ("en" | "hi" | "gu")[];
+  welcomeMessageTranslations?: Record<string, string> | null;
   embedded?: boolean;
   initialOpen?: boolean;
   readOnly?: boolean;
@@ -38,6 +40,8 @@ export function ChatbotWidgetPreview({
   initialSuggestions,
   showBranding,
   language = "en",
+  languages,
+  welcomeMessageTranslations = null,
   embedded = false,
   initialOpen = false,
   readOnly = false,
@@ -61,6 +65,8 @@ export function ChatbotWidgetPreview({
     initialSuggestions: initialSuggestions,
     showBranding: showBranding,
     language: language,
+    languages: languages || [language],
+    welcomeMessageTranslations: welcomeMessageTranslations,
   };
 
   // Container styles for contained mode

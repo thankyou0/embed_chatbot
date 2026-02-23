@@ -42,6 +42,7 @@ class AvatarUploadResponse(BaseModel):
 class ChatbotAppearanceResponse(ChatbotAppearanceBase):
     id: UUID
     chatbot_id: UUID
+    welcome_message_translations: Optional[dict] = None
     created_at: datetime
     updated_at: datetime
 
@@ -70,6 +71,8 @@ class WidgetConfigResponse(BaseModel):
     custom_instructions: Optional[str] = None
     # Language settings — list of allowed language codes
     languages: List[str] = ["en"]
+    # Pre-translated welcome message variants keyed by language code
+    welcome_message_translations: Optional[dict] = None
 
     class Config:
         from_attributes = True

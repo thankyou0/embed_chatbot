@@ -1,0 +1,912 @@
+{
+  "timestamp": "2026-02-21T16:18:53.253200",
+  "test_queries_count": 21,
+  "call1_models": [
+    "gemini-2.5-flash-lite",
+    "gemini-2.5-flash",
+    "gemini-2.0-flash",
+    "OR-gemini-2.0-flash",
+    "llama-3.1-8b"
+  ],
+  "call2_models": [
+    "gemini-2.5-flash",
+    "gemini-2.0-flash",
+    "OR-gemini-2.0-flash",
+    "llama-3.3-70b"
+  ],
+  "call1_results": {
+    "gemini-2.5-flash-lite": {
+      "tested": 2,
+      "errors": 0,
+      "rate_limited": 19,
+      "avg_latency_ms": 1103.0,
+      "scores": [
+        {
+          "json_valid": true,
+          "language_correct": true,
+          "product_intent_correct": true,
+          "english_query_quality": "good",
+          "total_score": 4,
+          "parsed": {
+            "language": "hindi",
+            "continuation": false,
+            "english_query": "Show me ground coffee",
+            "product": true
+          }
+        },
+        {
+          "json_valid": true,
+          "language_correct": true,
+          "product_intent_correct": true,
+          "english_query_quality": "good",
+          "total_score": 4,
+          "parsed": {
+            "language": "english",
+            "continuation": false,
+            "english_query": "Show me coffee under $50",
+            "product": true
+          }
+        }
+      ]
+    },
+    "gemini-2.5-flash": {
+      "tested": 0,
+      "errors": 0,
+      "rate_limited": 21,
+      "avg_latency_ms": 0,
+      "scores": []
+    },
+    "gemini-2.0-flash": {
+      "tested": 0,
+      "errors": 0,
+      "rate_limited": 21,
+      "avg_latency_ms": 0,
+      "scores": []
+    },
+    "OR-gemini-2.0-flash": {
+      "tested": 21,
+      "errors": 0,
+      "rate_limited": 0,
+      "avg_latency_ms": 1819.904761904762,
+      "scores": [
+        {
+          "json_valid": true,
+          "language_correct": true,
+          "product_intent_correct": true,
+          "english_query_quality": "good",
+          "total_score": 4,
+          "parsed": {
+            "language": "english",
+            "continuation": false,
+            "english_query": "Show me your best sellers",
+            "product": true
+          }
+        },
+        {
+          "json_valid": true,
+          "language_correct": false,
+          "product_intent_correct": true,
+          "english_query_quality": "good",
+          "total_score": 3,
+          "parsed": {
+            "language": "hindi-latin",
+            "continuation": false,
+            "english_query": "Show me ground coffee",
+            "product": true
+          }
+        },
+        {
+          "json_valid": true,
+          "language_correct": false,
+          "product_intent_correct": true,
+          "english_query_quality": "good",
+          "total_score": 3,
+          "parsed": {
+            "language": "gujarati-latin",
+            "continuation": false,
+            "english_query": "Show your bracelets",
+            "product": true
+          }
+        },
+        {
+          "json_valid": true,
+          "language_correct": true,
+          "product_intent_correct": true,
+          "english_query_quality": "good",
+          "total_score": 4,
+          "parsed": {
+            "language": "english",
+            "continuation": false,
+            "english_query": "Show me coffee under $50",
+            "product": true
+          }
+        },
+        {
+          "json_valid": true,
+          "language_correct": false,
+          "product_intent_correct": true,
+          "english_query_quality": "good",
+          "total_score": 3,
+          "parsed": {
+            "language": "hindi-latin",
+            "continuation": false,
+            "english_query": "Tell me about coffee under 500 rupees",
+            "product": true
+          }
+        },
+        {
+          "json_valid": true,
+          "language_correct": false,
+          "product_intent_correct": true,
+          "english_query_quality": "good",
+          "total_score": 3,
+          "parsed": {
+            "language": "gujarati-latin",
+            "continuation": false,
+            "english_query": "Show bracelets under ₹500",
+            "product": true
+          }
+        },
+        {
+          "json_valid": true,
+          "language_correct": true,
+          "product_intent_correct": true,
+          "english_query_quality": "good",
+          "total_score": 4,
+          "parsed": {
+            "language": "english",
+            "continuation": false,
+            "english_query": "Who is the Prime Minister of India?",
+            "product": false
+          }
+        },
+        {
+          "json_valid": true,
+          "language_correct": true,
+          "product_intent_correct": true,
+          "english_query_quality": "good",
+          "total_score": 4,
+          "parsed": {
+            "language": "hindi",
+            "continuation": false,
+            "english_query": "Who went to the moon?",
+            "product": false
+          }
+        },
+        {
+          "json_valid": true,
+          "language_correct": true,
+          "product_intent_correct": true,
+          "english_query_quality": "good",
+          "total_score": 4,
+          "parsed": {
+            "language": "gujarati",
+            "continuation": false,
+            "english_query": "Who is the Prime Minister of India?",
+            "product": false
+          }
+        },
+        {
+          "json_valid": true,
+          "language_correct": true,
+          "product_intent_correct": true,
+          "english_query_quality": "good",
+          "total_score": 4,
+          "parsed": {
+            "language": "english",
+            "continuation": false,
+            "english_query": "What are your CEO's contact details?",
+            "product": false
+          }
+        },
+        {
+          "json_valid": true,
+          "language_correct": true,
+          "product_intent_correct": true,
+          "english_query_quality": "good",
+          "total_score": 4,
+          "parsed": {
+            "language": "hindi",
+            "continuation": false,
+            "english_query": "What is your company's GSTIN number?",
+            "product": false
+          }
+        },
+        {
+          "json_valid": true,
+          "language_correct": true,
+          "product_intent_correct": true,
+          "english_query_quality": "good",
+          "total_score": 4,
+          "parsed": {
+            "language": "english",
+            "continuation": false,
+            "english_query": "Hi there!",
+            "product": false
+          }
+        },
+        {
+          "json_valid": true,
+          "language_correct": false,
+          "product_intent_correct": true,
+          "english_query_quality": "good",
+          "total_score": 3,
+          "parsed": {
+            "language": "hindi-latin",
+            "continuation": false,
+            "english_query": "Hello!",
+            "product": false
+          }
+        },
+        {
+          "json_valid": true,
+          "language_correct": true,
+          "product_intent_correct": true,
+          "english_query_quality": "good",
+          "total_score": 4,
+          "parsed": {
+            "language": "gujarati",
+            "continuation": false,
+            "english_query": "Hello! How are you?",
+            "product": false
+          }
+        },
+        {
+          "json_valid": true,
+          "language_correct": true,
+          "product_intent_correct": true,
+          "english_query_quality": "good",
+          "total_score": 4,
+          "parsed": {
+            "language": "hindi-latin",
+            "continuation": false,
+            "english_query": "show me coffee",
+            "product": true
+          }
+        },
+        {
+          "json_valid": true,
+          "language_correct": true,
+          "product_intent_correct": true,
+          "english_query_quality": "good",
+          "total_score": 4,
+          "parsed": {
+            "language": "gujarati-latin",
+            "continuation": false,
+            "english_query": "show me bracelets",
+            "product": true
+          }
+        },
+        {
+          "json_valid": true,
+          "language_correct": true,
+          "product_intent_correct": true,
+          "english_query_quality": "good",
+          "total_score": 4,
+          "parsed": {
+            "language": "english",
+            "continuation": false,
+            "english_query": "What is your return policy?",
+            "product": false
+          }
+        },
+        {
+          "json_valid": true,
+          "language_correct": false,
+          "product_intent_correct": true,
+          "english_query_quality": "good",
+          "total_score": 3,
+          "parsed": {
+            "language": "hindi-latin",
+            "continuation": false,
+            "english_query": "In how many days is the delivery done?",
+            "product": false
+          }
+        },
+        {
+          "json_valid": true,
+          "language_correct": true,
+          "product_intent_correct": true,
+          "english_query_quality": "good",
+          "total_score": 4,
+          "parsed": {
+            "language": "english",
+            "continuation": false,
+            "english_query": "something nice",
+            "product": false
+          }
+        },
+        {
+          "json_valid": true,
+          "language_correct": true,
+          "product_intent_correct": true,
+          "english_query_quality": "good",
+          "total_score": 4,
+          "parsed": {
+            "language": "english",
+            "continuation": false,
+            "english_query": "Ok",
+            "product": false
+          }
+        },
+        {
+          "json_valid": true,
+          "language_correct": true,
+          "product_intent_correct": false,
+          "english_query_quality": "good",
+          "total_score": 3,
+          "parsed": {
+            "language": "other",
+            "continuation": false,
+            "english_query": "Hello, show me your most popular products",
+            "product": true
+          }
+        }
+      ]
+    },
+    "llama-3.1-8b": {
+      "tested": 21,
+      "errors": 0,
+      "rate_limited": 0,
+      "avg_latency_ms": 698.7142857142857,
+      "scores": [
+        {
+          "json_valid": true,
+          "language_correct": true,
+          "product_intent_correct": true,
+          "english_query_quality": "good",
+          "total_score": 4,
+          "parsed": {
+            "language": "english",
+            "continuation": false,
+            "english_query": "Show me your best sellers",
+            "product": true
+          }
+        },
+        {
+          "json_valid": true,
+          "language_correct": false,
+          "product_intent_correct": true,
+          "english_query_quality": "good",
+          "total_score": 3,
+          "parsed": {
+            "language": "hindi-latin",
+            "continuation": false,
+            "english_query": "show me ground coffee",
+            "product": true
+          }
+        },
+        {
+          "json_valid": true,
+          "language_correct": false,
+          "product_intent_correct": true,
+          "english_query_quality": "good",
+          "total_score": 3,
+          "parsed": {
+            "language": "gujarati-latin",
+            "continuation": false,
+            "english_query": "show bracelets",
+            "product": true
+          }
+        },
+        {
+          "json_valid": true,
+          "language_correct": true,
+          "product_intent_correct": true,
+          "english_query_quality": "good",
+          "total_score": 4,
+          "parsed": {
+            "language": "english",
+            "continuation": false,
+            "english_query": "coffee under $50",
+            "product": true
+          }
+        },
+        {
+          "json_valid": true,
+          "language_correct": false,
+          "product_intent_correct": true,
+          "english_query_quality": "good",
+          "total_score": 3,
+          "parsed": {
+            "language": "hindi-latin",
+            "continuation": false,
+            "english_query": "coffee under 500 rupees",
+            "product": true
+          }
+        },
+        {
+          "json_valid": true,
+          "language_correct": false,
+          "product_intent_correct": true,
+          "english_query_quality": "good",
+          "total_score": 3,
+          "parsed": {
+            "language": "gujarati-latin",
+            "continuation": false,
+            "english_query": "₹500 or less bracelets show",
+            "product": true
+          }
+        },
+        {
+          "json_valid": true,
+          "language_correct": true,
+          "product_intent_correct": true,
+          "english_query_quality": "good",
+          "total_score": 4,
+          "parsed": {
+            "language": "english",
+            "continuation": false,
+            "english_query": "Who is the Prime Minister of India?",
+            "product": false
+          }
+        },
+        {
+          "json_valid": true,
+          "language_correct": false,
+          "product_intent_correct": true,
+          "english_query_quality": "good",
+          "total_score": 3,
+          "parsed": {
+            "language": "hindi-latin",
+            "continuation": false,
+            "english_query": "who went to the moon?",
+            "product": false
+          }
+        },
+        {
+          "json_valid": true,
+          "language_correct": false,
+          "product_intent_correct": true,
+          "english_query_quality": "good",
+          "total_score": 3,
+          "parsed": {
+            "language": "gujarati-latin",
+            "continuation": false,
+            "english_query": "who is the prime minister of india?",
+            "product": false
+          }
+        },
+        {
+          "json_valid": true,
+          "language_correct": true,
+          "product_intent_correct": true,
+          "english_query_quality": "good",
+          "total_score": 4,
+          "parsed": {
+            "language": "english",
+            "continuation": false,
+            "english_query": "What are your CEO's contact details",
+            "product": false
+          }
+        },
+        {
+          "json_valid": true,
+          "language_correct": false,
+          "product_intent_correct": true,
+          "english_query_quality": "good",
+          "total_score": 3,
+          "parsed": {
+            "language": "hindi-latin",
+            "continuation": false,
+            "english_query": "your company GSTIN number what is",
+            "product": false
+          }
+        },
+        {
+          "json_valid": true,
+          "language_correct": true,
+          "product_intent_correct": true,
+          "english_query_quality": "good",
+          "total_score": 4,
+          "parsed": {
+            "language": "english",
+            "continuation": false,
+            "english_query": "Hi there",
+            "product": false
+          }
+        },
+        {
+          "json_valid": true,
+          "language_correct": false,
+          "product_intent_correct": true,
+          "english_query_quality": "good",
+          "total_score": 3,
+          "parsed": {
+            "language": "hindi-latin",
+            "continuation": false,
+            "english_query": "Namaste!",
+            "product": false
+          }
+        },
+        {
+          "json_valid": true,
+          "language_correct": false,
+          "product_intent_correct": true,
+          "english_query_quality": "good",
+          "total_score": 3,
+          "parsed": {
+            "language": "gujarati-latin",
+            "continuation": false,
+            "english_query": "Namaste! How are you?",
+            "product": false
+          }
+        },
+        {
+          "json_valid": true,
+          "language_correct": true,
+          "product_intent_correct": true,
+          "english_query_quality": "good",
+          "total_score": 4,
+          "parsed": {
+            "language": "hindi-latin",
+            "continuation": false,
+            "english_query": "show me coffee",
+            "product": true
+          }
+        },
+        {
+          "json_valid": true,
+          "language_correct": false,
+          "product_intent_correct": true,
+          "english_query_quality": "good",
+          "total_score": 3,
+          "parsed": {
+            "language": "hindi-latin",
+            "continuation": false,
+            "english_query": "mane bracelets tell me",
+            "product": true
+          }
+        },
+        {
+          "json_valid": true,
+          "language_correct": true,
+          "product_intent_correct": true,
+          "english_query_quality": "good",
+          "total_score": 4,
+          "parsed": {
+            "language": "english",
+            "continuation": false,
+            "english_query": "What is your return policy",
+            "product": false
+          }
+        },
+        {
+          "json_valid": true,
+          "language_correct": false,
+          "product_intent_correct": false,
+          "english_query_quality": "good",
+          "total_score": 2,
+          "parsed": {
+            "language": "hindi-latin",
+            "continuation": true,
+            "english_query": "delivery how many days is it",
+            "product": true
+          }
+        },
+        {
+          "json_valid": true,
+          "language_correct": true,
+          "product_intent_correct": true,
+          "english_query_quality": "good",
+          "total_score": 4,
+          "parsed": {
+            "language": "english",
+            "continuation": false,
+            "english_query": "something nice",
+            "product": false
+          }
+        },
+        {
+          "json_valid": true,
+          "language_correct": true,
+          "product_intent_correct": true,
+          "english_query_quality": "good",
+          "total_score": 4,
+          "parsed": {
+            "language": "english",
+            "continuation": false,
+            "english_query": "ok",
+            "product": false
+          }
+        },
+        {
+          "json_valid": true,
+          "language_correct": false,
+          "product_intent_correct": false,
+          "english_query_quality": "good",
+          "total_score": 2,
+          "parsed": {
+            "language": "english",
+            "continuation": false,
+            "english_query": "show me your most popular products",
+            "product": true
+          }
+        }
+      ]
+    }
+  },
+  "call2_results": {
+    "gemini-2.5-flash": {
+      "tested": 1,
+      "errors": 0,
+      "rate_limited": 20,
+      "avg_latency_ms": 2254.0,
+      "scores": [
+        {
+          "has_response": true,
+          "language_correct": true,
+          "irrelevant_correct": true,
+          "missing_info_correct": true,
+          "suggestions_extracted": true,
+          "suggestions_correct_format": true,
+          "no_json_leak": true,
+          "total_score": 5
+        }
+      ]
+    },
+    "gemini-2.0-flash": {
+      "tested": 0,
+      "errors": 0,
+      "rate_limited": 21,
+      "avg_latency_ms": 0,
+      "scores": []
+    },
+    "OR-gemini-2.0-flash": {
+      "tested": 3,
+      "errors": 18,
+      "rate_limited": 0,
+      "avg_latency_ms": 2416.6666666666665,
+      "scores": [
+        {
+          "has_response": true,
+          "language_correct": true,
+          "irrelevant_correct": true,
+          "missing_info_correct": true,
+          "suggestions_extracted": true,
+          "suggestions_correct_format": true,
+          "no_json_leak": true,
+          "total_score": 5
+        },
+        {
+          "has_response": true,
+          "language_correct": true,
+          "irrelevant_correct": true,
+          "missing_info_correct": false,
+          "suggestions_extracted": true,
+          "suggestions_correct_format": true,
+          "no_json_leak": true,
+          "total_score": 5
+        },
+        {
+          "has_response": true,
+          "language_correct": true,
+          "irrelevant_correct": true,
+          "missing_info_correct": true,
+          "suggestions_extracted": true,
+          "suggestions_correct_format": true,
+          "no_json_leak": true,
+          "total_score": 5
+        }
+      ]
+    },
+    "llama-3.3-70b": {
+      "tested": 21,
+      "errors": 0,
+      "rate_limited": 0,
+      "avg_latency_ms": 1577.5238095238096,
+      "scores": [
+        {
+          "has_response": true,
+          "language_correct": true,
+          "irrelevant_correct": true,
+          "missing_info_correct": true,
+          "suggestions_extracted": true,
+          "suggestions_correct_format": true,
+          "no_json_leak": true,
+          "total_score": 5
+        },
+        {
+          "has_response": true,
+          "language_correct": true,
+          "irrelevant_correct": true,
+          "missing_info_correct": true,
+          "suggestions_extracted": true,
+          "suggestions_correct_format": true,
+          "no_json_leak": true,
+          "total_score": 5
+        },
+        {
+          "has_response": true,
+          "language_correct": true,
+          "irrelevant_correct": true,
+          "missing_info_correct": true,
+          "suggestions_extracted": true,
+          "suggestions_correct_format": true,
+          "no_json_leak": true,
+          "total_score": 5
+        },
+        {
+          "has_response": true,
+          "language_correct": true,
+          "irrelevant_correct": true,
+          "missing_info_correct": true,
+          "suggestions_extracted": true,
+          "suggestions_correct_format": true,
+          "no_json_leak": true,
+          "total_score": 5
+        },
+        {
+          "has_response": true,
+          "language_correct": true,
+          "irrelevant_correct": true,
+          "missing_info_correct": true,
+          "suggestions_extracted": true,
+          "suggestions_correct_format": true,
+          "no_json_leak": true,
+          "total_score": 5
+        },
+        {
+          "has_response": true,
+          "language_correct": true,
+          "irrelevant_correct": true,
+          "missing_info_correct": true,
+          "suggestions_extracted": true,
+          "suggestions_correct_format": true,
+          "no_json_leak": true,
+          "total_score": 5
+        },
+        {
+          "has_response": true,
+          "language_correct": true,
+          "irrelevant_correct": true,
+          "missing_info_correct": true,
+          "suggestions_extracted": false,
+          "suggestions_correct_format": false,
+          "no_json_leak": true,
+          "total_score": 4
+        },
+        {
+          "has_response": true,
+          "language_correct": true,
+          "irrelevant_correct": true,
+          "missing_info_correct": true,
+          "suggestions_extracted": false,
+          "suggestions_correct_format": false,
+          "no_json_leak": true,
+          "total_score": 4
+        },
+        {
+          "has_response": true,
+          "language_correct": true,
+          "irrelevant_correct": true,
+          "missing_info_correct": true,
+          "suggestions_extracted": false,
+          "suggestions_correct_format": false,
+          "no_json_leak": true,
+          "total_score": 4
+        },
+        {
+          "has_response": true,
+          "language_correct": true,
+          "irrelevant_correct": true,
+          "missing_info_correct": true,
+          "suggestions_extracted": true,
+          "suggestions_correct_format": true,
+          "no_json_leak": true,
+          "total_score": 5
+        },
+        {
+          "has_response": true,
+          "language_correct": true,
+          "irrelevant_correct": true,
+          "missing_info_correct": true,
+          "suggestions_extracted": true,
+          "suggestions_correct_format": true,
+          "no_json_leak": true,
+          "total_score": 5
+        },
+        {
+          "has_response": true,
+          "language_correct": true,
+          "irrelevant_correct": true,
+          "missing_info_correct": true,
+          "suggestions_extracted": true,
+          "suggestions_correct_format": true,
+          "no_json_leak": true,
+          "total_score": 5
+        },
+        {
+          "has_response": true,
+          "language_correct": true,
+          "irrelevant_correct": true,
+          "missing_info_correct": true,
+          "suggestions_extracted": true,
+          "suggestions_correct_format": true,
+          "no_json_leak": true,
+          "total_score": 5
+        },
+        {
+          "has_response": true,
+          "language_correct": true,
+          "irrelevant_correct": true,
+          "missing_info_correct": true,
+          "suggestions_extracted": true,
+          "suggestions_correct_format": true,
+          "no_json_leak": true,
+          "total_score": 5
+        },
+        {
+          "has_response": true,
+          "language_correct": true,
+          "irrelevant_correct": true,
+          "missing_info_correct": true,
+          "suggestions_extracted": true,
+          "suggestions_correct_format": true,
+          "no_json_leak": true,
+          "total_score": 5
+        },
+        {
+          "has_response": true,
+          "language_correct": true,
+          "irrelevant_correct": true,
+          "missing_info_correct": true,
+          "suggestions_extracted": true,
+          "suggestions_correct_format": true,
+          "no_json_leak": true,
+          "total_score": 5
+        },
+        {
+          "has_response": true,
+          "language_correct": true,
+          "irrelevant_correct": true,
+          "missing_info_correct": false,
+          "suggestions_extracted": false,
+          "suggestions_correct_format": false,
+          "no_json_leak": true,
+          "total_score": 4
+        },
+        {
+          "has_response": true,
+          "language_correct": true,
+          "irrelevant_correct": true,
+          "missing_info_correct": false,
+          "suggestions_extracted": false,
+          "suggestions_correct_format": false,
+          "no_json_leak": true,
+          "total_score": 4
+        },
+        {
+          "has_response": true,
+          "language_correct": true,
+          "irrelevant_correct": true,
+          "missing_info_correct": true,
+          "suggestions_extracted": true,
+          "suggestions_correct_format": true,
+          "no_json_leak": true,
+          "total_score": 5
+        },
+        {
+          "has_response": true,
+          "language_correct": true,
+          "irrelevant_correct": true,
+          "missing_info_correct": true,
+          "suggestions_extracted": true,
+          "suggestions_correct_format": true,
+          "no_json_leak": true,
+          "total_score": 5
+        },
+        {
+          "has_response": true,
+          "language_correct": true,
+          "irrelevant_correct": true,
+          "missing_info_correct": true,
+          "suggestions_extracted": true,
+          "suggestions_correct_format": true,
+          "no_json_leak": true,
+          "total_score": 5
+        }
+      ]
+    }
+  }
+}

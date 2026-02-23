@@ -208,6 +208,7 @@ type AppearanceFormData = z.infer<typeof appearanceSchema>;
 interface AppearanceData extends AppearanceFormData {
   id: string;
   chatbot_id: string;
+  welcome_message_translations?: Record<string, string> | null;
   created_at: string;
   updated_at: string;
 }
@@ -316,6 +317,8 @@ export default function ChatbotDetailPage() {
   const previousKnowledgeSourcesRef = useRef<KnowledgeSource[]>([]);
   const lastFetchTimeRef = useRef<number>(0);
   const autoDeletedSourcesRef = useRef<Set<string>>(new Set());
+  // SSE connection for the 'processing' phase (embedding in progress)
+  const eventSourceRef = useRef<EventSource | null>(null);
 
   // Appearance form setup
   const {
@@ -506,14 +509,14 @@ export default function ChatbotDetailPage() {
     }
   };
 
-  // Polling for crawling sources - runs whenever we detect active processing
+  // Polling for crawling sources - only runs while status is 'crawling' or 'pending'
+  // Once status transitions to 'processing', polling stops and the SSE stream
+  // (opened by the effect below) takes over to push the final completion event.
   useEffect(() => {
-    // Check for crawling/pending/processing status (case-insensitive)
+    // Only keep polling while crawling/pending; stop when processing begins
     const hasCrawlingSources = knowledgeSources.some((s) => {
       const status = s.status?.toLowerCase();
-      return (
-        status === "processing" || status === "pending" || status === "crawling"
-      );
+      return status === "crawling" || status === "pending";
     });
 
     // Detect status changes and show toast notifications
@@ -686,6 +689,101 @@ export default function ChatbotDetailPage() {
     };
   }, [isPolling, pollingStartTime]);
 
+  // SSE subscription: connect to the backend stream while any source is in 'processing'.
+  // The stream pushes status updates every 2 s and fires a 'done' event when
+  // embedding finishes — so we don't need to keep polling during that phase.
+  useEffect(() => {
+    const hasProcessingSources = knowledgeSources.some(
+      (s) => s.status?.toLowerCase() === "processing",
+    );
+    // Also bail out if crawling is still happening (SSE not needed yet)
+    const hasCrawlingOrPending = knowledgeSources.some((s) => {
+      const st = s.status?.toLowerCase();
+      return st === "crawling" || st === "pending";
+    });
+
+    if (hasProcessingSources && !hasCrawlingOrPending && !eventSourceRef.current) {
+      const token = getAccessToken();
+      if (!token) return;
+
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const url = `${API_URL}/api/v1/chatbots/${chatbotId}/knowledge-sources/status-stream?token=${encodeURIComponent(token)}`;
+      console.log("📡 Opening processing SSE stream...");
+
+      const es = new EventSource(url);
+      let doneHandled = false;
+
+      es.onmessage = (e) => {
+        try {
+          const sources = JSON.parse(e.data);
+          if (Array.isArray(sources)) {
+            // Merge partial data (SSE only returns lightweight fields)
+            setKnowledgeSources((prev) =>
+              prev.map((p) => {
+                const updated = sources.find((s: any) => s.id === p.id);
+                if (!updated) return p;
+                return {
+                  ...p,
+                  status: updated.status,
+                  pages_found: updated.pages_found ?? p.pages_found,
+                  error_message: updated.error_message ?? p.error_message,
+                  updated_at: updated.updated_at ?? p.updated_at,
+                };
+              }),
+            );
+          }
+        } catch {
+          // ignore parse errors
+        }
+      };
+
+      es.addEventListener("done", () => {
+        console.log("✅ Processing SSE: embedding complete — final sync");
+        doneHandled = true;
+        es.close();
+        eventSourceRef.current = null;
+        fetchKnowledgeSources(false);
+        fetchChatbotStats();
+      });
+
+      es.addEventListener("timeout", () => {
+        console.log("⏱️ Processing SSE: timed out — final sync");
+        doneHandled = true;
+        es.close();
+        eventSourceRef.current = null;
+        fetchKnowledgeSources(false);
+        fetchChatbotStats();
+      });
+
+      es.onerror = () => {
+        if (!doneHandled) {
+          console.error("❌ Processing SSE closed unexpectedly — fallback fetch");
+          es.close();
+          eventSourceRef.current = null;
+          fetchKnowledgeSources(false);
+          fetchChatbotStats();
+        }
+      };
+
+      eventSourceRef.current = es;
+    }
+
+    // Close SSE if there are no more processing sources
+    if (!hasProcessingSources && eventSourceRef.current) {
+      console.log("🛑 No processing sources — closing SSE stream");
+      eventSourceRef.current.close();
+      eventSourceRef.current = null;
+    }
+
+    return () => {
+      // Cleanup on component unmount
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
+      }
+    };
+  }, [knowledgeSources, chatbotId]);
+
   // Auto-hide toast after 5 seconds
   useEffect(() => {
     if (toastMessage) {
@@ -781,8 +879,10 @@ export default function ChatbotDetailPage() {
       const token = getAccessToken();
       if (!token) return;
 
+      // Cache-bust to avoid stale translations
+      const cacheBust = `_t=${Date.now()}`;
       const response = await apiRequestWithAuth<AppearanceData>(
-        `/api/v1/chatbots/${chatbotId}/appearance`,
+        `/api/v1/chatbots/${chatbotId}/appearance?${cacheBust}`,
         token,
         { method: "GET" },
       );
@@ -795,7 +895,8 @@ export default function ChatbotDetailPage() {
           key !== "id" &&
           key !== "chatbot_id" &&
           key !== "created_at" &&
-          key !== "updated_at"
+          key !== "updated_at" &&
+          key !== "welcome_message_translations"
         ) {
           setValue(
             key as keyof AppearanceFormData,
@@ -1470,7 +1571,8 @@ export default function ChatbotDetailPage() {
       const token = getAccessToken();
       if (!token) return;
 
-      await apiRequestWithAuth(
+      // PATCH returns the updated appearance (including fresh translations)
+      const updated = await apiRequestWithAuth<AppearanceData>(
         `/api/v1/chatbots/${chatbotId}/appearance`,
         token,
         {
@@ -1479,10 +1581,15 @@ export default function ChatbotDetailPage() {
         },
       );
 
+      // Use the PATCH response directly so translations are immediately visible
+      if (updated && updated.id) {
+        setAppearance(updated);
+      }
+
       setAppearanceSuccessMessage("Appearance settings saved successfully!");
       setTimeout(() => setAppearanceSuccessMessage(null), 3000);
 
-      // Refresh to reset isDirty
+      // Also refresh from GET to reset isDirty and ensure full sync
       await fetchAppearance();
     } catch (err: any) {
       console.error("Failed to save appearance:", err);
@@ -1639,7 +1746,7 @@ export default function ChatbotDetailPage() {
                 Chatbots
               </Link>
               <ChevronRight className="h-4 w-4 inline-block mx-2 text-muted-foreground" />
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 to-teal-600">
                 {chatbot.name}
               </span>
             </h1>
@@ -1744,17 +1851,17 @@ export default function ChatbotDetailPage() {
         <TabsContent value="overview" className="space-y-6">
           {/* Quick Stats */}
           <div className="grid gap-4 md:grid-cols-3">
-            <Card className="border-l-4 border-l-indigo-500">
+            <Card className="border-l-4 border-l-emerald-500">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
                   Total Conversations
                 </CardTitle>
-                <div className="p-2 rounded-lg bg-indigo-50">
-                  <MessageSquare className="h-4 w-4 text-indigo-600" />
+                <div className="p-2 rounded-lg bg-emerald-50">
+                  <MessageSquare className="h-4 w-4 text-emerald-600" />
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-indigo-600">
+                <div className="text-2xl font-bold text-emerald-600">
                   {stats?.total_conversations || 0}
                 </div>
                 <p className="text-xs text-muted-foreground">
@@ -1790,17 +1897,17 @@ export default function ChatbotDetailPage() {
               </CardContent>
             </Card>
 
-            <Card className="border-l-4 border-l-purple-500">
+            <Card className="border-l-4 border-l-teal-500">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
                   Knowledge Base Size
                 </CardTitle>
-                <div className="p-2 rounded-lg bg-purple-50">
-                  <Database className="h-4 w-4 text-purple-600" />
+                <div className="p-2 rounded-lg bg-teal-50">
+                  <Database className="h-4 w-4 text-teal-600" />
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-purple-600">
+                <div className="text-2xl font-bold text-teal-600">
                   {stats?.total_kb_size
                     ? stats.total_kb_size >= 1024 * 1024
                       ? `${(stats.total_kb_size / (1024 * 1024)).toFixed(2)} MB`
@@ -1928,11 +2035,11 @@ export default function ChatbotDetailPage() {
                             className={cn(
                               "mt-1 p-1.5 rounded-full",
                               item.type === "knowledge_source"
-                                ? "bg-indigo-50 text-indigo-600"
+                                ? "bg-emerald-50 text-emerald-600"
                                 : item.type === "conversation"
                                   ? "bg-emerald-50 text-emerald-600"
                                   : isTeamActivity
-                                    ? "bg-purple-50 text-purple-600"
+                                    ? "bg-teal-50 text-teal-600"
                                     : "bg-slate-100 text-slate-600",
                             )}
                           >
@@ -2196,8 +2303,8 @@ export default function ChatbotDetailPage() {
                     </form>
                   ) : (
                     <div className="space-y-6">
-                      <div className="mb-3 p-3 bg-purple-50 border border-purple-200 rounded-lg">
-                        <p className="text-sm text-purple-800">
+                      <div className="mb-3 p-3 bg-teal-50 border border-teal-200 rounded-lg">
+                        <p className="text-sm text-teal-800">
                           <strong>💡 Tip:</strong> Add frequently asked
                           questions (FAQs) from your site or any specific
                           questions you want your bot to answer consistently.
@@ -3422,7 +3529,7 @@ export default function ChatbotDetailPage() {
                                   key={lang.code}
                                   className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
                                     currentLangs.includes(lang.code)
-                                      ? "border-indigo-500 bg-indigo-50/50 dark:bg-indigo-900/20"
+                                      ? "border-emerald-500 bg-emerald-50/50 dark:bg-emerald-900/20"
                                       : "border-border hover:border-muted-foreground/30"
                                   }`}
                                 >
@@ -3430,7 +3537,7 @@ export default function ChatbotDetailPage() {
                                     type="checkbox"
                                     checked={currentLangs.includes(lang.code)}
                                     onChange={() => toggleLanguage(lang.code)}
-                                    className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                    className="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
                                   />
                                   <div>
                                     <span className="text-sm font-medium">
@@ -3486,7 +3593,7 @@ export default function ChatbotDetailPage() {
                                   shouldDirty: true,
                                 });
                               }}
-                              className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                              className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-emerald-600"
                             />
                             <div className="flex justify-between text-xs text-muted-foreground mt-1">
                               <span>Precise (0.0)</span>
@@ -3544,10 +3651,10 @@ export default function ChatbotDetailPage() {
         {/* Install Tab */}
         <TabsContent value="install" className="space-y-6">
           {/* Quick Start Guide */}
-          <Card className="border-indigo-200 bg-gradient-to-r from-indigo-50/50 to-purple-50/50">
+          <Card className="border-emerald-200 bg-gradient-to-r from-emerald-50/50 to-teal-50/50">
             <CardHeader>
               <div className="flex items-start gap-3">
-                <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center flex-shrink-0 shadow-sm">
+                <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-emerald-600 to-teal-600 flex items-center justify-center flex-shrink-0 shadow-sm">
                   <Sparkles className="h-5 w-5 text-white" />
                 </div>
                 <div>
@@ -3561,7 +3668,7 @@ export default function ChatbotDetailPage() {
             <CardContent>
               <div className="space-y-4">
                 <div className="flex gap-3">
-                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-indigo-600 to-purple-600 text-white flex items-center justify-center font-semibold text-sm shadow-sm">
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-emerald-600 to-teal-600 text-white flex items-center justify-center font-semibold text-sm shadow-sm">
                     1
                   </div>
                   <div className="flex-1">
@@ -3575,7 +3682,7 @@ export default function ChatbotDetailPage() {
                   </div>
                 </div>
                 <div className="flex gap-3">
-                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-indigo-600 to-purple-600 text-white flex items-center justify-center font-semibold text-sm shadow-sm">
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-emerald-600 to-teal-600 text-white flex items-center justify-center font-semibold text-sm shadow-sm">
                     2
                   </div>
                   <div className="flex-1">
@@ -3585,7 +3692,7 @@ export default function ChatbotDetailPage() {
                     <p className="text-sm text-muted-foreground">
                       Copy the code snippet and paste it into your website's
                       HTML, just before the closing{" "}
-                      <code className="bg-indigo-100 px-1.5 py-0.5 rounded text-xs text-indigo-700">
+                      <code className="bg-emerald-100 px-1.5 py-0.5 rounded text-xs text-emerald-700">
                         &lt;/body&gt;
                       </code>{" "}
                       tag.
@@ -3593,7 +3700,7 @@ export default function ChatbotDetailPage() {
                   </div>
                 </div>
                 <div className="flex gap-3">
-                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-indigo-600 to-purple-600 text-white flex items-center justify-center font-semibold text-sm shadow-sm">
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-emerald-600 to-teal-600 text-white flex items-center justify-center font-semibold text-sm shadow-sm">
                     3
                   </div>
                   <div className="flex-1">
@@ -3719,7 +3826,7 @@ export default function ChatbotDetailPage() {
                 {/* HTML/Static Websites */}
                 <div className="border rounded-lg p-4 space-y-3">
                   <div className="flex items-center gap-2">
-                    <Globe className="h-5 w-5 text-indigo-600" />
+                    <Globe className="h-5 w-5 text-emerald-600" />
                     <h4 className="font-semibold">HTML / Static Websites</h4>
                   </div>
                   <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground ml-7">
@@ -3944,7 +4051,7 @@ export default function ChatbotDetailPage() {
                 {/* Testing Checklist */}
                 <div>
                   <h4 className="font-semibold mb-3 flex items-center gap-2">
-                    <CheckSquare className="h-4 w-4 text-purple-600" />
+                    <CheckSquare className="h-4 w-4 text-teal-600" />
                     Testing Checklist
                   </h4>
                   <div className="space-y-2 ml-6">
@@ -4034,14 +4141,14 @@ export default function ChatbotDetailPage() {
 
                 {/* Need Help */}
                 <div className="border-t pt-6">
-                  <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                  <div className="bg-teal-50 border border-teal-200 rounded-lg p-4">
                     <div className="flex gap-3">
-                      <HelpCircle className="h-5 w-5 text-purple-600 flex-shrink-0 mt-0.5" />
+                      <HelpCircle className="h-5 w-5 text-teal-600 flex-shrink-0 mt-0.5" />
                       <div className="flex-1">
-                        <h4 className="font-semibold text-sm text-purple-900 mb-1">
+                        <h4 className="font-semibold text-sm text-teal-900 mb-1">
                           Still need help?
                         </h4>
-                        <p className="text-sm text-purple-800">
+                        <p className="text-sm text-teal-800">
                           If you're experiencing issues not covered here, please
                           contact our support team or check our documentation
                           for more detailed guides and API references.
@@ -4080,7 +4187,7 @@ export default function ChatbotDetailPage() {
               <Card>
                 <CardHeader className="pb-4">
                   <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                    <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center flex-shrink-0">
                       <Settings className="h-5 w-5 text-white" />
                     </div>
                     <div>
@@ -4318,6 +4425,8 @@ export default function ChatbotDetailPage() {
           initialSuggestions={watchedAppearanceValues.initial_suggestions}
           showBranding={watchedAppearanceValues.show_branding}
           language={watchedAppearanceValues.language as "en" | "hi" | "gu"}
+          languages={(watchedLanguages || ["en"]) as ("en" | "hi" | "gu")[]}
+          welcomeMessageTranslations={appearance?.welcome_message_translations || null}
           contained={false}
           initialOpen={false}
           readOnly={false}
@@ -4338,7 +4447,7 @@ export default function ChatbotDetailPage() {
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b">
               <div className="flex items-center gap-2">
-                <FileText className="h-5 w-5 text-indigo-600" />
+                <FileText className="h-5 w-5 text-emerald-600" />
                 <h3 className="font-semibold text-lg">
                   {previewFile.filename}
                 </h3>
@@ -4392,7 +4501,7 @@ export default function ChatbotDetailPage() {
                     <a
                       href={previewFile.url}
                       download={previewFile.filename}
-                      className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 transition-colors"
                     >
                       <Download className="h-4 w-4" />
                       Download File

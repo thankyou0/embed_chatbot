@@ -1,0 +1,90 @@
+{
+  "description": "Irrelevant query test file — queries completely outside each bot's domain. Used to verify [[IRRELEVANT]] tagging is correctly applied.",
+  "query_type": "irrelevant",
+  "bots": [
+    {
+      "bot": "Tentree",
+      "bot_id": "799637f9-391b-4b9d-84cb-5fdd17cdf109",
+      "domain": "eco-friendly clothing (t-shirts, hoodies, jackets, joggers)",
+      "queries": [
+        {"lang": "en", "query": "What's the best way to invest money in the stock market?"},
+        {"lang": "en", "query": "Can you recommend a good laptop for programming?"},
+        {"lang": "en", "query": "How do I treat a migraine headache naturally?"},
+        {"lang": "hi", "query": "शेयर बाज़ार में पैसे कैसे लगाएं?"},
+        {"lang": "hi", "query": "घर पर बिरयानी कैसे बनाएं?"},
+        {"lang": "hi", "query": "क्रिकेट विश्वकप में कौन सी टीम जीतेगी?"},
+        {"lang": "gu", "query": "શેરબજારમાં કેવી રીતે રોકાણ કરવું?"},
+        {"lang": "gu", "query": "ઘર પર બિરિયાની કેવી રીતે બનાવવી?"},
+        {"lang": "gu", "query": "ક્રિકેટ વિશ્વ કપ માટે કઈ ટીમ જીતશે?"}
+      ]
+    },
+    {
+      "bot": "Deathwish Coffee (DWC)",
+      "bot_id": "99fc3604-99e7-4cd0-a2a6-509ac08d9fd0",
+      "domain": "coffee brand (coffee beans, blends, merchandise)",
+      "queries": [
+        {"lang": "en", "query": "What's the best programming language for beginners to learn?"},
+        {"lang": "en", "query": "Recommend me a good sports car under 50000 dollars"},
+        {"lang": "en", "query": "How do I lose weight effectively in 30 days?"},
+        {"lang": "hi", "query": "शुरुआती लोगों के लिए सबसे अच्छी प्रोग्रामिंग भाषा कौन सी है?"},
+        {"lang": "hi", "query": "घर पर माइग्रेन का इलाज कैसे करें?"},
+        {"lang": "hi", "query": "भारत में खरीदने के लिए सबसे अच्छी कार कौन सी है?"}
+      ]
+    },
+    {
+      "bot": "Beardbrand",
+      "bot_id": "e23fcc6f-7a02-4b09-8d49-95c00a57d852",
+      "domain": "beard grooming (beard oil, beard balm, grooming kits)",
+      "queries": [
+        {"lang": "en", "query": "Which tech stocks should I invest in right now?"},
+        {"lang": "en", "query": "Suggest a good weight loss diet plan for men"},
+        {"lang": "en", "query": "Best countries to visit for solo travel?"},
+        {"lang": "gu", "query": "કયા ટેક્નોલોજી શેરો ખરીદવા જોઈએ?"},
+        {"lang": "gu", "query": "વજન ઘટાડવા માટે શ્રેષ્ઠ ડાઇટ કઈ છે?"},
+        {"lang": "gu", "query": "એકલા પ્રવાસ માટે સૌથી સારો દેશ કયો છે?"}
+      ]
+    },
+    {
+      "bot": "Ramraj",
+      "bot_id": "182f88cd-02d8-4c94-824d-b41432847400",
+      "domain": "traditional Indian clothing (dhoti, shirts, kurta)",
+      "queries": [
+        {"lang": "hi", "query": "आर्टिफिशियल इंटेलिजेंस के क्या फायदे हैं?"},
+        {"lang": "hi", "query": "अगले चुनाव में कौन सी पार्टी जीतेगी?"},
+        {"lang": "hi", "query": "बच्चों के लिए सबसे अच्छा स्कूल बोर्ड कौन सा है?"},
+        {"lang": "gu", "query": "આર્ટિફિશિયલ ઇન્ટેલિજન્સના ફાયદા શું છે?"},
+        {"lang": "gu", "query": "આગામી ચૂંટણીમાં કઈ પાર્ટી જીતશે?"},
+        {"lang": "gu", "query": "બાળકો માટે કઈ સ્કૂલ બોર્ડ સૌથી સારી છે?"}
+      ]
+    },
+    {
+      "bot": "Kriyanta",
+      "bot_id": "1cb18dc0-4909-409d-ab03-0436524fcec4",
+      "domain": "Gifts (home decor, accessories, stationery, wall arts, watches)",
+      "queries": [
+        {"lang": "en", "query": "What's the best recipe for dal makhani?"},
+        {"lang": "en", "query": "How do I lose weight fast in one month?"},
+        {"lang": "en", "query": "Which mutual funds should I invest in for long term?"},
+        {"lang": "gu", "query": "દાળ મખનીની રેસિપી શું છે?"},
+        {"lang": "gu", "query": "ત્રીસ દિવસમાં વજન કેવી રીતે ઘટાડવું?"},
+        {"lang": "gu", "query": "સૌથી સારા મ્યુચ્યુઅલ ફંડ કયા છે?"}
+      ]
+    },
+    {
+      "bot": "Zevaramaze",
+      "bot_id": "e79b3754-006d-45d5-b21d-2391710e08ca",
+      "domain": "jewelry (bracelets, necklaces, rings, earrings, pendants)",
+      "queries": [
+        {"lang": "en", "query": "How do I start a vegetable garden at home?"},
+        {"lang": "en", "query": "What is the weather forecast for tomorrow?"},
+        {"lang": "en", "query": "Recommend some good Gujarati movies to watch"},
+        {"lang": "hi", "query": "घर पर सब्जियों का बगीचा कैसे लगाएं?"},
+        {"lang": "hi", "query": "कल का मौसम कैसा रहेगा?"},
+        {"lang": "hi", "query": "कुछ अच्छी गुजराती फिल्में बताएं"},
+        {"lang": "gu", "query": "ઘર પર શાકભાજીની ખેતી કેવી રીતે કરવી?"},
+        {"lang": "gu", "query": "આવતીકાલ નું હવામાન કેવું રહેશે?"},
+        {"lang": "gu", "query": "જોવા જેવી ગુજરાતી ફિલ્મ કઈ છે?"}
+      ]
+    }
+  ]
+}

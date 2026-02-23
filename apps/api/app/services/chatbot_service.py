@@ -81,8 +81,87 @@ import aiofiles
 from pathlib import Path
 import pandas as pd
 import hashlib
+import httpx
+from app.core.config import settings, get_groq_api_key, get_openrouter_api_key
 
 logger = get_logger(__name__)
+
+
+# ---------------------------------------------------------------------------
+#  Welcome-message translation helper
+#  Translates a welcome message to each target language using OpenRouter/Groq.
+# ---------------------------------------------------------------------------
+
+LANG_NAMES = {"hi": "Hindi", "gu": "Gujarati", "en": "English"}
+
+
+async def _translate_welcome_message(
+    text: str, target_languages: list[str]
+) -> dict[str, str]:
+    """
+    Translate *text* into each language in *target_languages* (excluding 'en').
+    Returns a dict like {"hi": "...", "gu": "..."}.
+    Errors are silently swallowed (returns empty dict on failure).
+    """
+    targets = [l for l in target_languages if l != "en"]
+    if not targets or not text:
+        return {}
+
+    translations: dict[str, str] = {}
+    for lang in targets:
+        lang_name = LANG_NAMES.get(lang, lang)
+
+        # Pick provider: OpenRouter > Groq
+        _use_openrouter = bool(settings.OPENROUTER_API_KEYS or settings.OPENROUTER_API_KEY)
+        _url = (
+            "https://openrouter.ai/api/v1/chat/completions"
+            if _use_openrouter
+            else "https://api.groq.com/openai/v1/chat/completions"
+        )
+        _key = get_openrouter_api_key() if _use_openrouter else get_groq_api_key()
+        _model = (
+            settings.OPENROUTER_TRANSLATION_MODEL
+            if _use_openrouter
+            else settings.GROQ_TRANSLATION_MODEL
+        )
+
+        try:
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                resp = await client.post(
+                    _url,
+                    headers={
+                        "Authorization": f"Bearer {_key}",
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "model": _model,
+                        "messages": [
+                            {
+                                "role": "system",
+                                "content": (
+                                    f"You are a translator. Translate the following English text to {lang_name}. "
+                                    f"Output ONLY the {lang_name} translation in native script, nothing else. "
+                                    "Keep brand names and proper nouns as-is."
+                                ),
+                            },
+                            {"role": "user", "content": text},
+                        ],
+                        "temperature": 0.0,
+                        "max_tokens": 300,
+                    },
+                )
+                if resp.status_code == 200:
+                    data = resp.json()
+                    translated = data["choices"][0]["message"]["content"].strip()
+                    if translated:
+                        translations[lang] = translated
+                        logger.info(
+                            f"Welcome msg translated to {lang_name}: '{translated[:80]}'"
+                        )
+        except Exception as e:
+            logger.warning(f"Welcome translation to {lang_name} failed: {e}")
+
+    return translations
 
 
 class ChatbotService:
@@ -1164,6 +1243,29 @@ class ChatbotService:
         if "welcome_message" in update_data:
             chatbot.welcome_message = update_data["welcome_message"]
 
+        # Re-translate welcome message when text or languages change,
+        # OR when translations are missing (e.g., first save after migration)
+        need_translate = (
+            "welcome_message" in changed_fields
+            or "languages" in changed_fields
+            or (
+                not appearance.welcome_message_translations
+                and any(l != "en" for l in (appearance.languages or ["en"]))
+            )
+        )
+        if need_translate:
+            welcome_text = appearance.welcome_message or chatbot.welcome_message
+            langs = appearance.languages or ["en"]
+            if welcome_text and any(l != "en" for l in langs):
+                translations = await _translate_welcome_message(welcome_text, langs)
+                appearance.welcome_message_translations = translations or None
+                logger.info(
+                    f"Welcome translations updated for chatbot {chatbot_id}: "
+                    f"{list((translations or {}).keys())}"
+                )
+            else:
+                appearance.welcome_message_translations = None
+
         # Update timestamp
         appearance.updated_at = datetime.now(timezone.utc)
 
@@ -1253,6 +1355,12 @@ class ChatbotService:
             custom_instructions=appearance.custom_instructions,
             # Language settings
             languages=appearance.languages if appearance.languages else ["en"],
+            # Pre-translated welcome message variants
+            welcome_message_translations=(
+                appearance.welcome_message_translations
+                if appearance.welcome_message_translations
+                else None
+            ),
         )
 
     # ============== Knowledge Base Management ==============

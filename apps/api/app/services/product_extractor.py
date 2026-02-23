@@ -333,7 +333,7 @@ class ProductDataExtractor:
             if offers.get('priceSpecification'):
                 spec = offers['priceSpecification']
                 if isinstance(spec, list):
-                    spec = spec[0]
+                    spec = spec[0] if spec else {}
                 if isinstance(spec, dict):
                     result['price'] = self._safe_float(spec.get('price')) or result['price']
                     result['currency'] = spec.get('priceCurrency') or result['currency']
@@ -551,7 +551,10 @@ class ProductDataExtractor:
                     parts = srcset.split(',')
                     # Get the highest resolution image (usually last in srcset)
                     for part in reversed(parts):
-                        url_part = part.strip().split()[0]
+                        _split = part.strip().split()
+                        if not _split:
+                            continue
+                        url_part = _split[0]
                         if url_part:
                             img_url = self._make_absolute_url(url_part)
                             if img_url and self._is_valid_product_image(img_url) and img_url not in images:

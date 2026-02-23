@@ -16,8 +16,8 @@ export function HeroSection() {
     >
       {/* Animated background gradients */}
       <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute top-1/4 -left-1/4 w-[600px] h-[600px] bg-indigo-500/20 rounded-full blur-[120px] animate-pulse" />
-        <div className="absolute bottom-1/4 -right-1/4 w-[500px] h-[500px] bg-purple-500/20 rounded-full blur-[120px] animate-pulse [animation-delay:1s]" />
+        <div className="absolute top-1/4 -left-1/4 w-[600px] h-[600px] bg-emerald-500/20 rounded-full blur-[120px] animate-pulse" />
+        <div className="absolute bottom-1/4 -right-1/4 w-[500px] h-[500px] bg-teal-500/20 rounded-full blur-[120px] animate-pulse [animation-delay:1s]" />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-cyan-500/10 rounded-full blur-[100px] animate-pulse [animation-delay:2s]" />
       </div>
 
@@ -37,7 +37,7 @@ export function HeroSection() {
           initial={{ opacity: 0, y: 20 }}
           animate={inView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6 }}
-          className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-indigo-500/30 bg-indigo-500/10 text-indigo-300 text-sm mb-8"
+          className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 text-sm mb-8"
         >
           <Sparkles className="w-4 h-4" />
           <span>AI-Powered Chatbot Platform</span>
@@ -52,7 +52,7 @@ export function HeroSection() {
         >
           <span className="text-white">Embed an AI Chatbot</span>
           <br />
-          <span className="bg-gradient-to-r from-indigo-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent">
+          <span className="bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 bg-clip-text text-transparent">
             on Any Website
           </span>
           <br />
@@ -80,7 +80,7 @@ export function HeroSection() {
         >
           <Link
             href="/signup"
-            className="group inline-flex items-center gap-2 px-8 py-4 text-base font-semibold bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl hover:from-indigo-400 hover:to-purple-500 transition-all shadow-2xl shadow-indigo-500/25 hover:shadow-indigo-500/40"
+            className="group inline-flex items-center gap-2 px-8 py-4 text-base font-semibold bg-gradient-to-r from-emerald-500 to-teal-600 rounded-xl hover:from-emerald-400 hover:to-teal-500 transition-all shadow-2xl shadow-emerald-500/25 hover:shadow-emerald-500/40"
           >
             Start for Free
             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
@@ -101,7 +101,7 @@ export function HeroSection() {
           className="relative mt-16 lg:mt-20 mx-auto max-w-5xl"
         >
           {/* Glow effect behind the mockup */}
-          <div className="absolute -inset-4 bg-gradient-to-r from-indigo-500/20 via-purple-500/20 to-cyan-500/20 rounded-3xl blur-3xl" />
+          <div className="absolute -inset-4 bg-gradient-to-r from-emerald-500/20 via-teal-500/20 to-cyan-500/20 rounded-3xl blur-3xl" />
 
           {/* Browser mockup */}
           <div className="relative rounded-2xl border border-white/10 bg-[#111118] overflow-hidden shadow-2xl">
@@ -147,9 +147,9 @@ export function HeroSection() {
                   </div>
 
                   {/* Chat popup */}
-                  <div className="w-[280px] sm:w-[320px] rounded-2xl border border-white/10 bg-[#1a1a2e] shadow-2xl shadow-indigo-500/10 overflow-hidden mb-3">
+                  <div className="w-[280px] sm:w-[320px] rounded-2xl border border-white/10 bg-[#1a1a2e] shadow-2xl shadow-emerald-500/10 overflow-hidden mb-3">
                     {/* Chat header */}
-                    <div className="px-4 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 flex items-center gap-3">
+                    <div className="px-4 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-sm">
                         🤖
                       </div>
@@ -167,7 +167,7 @@ export function HeroSection() {
                     {/* Chat messages */}
                     <div className="p-4 space-y-3">
                       <div className="flex gap-2">
-                        <div className="w-6 h-6 rounded-full bg-indigo-500/20 flex-shrink-0 flex items-center justify-center text-[10px]">
+                        <div className="w-6 h-6 rounded-full bg-emerald-500/20 flex-shrink-0 flex items-center justify-center text-[10px]">
                           🤖
                         </div>
                         <div className="px-3 py-2 rounded-xl rounded-tl-sm bg-white/5 text-sm text-white/80 max-w-[220px]">
@@ -175,12 +175,12 @@ export function HeroSection() {
                         </div>
                       </div>
                       <div className="flex justify-end">
-                        <div className="px-3 py-2 rounded-xl rounded-tr-sm bg-indigo-600 text-sm text-white max-w-[220px]">
+                        <div className="px-3 py-2 rounded-xl rounded-tr-sm bg-emerald-600 text-sm text-white max-w-[220px]">
                           What are your pricing plans?
                         </div>
                       </div>
                       <div className="flex gap-2">
-                        <div className="w-6 h-6 rounded-full bg-indigo-500/20 flex-shrink-0 flex items-center justify-center text-[10px]">
+                        <div className="w-6 h-6 rounded-full bg-emerald-500/20 flex-shrink-0 flex items-center justify-center text-[10px]">
                           🤖
                         </div>
                         <div className="px-3 py-2 rounded-xl rounded-tl-sm bg-white/5 text-sm text-white/80 max-w-[220px]">
@@ -195,7 +195,7 @@ export function HeroSection() {
                         <span className="text-sm text-white/30 flex-1">
                           Type a message...
                         </span>
-                        <div className="w-6 h-6 rounded-md bg-indigo-600 flex items-center justify-center">
+                        <div className="w-6 h-6 rounded-md bg-emerald-600 flex items-center justify-center">
                           <ArrowRight className="w-3 h-3 text-white" />
                         </div>
                       </div>
@@ -221,7 +221,7 @@ export function HeroSection() {
             { value: "<1s", label: "Response Time" },
           ].map((stat) => (
             <div key={stat.label} className="text-center">
-              <div className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
+              <div className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
                 {stat.value}
               </div>
               <div className="text-sm text-white/40 mt-1">{stat.label}</div>

@@ -47,12 +47,12 @@ export function DemoSection() {
           transition={{ duration: 0.6 }}
           className="text-center mb-16"
         >
-          <p className="text-sm font-medium text-indigo-400 tracking-wider uppercase mb-3">
+          <p className="text-sm font-medium text-emerald-400 tracking-wider uppercase mb-3">
             Live Demo
           </p>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-4">
             See It{" "}
-            <span className="bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
               in Action
             </span>
           </h2>
@@ -80,14 +80,14 @@ export function DemoSection() {
                   onClick={() => handleDemoClick(i)}
                   className={`w-full text-left p-4 rounded-xl border transition-all duration-200 ${
                     activeDemo === i
-                      ? "border-indigo-500/40 bg-indigo-500/10 text-white"
+                      ? "border-emerald-500/40 bg-emerald-500/10 text-white"
                       : "border-white/5 bg-white/[0.02] text-white/50 hover:text-white/70 hover:bg-white/[0.04]"
                   }`}
                 >
                   <div className="flex items-start gap-3">
                     <Send
                       className={`w-4 h-4 mt-0.5 flex-shrink-0 ${
-                        activeDemo === i ? "text-indigo-400" : "text-white/20"
+                        activeDemo === i ? "text-emerald-400" : "text-white/20"
                       }`}
                     />
                     <span className="text-sm leading-relaxed">
@@ -100,9 +100,9 @@ export function DemoSection() {
 
             {/* Chat window */}
             <div className="lg:col-span-3">
-              <div className="rounded-2xl border border-white/10 bg-[#111118] overflow-hidden shadow-2xl shadow-indigo-500/5">
+              <div className="rounded-2xl border border-white/10 bg-[#111118] overflow-hidden shadow-2xl shadow-emerald-500/5">
                 {/* Chat header */}
-                <div className="px-5 py-3.5 bg-gradient-to-r from-indigo-600 to-purple-600 flex items-center gap-3">
+                <div className="px-5 py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 flex items-center gap-3">
                   <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-sm">
                     🤖
                   </div>
@@ -121,7 +121,7 @@ export function DemoSection() {
                 <div className="p-5 space-y-4 min-h-[280px]">
                   {/* Bot welcome */}
                   <div className="flex gap-2.5">
-                    <div className="w-7 h-7 rounded-full bg-indigo-500/20 flex-shrink-0 flex items-center justify-center text-xs">
+                    <div className="w-7 h-7 rounded-full bg-emerald-500/20 flex-shrink-0 flex items-center justify-center text-xs">
                       🤖
                     </div>
                     <div className="px-4 py-2.5 rounded-2xl rounded-tl-sm bg-white/5 text-sm text-white/70 max-w-[80%]">
@@ -131,7 +131,7 @@ export function DemoSection() {
 
                   {/* User question */}
                   <div className="flex justify-end">
-                    <div className="px-4 py-2.5 rounded-2xl rounded-tr-sm bg-indigo-600 text-sm text-white max-w-[80%]">
+                    <div className="px-4 py-2.5 rounded-2xl rounded-tr-sm bg-emerald-600 text-sm text-white max-w-[80%]">
                       {demoConversations[activeDemo].question}
                     </div>
                   </div>
@@ -145,7 +145,7 @@ export function DemoSection() {
                     transition={{ duration: 0.4 }}
                     className="flex gap-2.5"
                   >
-                    <div className="w-7 h-7 rounded-full bg-indigo-500/20 flex-shrink-0 flex items-center justify-center text-xs">
+                    <div className="w-7 h-7 rounded-full bg-emerald-500/20 flex-shrink-0 flex items-center justify-center text-xs">
                       🤖
                     </div>
                     <div className="px-4 py-2.5 rounded-2xl rounded-tl-sm bg-white/5 text-sm text-white/70 max-w-[80%] leading-relaxed">
@@ -160,7 +160,7 @@ export function DemoSection() {
                     <span className="text-sm text-white/30 flex-1">
                       Type your question...
                     </span>
-                    <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center cursor-pointer hover:bg-indigo-500 transition">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-600 flex items-center justify-center cursor-pointer hover:bg-emerald-500 transition">
                       <ArrowRight className="w-4 h-4 text-white" />
                     </div>
                   </div>

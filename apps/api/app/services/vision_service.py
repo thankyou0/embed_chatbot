@@ -8,7 +8,7 @@ import json
 import re
 from typing import Optional, Dict, Any, List, Tuple
 from dataclasses import dataclass, field, asdict
-from app.core.config import settings
+from app.core.config import settings, get_groq_api_key
 from app.core.logging import get_logger
 
 logger = get_logger(__name__)
@@ -153,8 +153,8 @@ class VisionService:
     # Model configurations
     PROVIDERS = {
         "gemini": {
-            "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent",
-            "model": "gemini-flash-latest",
+            "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent",
+            "model": "gemini-2.0-flash-lite",
             "free_tier": True,
             "rate_limit": "1500/day"
         },
@@ -418,7 +418,7 @@ Be specific. No extra text."""
     ) -> ImageAttributes:
         """Analyze image using Groq with Llama Vision (free tier: 30 req/min)."""
         
-        api_key = getattr(settings, 'GROQ_API_KEY', None)
+        api_key = get_groq_api_key()
         if not api_key:
             raise ValueError("GROQ_API_KEY not configured")
         
@@ -769,7 +769,7 @@ Return ONLY a JSON object (no markdown, no explanation):
                 logger.warning(f"Gemini query builder failed: {e}")
         
         # Fallback to Groq
-        api_key = getattr(settings, 'GROQ_API_KEY', None)
+        api_key = get_groq_api_key()
         if api_key:
             try:
                 async with httpx.AsyncClient() as client:

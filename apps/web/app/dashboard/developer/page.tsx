@@ -212,8 +212,8 @@ export default function DeveloperLogsPage() {
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2">
-            <Wrench className="h-5 w-5 text-indigo-600" />
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">Developer Logs</span>
+            <Wrench className="h-5 w-5 text-emerald-600" />
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 to-teal-600">Developer Logs</span>
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
             Failures and warnings for knowledge sources with tenant/chatbot context.
@@ -238,10 +238,10 @@ export default function DeveloperLogsPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-        <Card className="border-l-4 border-l-indigo-500">
+        <Card className="border-l-4 border-l-emerald-500">
           <CardHeader className="pb-2">
             <CardDescription>Total Incidents</CardDescription>
-            <CardTitle className="text-2xl text-indigo-600">{summary.total}</CardTitle>
+            <CardTitle className="text-2xl text-emerald-600">{summary.total}</CardTitle>
           </CardHeader>
         </Card>
         <Card className="border-l-4 border-l-red-500">
@@ -258,10 +258,10 @@ export default function DeveloperLogsPage() {
             </CardTitle>
           </CardHeader>
         </Card>
-        <Card className="border-l-4 border-l-purple-500">
+        <Card className="border-l-4 border-l-teal-500">
           <CardHeader className="pb-2">
             <CardDescription>Impacted Chatbots</CardDescription>
-            <CardTitle className="text-2xl text-purple-600">{summary.impactedChatbots}</CardTitle>
+            <CardTitle className="text-2xl text-teal-600">{summary.impactedChatbots}</CardTitle>
           </CardHeader>
         </Card>
       </div>

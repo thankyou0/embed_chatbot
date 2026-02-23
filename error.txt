@@ -10,13 +10,13 @@ deletion of crawling site's embedding isn't actually deleting that info pls chec
 
 (function () {
   const script = document.createElement("script");
-  script.src = "https://ecom-chatbot-widget-3fhmc.ondigitalocean.app/widget.umd.js";
+  script.src = "http://localhost:3001/widget.umd.js";
   script.async = true;
 
   script.onload = function () {
     window.ChatbotWidget.init({
-      chatbotId: "071cee9c-f83c-4005-ac79-f9ed58cea228",
-      apiUrl: "https://ecom-chatbot-api-8bwdf.ondigitalocean.app"
+      chatbotId: "182f88cd-02d8-4c94-824d-b41432847400",
+      apiUrl: "http://localhost:8000"
     });
   };
 
@@ -116,3 +116,54 @@ path → chatbot_id: Input should be a valid UUID, invalid character: expected a
 
 
 rate limit configuration, language add/remove FROM ENV/DEVELOPER_ACCESS
+
+
+
+[@sentry/nextjs] DEPRECATION WARNING: It is recommended renaming your `sentry.client.config.ts` file, or moving its content to `instrumentation-client.ts`. When using Turbopack `sentry.client.config.ts` will no longer work. Read more about the `instrumentation-client.ts` file: https://nextjs.org/docs/app/api-reference/file-conventions/instrumentation-client⁠
+
+
+
+
+
+now i think i've implemented a chat service functionality at my best. now i want to test with using different e-commerce sites with crawling it and then using diff kind of msgs with diff lang and want to know how bot behaves with those questions because this is the only way we can test our product. every site has diff structure so bsaed on that we might face failture of crawling for some sites and also with that our bot might not response well for specific sites. and bot might fail to give appropriate warning for site like blocking or js heavy site or using sitemap.xml automatically or other thing.
+
+SO WHAT I WANT IS TO TEST MY CHAT SERVICE FEATURE FOR DIFF WEBSITE AND DO CRAWL BY YOURSELF FOR ATLEAST 10-15 SITES FOR AROUND 150 PAGE THEN STOP CRAWLING . THEN CRATE DIFF KIND OF QUESTIONS AND ASK IT TO BOT FOR EACH SITE AND ANALYZE THE RESULT. HERE QUERY MUST BE GENERIC LIKE HUMANS ASK WHICH SHOULD INCLUDE PRODUCT/NON-PRODUCT QUERIES, SPECIFIC PRODUCT SEARCH QUERY, SPECIFIC PRODUCT TYPE QUERY, IRRELEVENT QUERY TO CHECK WHETHER BOT ABLE TO MARK THAT ONE OR NOT, MISSING INFO KIND OF QUERIES, COMPLEX QUERY, QUERY WHICH REQUIRES SUMMARY OF THE CONVERSATION TO CHECK THAT FEATURE WORKING OR NOT, NO NEED TO DO IMAGE INPUT SEARCH QUERIES RIGHT NOW. so use your brain and knowledge and create a queries for each chatbot sites that you've crawled and also for chatbos which are already there in my account (max@gmail.com with password --> 12345678). and use different langauges for same query and above listed type of query and check it out. add your query types by yourself after analysing my chat_service code and make sure to check completely and create a beautifull analysis file of result which lists where bot performs well and where doesn't and what improvements should be done.
+also analyse the suggestions that bot gives for each query. and list if improvements needed. and for product query, clearly see are product listing happening in right way or not.
+
+make sure to complete above listed task by any mean, right now don't change the code, just test it.
+
+
+
+
+
+Option 1: Stay English-only, upgrade quality
+Model: BAAI/bge-large-en-v1.5 (your current is bge-small-en-v1.5)
+
+small	large
+Dimensions	384	1024
+MTEB Score	58.6	63.6
+Speed	Fast	~3x slower
+Cost	Low	Higher RAM/VRAM
+Keep full translation pipeline (all 3 forms → English → search)
+Pro: Biggest quality jump with zero migration risk — embeddings just need re-indexing, same pipeline
+Con: Translation quality still bottlenecks retrieval. If Call 1 mistranslates, you lose
+
+
+
+so i've some questions to ask
+so run terminal commands and there i'll write my question. make sure the terminal cmd should able to take multiline input as well as special chars without any hurdle.
+after submitting my response only you should begin processing my question. your task is to analyse my query and process it in order to find it's answer.
+remember to give not in terminal but in your chat.
+then after completion of your answer, you'll again run terminal for my next question input.
+one more thing to add is whenever i stop you from running any terminal command, then immediately run --> Read-Host "any updates?"  in terminal so that i can help you with your response.
+[ IMPORTANT ] [ ALWAYS DO ] WE WILL REPEAT THIS PROCESS UNTIL I SAY "stop it" WITH THE SAME CASE SENSITIVITY ON MY RESPONSE. LET'S START WITH THE FIRST QUESTION. HII, HOW ARE YOU?
+
+
+i've currently6 bots in account max@gmail.com with pass--> 12345678 right. now i want to do some more testing on those bots. so first of all for each 6 bots, setup diff language settings like on has access to particular langs while other has diff kind of lang support. and based on that create a test queries for 2 type. 1 is non-product based ques. while 2 is product based ques. make sure that you use pure guj/hindi when creating those query means don't use english lating chars in it. in latin guj/hindi, it's acceptable. i want to test only these 2 query types rightnow so based on that, create queries by analysing crawling data for each 6 bots. and use allowed langs only in query bec this is not lang related check. then analyze whether bot is able to give proper response or not and if not let say giving response in lang diff from asked lang or for product query giving no products, then kindly note it down and create report and suggest what kind of improvements needed. so do testing.
+
+
+I'm currently learning EJPT course and there instructor is explaining me how old service versions had bugs and how we can exploit it using already have library or meterpreter. now i understand this thing but with that this course doesn't provide info about what was the issue in those service versions and actually how these exploits happen. i think that thing is beyond the scope. i think it is extremely important because that's the actual thing to learn like what was the real issue and how to identify it right. Now i want to learn that thing. i know linux, networking and some security basic and don't want to learn theoritical only things. i want practical knowledge with proper understanding. I was to about paying for subscription of either THB or HTB. but recently anthropic added security related update/feature in there extension where it checks code and find security bugs. now because of that i thought whether learning cybersecurity and ethical hacking still to be learn on a way which i described above. because you can see what happened with software enginnering right? in next 1 or 2 year, it will completely replaced and can be created completely using ai agents. so should security related thing is also going on that way like in future there will be no security related issue exist and ai agent will automatically take care of the security and world don't need security enginners. because that happens then why should i do focus on thing which already can be solve by ai agent, then i should focus on something else right. and also findout recent researches related to security and ethical hacking like what is the future of it. give me suggestion pls.
+
+
+
+

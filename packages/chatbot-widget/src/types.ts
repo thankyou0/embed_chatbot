@@ -17,6 +17,7 @@ export interface Message {
   imagePreview?: string;
   isTyping?: boolean;
   isWaitingForContent?: boolean; // True while waiting for first content chunk (shows skeleton)
+  isWelcome?: boolean; // True for the initial welcome message (enables typewriter animation)
   timestamp: Date;
   products?: ProductInfo[]; // Product carousel data
 }
@@ -42,6 +43,9 @@ export interface ChatbotConfig {
   customInstructions?: string | null;
   // Language settings
   language?: "en" | "hi" | "gu";
+  languages?: ("en" | "hi" | "gu")[];
+  // Server-provided welcome message translations keyed by lang code
+  welcomeMessageTranslations?: Record<string, string> | null;
   theme?: {
     primaryColor?: string;
     position?: "bottom-right" | "bottom-left";

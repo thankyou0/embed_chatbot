@@ -1,0 +1,1523 @@
+[
+  {
+    "bot_id": "799637f9-391b-4b9d-84cb-5fdd17cdf109",
+    "bot_name": "Crawl-Tentree",
+    "allowed_langs": [
+      "en",
+      "hi",
+      "gu"
+    ],
+    "domain": "sustainable outdoor/eco clothing (tentree.com)",
+    "query_lang": "en",
+    "query_type": "missing_info",
+    "query": "Do you offer custom embroidery or personalisation on jackets?",
+    "response_text": "We've got some great options for customization. Check these out!",
+    "products": [
+      {
+        "name": "Men's Jackets, Coats & Outerwear",
+        "url": "https://www.tentree.com/collections/mens-jackets-coats",
+        "price": "",
+        "currency": "INR",
+        "image": null,
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Women's Jackets, Coats & Outerwear",
+        "url": "https://www.tentree.com/collections/womens-jackets-coats",
+        "price": "",
+        "currency": "INR",
+        "image": null,
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Men's Clothing",
+        "url": "https://www.tentree.com/collections/mens",
+        "price": "",
+        "currency": "INR",
+        "image": null,
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      }
+    ],
+    "suggestions": [
+      "Can I get a name embroidered on a jacket?",
+      "Do you offer custom logos for businesses?"
+    ],
+    "error": null,
+    "elapsed": 5.06,
+    "detected_lang": "en",
+    "admits_no_info": false,
+    "declines_irrelevant": null
+  },
+  {
+    "bot_id": "799637f9-391b-4b9d-84cb-5fdd17cdf109",
+    "bot_name": "Crawl-Tentree",
+    "allowed_langs": [
+      "en",
+      "hi",
+      "gu"
+    ],
+    "domain": "sustainable outdoor/eco clothing (tentree.com)",
+    "query_lang": "en",
+    "query_type": "irrelevant",
+    "query": "Can you recommend the best gaming laptop under $1000?",
+    "response_text": "I can only help with Crawl-Tentree products. What are you looking for?",
+    "products": [
+      {
+        "name": "Ungendered Mobius 35L Backpack",
+        "url": "https://www.tentree.com/products/mobius-modular-pack",
+        "price": "138",
+        "currency": "USD",
+        "image": "https://cdn.shopify.com/s/files/1/2341/3995/files/Black-35L-Multi-functional-backpack-TAU6090-0164_1.jpg?v=1770774797",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Womens Dunes Shacket",
+        "url": "https://www.tentree.com/products/dunes-shacket-birchwood-heather",
+        "price": "108",
+        "currency": "USD",
+        "image": "https://cdn.shopify.com/s/files/1/2341/3995/files/Brown-Quilted-Shacket-TCW5967-5583_5.jpg?v=1752700765",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Womens Highline Reversible Tank",
+        "url": "https://www.tentree.com/collections/womens-t-shirts-tanks/products/womens-highline-reversible-tank-elm-white-heather?utm_source=blog&utm_medium=post&utm_campaign=tentree_saye_sneaker_collaboration_022023",
+        "price": "68",
+        "currency": "USD",
+        "image": "https://cdn.shopify.com/s/files/1/2341/3995/products/White-Sustainable-Reversible-Tank-TCW4940-0453_5.jpg?v=1681496434",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Accessories tentree x Saye M'89 Sneaker",
+        "url": "https://www.tentree.com/collections/saye-sneakers/products/tentree-x-saye-m89-sneaker-off-white-deep-ochre?utm_source=blog&utm_medium=post&utm_campaign=spring_capsule_wardrobe_022023",
+        "price": "154",
+        "currency": "USD",
+        "image": "https://cdn.shopify.com/s/files/1/2341/3995/products/white_brown_vegan_sneakers_TAU5661-3131_1.jpg?v=1675454167",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Womens Twill High Waist Short",
+        "url": "https://www.tentree.com/products/womens-twill-high-waist-short?utm_source=blog&utm_medium=post&utm_campaign=spring_capsule_wardrobe_022023",
+        "price": "62.40",
+        "currency": "USD",
+        "image": "https://cdn.shopify.com/s/files/1/2341/3995/files/Green-Womens-Hise-Rise-Shorts-TCW4296-0012_2.jpg?v=1692729284",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Womens Tern Dress",
+        "url": "https://www.tentree.com/products/tern-dress-light-wash",
+        "price": "108",
+        "currency": "USD",
+        "image": "https://cdn.shopify.com/s/files/1/2341/3995/files/Blue-Organic-Cotton-Denim-Relaxed-Dress-TCW6494-6072_4.jpg?v=1771555294",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Ungendered Ripstop Packable Backpack",
+        "url": "https://www.tentree.com/products/ripstop-packable-backpack-mineral",
+        "price": "80",
+        "currency": "USD",
+        "image": "https://cdn.shopify.com/s/files/1/2341/3995/files/Green-Sustainable-Water-Repellent-Backpack-TAU5866-3430_2_d5daf143-1564-4d45-accd-92c5855f8dc6.jpg?v=1718392287",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Womens Boreal Wildlife Oversized Crew",
+        "url": "https://www.tentree.com/products/boreal-wildlife-oversized-crew-forest-pine-boreal-wolf",
+        "price": "80",
+        "currency": "USD",
+        "image": "https://cdn.shopify.com/s/files/1/2341/3995/files/Green-Oversized-Graphic-Printed-Crew-TCW6309-5853_1.jpg?v=1749230885",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      }
+    ],
+    "suggestions": [
+      "What products do you carry?",
+      "Tell me about Crawl-Tentree"
+    ],
+    "error": null,
+    "elapsed": 15.3,
+    "detected_lang": "en",
+    "admits_no_info": null,
+    "declines_irrelevant": true
+  },
+  {
+    "bot_id": "799637f9-391b-4b9d-84cb-5fdd17cdf109",
+    "bot_name": "Crawl-Tentree",
+    "allowed_langs": [
+      "en",
+      "hi",
+      "gu"
+    ],
+    "domain": "sustainable outdoor/eco clothing (tentree.com)",
+    "query_lang": "hi",
+    "query_type": "missing_info",
+    "query": "क्या टेंट्री की products पर wholesale discount मिलती है?",
+    "response_text": "Are yaar, wholesale discount ke bare mein toh maine information nahi dhoondhi! Yahan wholesale discount ke bare mein koi details available nahi hai",
+    "products": [
+      {
+        "name": "We Think You'll Like...",
+        "url": "https://www.tentree.com/products/e-gift-code?utm_source=blog&utm_medium=post&utm_campaign=digital_gifts_112022",
+        "price": "25",
+        "currency": "USD",
+        "image": "https://cdn.shopify.com/s/files/1/2341/3995/products/E-Gift-Code_PDP-Image.jpg?v=1674512590",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Mens Hemp Button Front Shortsleeve Shirt",
+        "url": "https://www.tentree.com/collections/mens-shortsleeve-shirts/products/mens-hemp-button-front-shortsleeve-shirt-deep-lichen-green?utm_source=blog&utm_medium=post&utm_campaign=spring_capsule_wardrobe_022023",
+        "price": "88",
+        "currency": "USD",
+        "image": "https://cdn.shopify.com/s/files/1/2341/3995/products/green_hemp_button_up_t-shirt_TCM4793_2401_5.jpg?v=1684188400",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Womens Brackley T-Shirt",
+        "url": "https://www.tentree.com/products/brackley-t-shirt-forest-pine-heather",
+        "price": "80",
+        "currency": "USD",
+        "image": "https://cdn.shopify.com/s/files/1/2341/3995/files/Green-TreeBlend-V-Neck-T-Shirt-TCW2456-5591_2.jpg?v=1749230371",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Womens Modal Daytrip Reversible Dress",
+        "url": "https://www.tentree.com/collections/womens-dresses-and-rompers/products/modal-daytrip-dress-baked-clay?utm_source=blog&utm_medium=post&utm_campaign=dresses_and_jumpsuits_052023",
+        "price": "98",
+        "currency": "USD",
+        "image": "https://cdn.shopify.com/s/files/1/2341/3995/products/Orange-Womens-Eco-Friendly-Reversable-Dress-TCW4814-2316_5.jpg?v=1680127232",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Mens Twill Latitude Short",
+        "url": "https://www.tentree.com/products/men-twill-latitude-short?utm_source=blog&utm_medium=post&utm_campaign=spring_capsule_wardrobe_022023",
+        "price": "88",
+        "currency": "USD",
+        "image": "https://cdn.shopify.com/s/files/1/2341/3995/products/Black-Mens-Organic-Cotton-Twill-Shorts-TCM2899-0164_3.jpg?v=1769731995",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Womens Artist Series Logo T-Shirt",
+        "url": "https://www.tentree.com/products/artist-series-logo-t-shirt-cloud-white-amber-glow-1%20?utm_source=blog&utm_medium=post&utm_campaign=luke_swinson_collection_052023",
+        "price": "45",
+        "currency": "USD",
+        "image": "https://cdn.shopify.com/s/files/1/2341/3995/products/White-Recycled-Polyester-Graphic-T-Shirt-TCW4981-2481_1.jpg?v=1679445442",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Mens InMotion Agility Short Light",
+        "url": "https://www.tentree.com/products/mens-inmotion-agility-short-light-fig?utm_campaign=tips_for_working_out_at_home_012023&utm_medium=post&utm_source=blog",
+        "price": "78",
+        "currency": "USD",
+        "image": "https://cdn.shopify.com/s/files/1/2341/3995/products/PurpleMen_sReprevePolyesterSportShorts_TCM5125-2164-50579_6.jpg?v=1657686201",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Mens SeaFleece Full Zip",
+        "url": "https://www.tentree.com/products/mens-seafleece-full-zip-dress-blue?utm_source=blog&utm_medium=post&utm_campaign=fabric_focus_seafleece_seablend_032023",
+        "price": "98",
+        "currency": "USD",
+        "image": "https://cdn.shopify.com/s/files/1/2341/3995/products/blue_basic_zip_up_TCM5034-1477_1.jpg?v=1769731897",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Womens TreeLinen Button Front Romper",
+        "url": "https://www.tentree.com/collections/womens-dresses-and-rompers/products/treelinen-button-front-romper-meteorite-black?utm_source=blog&utm_medium=post&utm_campaign=dresses_and_jumpsuits_052023",
+        "price": "108",
+        "currency": "USD",
+        "image": "https://cdn.shopify.com/s/files/1/2341/3995/products/Black-Womens-TreeLinen-Button-Front-Romper-TCW4962-0164_1.jpg?v=1679445415",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Mens Organic Cotton Relaxed T-Shirt",
+        "url": "https://www.tentree.com/products/mens-organic-cotton-relaxed-t-shirt-white?utm_campaign=tips_for_working_out_at_home_012023&utm_medium=post&utm_source=blog",
+        "price": "50",
+        "currency": "USD",
+        "image": "https://cdn.shopify.com/s/files/1/2341/3995/products/white_basic_cotton_tshirt_TCM4753_0016_1.jpg?v=1657686298",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      }
+    ],
+    "suggestions": [
+      "Wholesale ke liye kya process hai?",
+      "Bulk order par kitna discount milta hai?"
+    ],
+    "error": null,
+    "elapsed": 10.37,
+    "detected_lang": "en",
+    "admits_no_info": false,
+    "declines_irrelevant": null
+  },
+  {
+    "bot_id": "799637f9-391b-4b9d-84cb-5fdd17cdf109",
+    "bot_name": "Crawl-Tentree",
+    "allowed_langs": [
+      "en",
+      "hi",
+      "gu"
+    ],
+    "domain": "sustainable outdoor/eco clothing (tentree.com)",
+    "query_lang": "hi",
+    "query_type": "irrelevant",
+    "query": "भारत में Bitcoin में invest करने का सबसे अच्छा तरीका क्या है?",
+    "response_text": "अरे, यहाँ बहुत सारे विकल्प हैं! लेकिन मैं आपको बता दूं, मेरे पास इसके बारे में जानकारी नहीं है क्योंकि यह Crawl-Tentree के प्रोडक्ट से संबंधित नहीं है।",
+    "products": [],
+    "suggestions": [
+      "Crawl-Tentree के प्रोडक्ट्स देखो",
+      "क्या आपके पास कोई प्रोडक्ट है जो मुझे पसंद हो?"
+    ],
+    "error": null,
+    "elapsed": 4.03,
+    "detected_lang": "hi",
+    "admits_no_info": null,
+    "declines_irrelevant": true
+  },
+  {
+    "bot_id": "799637f9-391b-4b9d-84cb-5fdd17cdf109",
+    "bot_name": "Crawl-Tentree",
+    "allowed_langs": [
+      "en",
+      "hi",
+      "gu"
+    ],
+    "domain": "sustainable outdoor/eco clothing (tentree.com)",
+    "query_lang": "gu",
+    "query_type": "missing_info",
+    "query": "ટેન્ટ્રી ઑfline store ભારતમां ક્યા ક્યa city maa che?",
+    "response_text": "અરે, ટેન્ટ્રી ની ઑફલાઈન સ્ટોર્સ ભારતમાં ઘણા શહેરોમાં છે! પણ હું તમને ખરી જાણકારી આપી શકતો નથી કે કયા શહેરમાં છે",
+    "products": [],
+    "suggestions": [
+      "ટેન્ટ્રી ની ઓફિસિયલ વેબસાઈટ પર શોધો",
+      "ગૂગલ મેપ્સ પર ટેન્ટ્રી સ્ટોર્સ શોધો"
+    ],
+    "error": null,
+    "elapsed": 3.47,
+    "detected_lang": "gu",
+    "admits_no_info": false,
+    "declines_irrelevant": null
+  },
+  {
+    "bot_id": "799637f9-391b-4b9d-84cb-5fdd17cdf109",
+    "bot_name": "Crawl-Tentree",
+    "allowed_langs": [
+      "en",
+      "hi",
+      "gu"
+    ],
+    "domain": "sustainable outdoor/eco clothing (tentree.com)",
+    "query_lang": "gu",
+    "query_type": "irrelevant",
+    "query": "ફૂટboll World Cup 2026 ક્યારe shru thase?",
+    "response_text": "Are, yaar! FIFA World Cup 2026 ni information ahiya nathi — Crawl-Tentree pase su chhe.",
+    "products": [],
+    "suggestions": [
+      "FIFA World Cup 2026 ni dates shu chhe?",
+      "Ane World Cup 2026 ma ke team khelase?"
+    ],
+    "error": null,
+    "elapsed": 10.63,
+    "detected_lang": "en",
+    "admits_no_info": null,
+    "declines_irrelevant": false
+  },
+  {
+    "bot_id": "99fc3604-99e7-4cd0-a2a6-509ac08d9fd0",
+    "bot_name": "Crawl-Death Wish Coffee",
+    "allowed_langs": [
+      "en",
+      "hi"
+    ],
+    "domain": "strong/specialty coffee brand (deathwishcoffee.com)",
+    "query_lang": "en",
+    "query_type": "missing_info",
+    "query": "Do you have any decaffeinated coffee options, and what are the prices?",
+    "response_text": "We've got quite a range of coffee options, but I don't have specific information on decaffeinated coffee options and their prices",
+    "products": [
+      {
+        "name": "Blog and TikTok Feed",
+        "url": "https://www.deathwishcoffee.com/pages/blog",
+        "price": "50",
+        "currency": "USD",
+        "image": "http://www.deathwishcoffee.com/cdn/shop/files/DWC-Primary-logo_ceec8917-4619-4676-b983-7a7dc8197fad.jpg?v=1625335264",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Espresso Roast + Medium Roast Bundle",
+        "url": "https://www.deathwishcoffee.com/products/espresso-roast-medium-roast-bundle",
+        "price": "39.98",
+        "currency": "USD",
+        "image": "https://www.deathwishcoffee.com/cdn/shop/files/EspressoRoast_MediumRoast_Ground_Bundle.jpg?v=1726760774&width=1920",
+        "brand": "Death Wish Coffee Company",
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Death Wish Coffee Digital Gift Card",
+        "url": "https://www.deathwishcoffee.com/products/gift-card?variant=411724869",
+        "price": "25",
+        "currency": "USD",
+        "image": "https://www.deathwishcoffee.com/cdn/shop/products/MicrosoftTeams-image_2.jpg?v=1639423338&width=1920",
+        "brand": "Death Wish Coffee Company",
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Dark Roast + Espresso Roast Bundle",
+        "url": "https://www.deathwishcoffee.com/products/dark-roast-espresso-roast-bundle",
+        "price": "39.98",
+        "currency": "USD",
+        "image": "https://www.deathwishcoffee.com/cdn/shop/files/DarkRoast_EspressoRoast_Ground_Bundle.jpg?v=1726760284&width=1920",
+        "brand": "Death Wish Coffee Company",
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Light Roast + Espresso Roast Bundle",
+        "url": "https://www.deathwishcoffee.com/products/light-roast-espresso-roast-bundle",
+        "price": "39.98",
+        "currency": "USD",
+        "image": "https://www.deathwishcoffee.com/cdn/shop/files/LR_ER_16oz_Ground_Angle_A1_Callouts.jpg?v=1758720756&width=1920",
+        "brand": "Death Wish Coffee",
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Dark Roast + Medium Roast Bundle",
+        "url": "https://www.deathwishcoffee.com/products/dark-roast-medium-roast-bundle",
+        "price": "39.98",
+        "currency": "USD",
+        "image": "https://www.deathwishcoffee.com/cdn/shop/files/DarkRoast_MediumRoast_Ground_Bundle.jpg?v=1726760446&width=1920",
+        "brand": "Death Wish Coffee Company",
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Light Roast + Medium Roast Bundle",
+        "url": "https://www.deathwishcoffee.com/products/light-roast-medium-roast-bundle",
+        "price": "39.98",
+        "currency": "USD",
+        "image": "https://www.deathwishcoffee.com/cdn/shop/files/LR_MR_16oz_Ground_Angle_A1_Callouts.jpg?v=1758650670&width=1920",
+        "brand": "Death Wish Coffee",
+        "rating": null,
+        "review_count": null
+      }
+    ],
+    "suggestions": [
+      "What types of coffee do you offer?",
+      "Can I see your full coffee collection?"
+    ],
+    "error": null,
+    "elapsed": 11.72,
+    "detected_lang": "en",
+    "admits_no_info": true,
+    "declines_irrelevant": null
+  },
+  {
+    "bot_id": "99fc3604-99e7-4cd0-a2a6-509ac08d9fd0",
+    "bot_name": "Crawl-Death Wish Coffee",
+    "allowed_langs": [
+      "en",
+      "hi"
+    ],
+    "domain": "strong/specialty coffee brand (deathwishcoffee.com)",
+    "query_lang": "en",
+    "query_type": "irrelevant",
+    "query": "Which smartphone has the best camera in 2026?",
+    "response_text": "I can only help with Crawl-Death Wish Coffee products. What are you looking for?",
+    "products": [
+      {
+        "name": "Grinds & Glares Sunglasses",
+        "url": "https://www.deathwishcoffee.com/products/grinds-glares-sunglasses",
+        "price": "12",
+        "currency": "USD",
+        "image": "https://www.deathwishcoffee.com/cdn/shop/files/DeathWishCoffee_July2025_Product_Sunglasses_Front_Web.jpg?v=1751464014&width=1920",
+        "brand": "Planet Apparel",
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Coffee, Road Trip, Repeat Keychain",
+        "url": "https://www.deathwishcoffee.com/products/coffee-road-trip-repeat-keychain",
+        "price": "5",
+        "currency": "USD",
+        "image": "https://www.deathwishcoffee.com/cdn/shop/files/DeathWishCoffee_May2025_Keychain_GrabyourCoffee_Front_Web.jpg?v=1745860293&width=1920",
+        "brand": "Planet Apparel",
+        "rating": null,
+        "review_count": null
+      }
+    ],
+    "suggestions": [
+      "What coffee products do you have?",
+      "Tell me about Crawl-Death Wish Coffee"
+    ],
+    "error": null,
+    "elapsed": 9.87,
+    "detected_lang": "en",
+    "admits_no_info": null,
+    "declines_irrelevant": true
+  },
+  {
+    "bot_id": "99fc3604-99e7-4cd0-a2a6-509ac08d9fd0",
+    "bot_name": "Crawl-Death Wish Coffee",
+    "allowed_langs": [
+      "en",
+      "hi"
+    ],
+    "domain": "strong/specialty coffee brand (deathwishcoffee.com)",
+    "query_lang": "hi",
+    "query_type": "missing_info",
+    "query": "क्या आप अपनी coffee beans को bulk order में ship करते हैं? minimum quantity क्या है?",
+    "response_text": "Are yaar, hum bulk order mein coffee beans ship karte hain! Lekin minimum quantity ke bare mein mujhe thodi information nahi hai — Crawl-Death Wish Coffee ki bulk order policy ke liye unka website check karo.",
+    "products": [
+      {
+        "name": "Espresso Roast + Medium Roast Single-Serve Pod Bundle",
+        "url": "https://www.deathwishcoffee.com/products/espresso-roast-medium-roast-death-cup-bundle",
+        "price": "29.98",
+        "currency": "USD",
+        "image": "https://www.deathwishcoffee.com/cdn/shop/files/EspressoRoast_MediumRoast_Pod_Bundle.jpg?v=1726760838&width=1920",
+        "brand": "Death Wish Coffee Company",
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Espresso Roast + Medium Roast Bundle",
+        "url": "https://www.deathwishcoffee.com/products/espresso-roast-medium-roast-bundle",
+        "price": "39.98",
+        "currency": "USD",
+        "image": "https://www.deathwishcoffee.com/cdn/shop/files/EspressoRoast_MediumRoast_Ground_Bundle.jpg?v=1726760774&width=1920",
+        "brand": "Death Wish Coffee Company",
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Light Roast + Medium Roast Single-Serve Pod Bundle",
+        "url": "https://www.deathwishcoffee.com/products/light-roast-medium-roast-single-serve-pod-bundle",
+        "price": "29.98",
+        "currency": "USD",
+        "image": "https://www.deathwishcoffee.com/cdn/shop/files/LR_MR_10ct_Angle_A1.jpg?v=1758633693&width=1920",
+        "brand": "Death Wish Coffee",
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Medium Roast Coffee",
+        "url": "https://www.deathwishcoffee.com/products/medium-roast",
+        "price": "19.99",
+        "currency": "USD",
+        "image": "https://www.deathwishcoffee.com/cdn/shop/files/Medium_Roast_16oz_Ground_Angle_DTC_A4_2.jpg?v=1726752632&width=1920",
+        "brand": "Death Wish Coffee Company",
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Dark Roast + Medium Roast Bundle",
+        "url": "https://www.deathwishcoffee.com/products/dark-roast-medium-roast-bundle",
+        "price": "39.98",
+        "currency": "USD",
+        "image": "https://www.deathwishcoffee.com/cdn/shop/files/DarkRoast_MediumRoast_Ground_Bundle.jpg?v=1726760446&width=1920",
+        "brand": "Death Wish Coffee Company",
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Dark Roast + Medium Roast Single-Serve Pod Bundle",
+        "url": "https://www.deathwishcoffee.com/products/dark-roast-medium-roast-death-cup-bundle",
+        "price": "29.98",
+        "currency": "USD",
+        "image": "https://www.deathwishcoffee.com/cdn/shop/files/DarkRoast_MediumRoast_Pod_Bundle.jpg?v=1726760556&width=1920",
+        "brand": "Death Wish Coffee Company",
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Medium Roast Single-Serve Pods",
+        "url": "https://www.deathwishcoffee.com/products/medium-roast-death-cups",
+        "price": "14.99",
+        "currency": "USD",
+        "image": "https://www.deathwishcoffee.com/cdn/shop/files/Medium_Roast_10ct_Angle_Vertical_Pods_DTC_A4_2.jpg?v=1726755183&width=1920",
+        "brand": "Death Wish Coffee Company",
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Triple Threat Single-Serve Pod Bundle",
+        "url": "https://www.deathwishcoffee.com/products/triple-threat-death-cup-bundle",
+        "price": "43.99",
+        "currency": "USD",
+        "image": "https://www.deathwishcoffee.com/cdn/shop/files/Triple_Threat_Pod_Bundle.jpg?v=1726761497&width=1920",
+        "brand": "Death Wish Coffee Company",
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Light Roast + Medium Roast Bundle",
+        "url": "https://www.deathwishcoffee.com/products/light-roast-medium-roast-bundle",
+        "price": "39.98",
+        "currency": "USD",
+        "image": "https://www.deathwishcoffee.com/cdn/shop/files/LR_MR_16oz_Ground_Angle_A1_Callouts.jpg?v=1758650670&width=1920",
+        "brand": "Death Wish Coffee",
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Triple Threat Coffee Bundle",
+        "url": "https://www.deathwishcoffee.com/products/triple-threat-coffee-bundle",
+        "price": "54.99",
+        "currency": "USD",
+        "image": "https://www.deathwishcoffee.com/cdn/shop/files/Triple_Threat_Ground_Bundle.jpg?v=1726767066&width=1920",
+        "brand": "Death Wish Coffee Company",
+        "rating": null,
+        "review_count": null
+      }
+    ],
+    "suggestions": [
+      "Bulk order ke liye kya process hai?",
+      "Minimum quantity kitni hai?"
+    ],
+    "error": null,
+    "elapsed": 12.05,
+    "detected_lang": "en",
+    "admits_no_info": false,
+    "declines_irrelevant": null
+  },
+  {
+    "bot_id": "99fc3604-99e7-4cd0-a2a6-509ac08d9fd0",
+    "bot_name": "Crawl-Death Wish Coffee",
+    "allowed_langs": [
+      "en",
+      "hi"
+    ],
+    "domain": "strong/specialty coffee brand (deathwishcoffee.com)",
+    "query_lang": "hi",
+    "query_type": "irrelevant",
+    "query": "मुझे अपने बच्चे के लिए अच्छा स्कूल ढूंढना है, सुझाव दो।",
+    "response_text": "अरे, यहाँ तो हम स्कूल के बारे में बात नहीं कर रहे हैं! मैं आपको Crawl-Death Wish Coffee के बारे में जानकारी दे सकता हूँ। अगर आपको कॉफी या गिफ्ट आइटम्स के बारे में जानना है, तो मुझे बताएं!",
+    "products": [],
+    "suggestions": [
+      "Crawl-Death Wish Coffee की कीमत क्या है?",
+      "कॉफी के प्रकार क्या हैं?"
+    ],
+    "error": null,
+    "elapsed": 10.95,
+    "detected_lang": "hi",
+    "admits_no_info": null,
+    "declines_irrelevant": false
+  },
+  {
+    "bot_id": "e23fcc6f-7a02-4b09-8d49-95c00a57d852",
+    "bot_name": "Crawl-Beardbrand",
+    "allowed_langs": [
+      "en",
+      "gu"
+    ],
+    "domain": "beard grooming & men's care (beardbrand.com)",
+    "query_lang": "en",
+    "query_type": "missing_info",
+    "query": "Do you have a loyalty or rewards programme for repeat customers?",
+    "response_text": "Oh nice! We don't have any info on a loyalty or rewards program for repeat customers in our current context, so I don't have that information",
+    "products": [],
+    "suggestions": [
+      "What are your best-selling items?",
+      "Do you offer any discounts for bulk orders?"
+    ],
+    "error": null,
+    "elapsed": 11.24,
+    "detected_lang": "en",
+    "admits_no_info": true,
+    "declines_irrelevant": null
+  },
+  {
+    "bot_id": "e23fcc6f-7a02-4b09-8d49-95c00a57d852",
+    "bot_name": "Crawl-Beardbrand",
+    "allowed_langs": [
+      "en",
+      "gu"
+    ],
+    "domain": "beard grooming & men's care (beardbrand.com)",
+    "query_lang": "en",
+    "query_type": "irrelevant",
+    "query": "What are the best stocks to invest in right now?",
+    "response_text": "I can only help with Crawl-Beardbrand products. What are you looking for?",
+    "products": [],
+    "suggestions": [
+      "What products do you carry?",
+      "Tell me about Crawl-Beardbrand"
+    ],
+    "error": null,
+    "elapsed": 11.8,
+    "detected_lang": "en",
+    "admits_no_info": null,
+    "declines_irrelevant": true
+  },
+  {
+    "bot_id": "e23fcc6f-7a02-4b09-8d49-95c00a57d852",
+    "bot_name": "Crawl-Beardbrand",
+    "allowed_langs": [
+      "en",
+      "gu"
+    ],
+    "domain": "beard grooming & men's care (beardbrand.com)",
+    "query_lang": "gu",
+    "query_type": "missing_info",
+    "query": "શું beardbrand ની products India maa deliver thay che?",
+    "response_text": "Are, Crawl-Beardbrand ni products India ma deliver thase che!",
+    "products": [
+      {
+        "name": "Shipping, Returns & Guarantees",
+        "url": "https://www.beardbrand.com/pages/shipping-returns-guarantees",
+        "price": "75",
+        "currency": "USD",
+        "image": "https://www.beardbrand.com/cdn/shop/t/886/assets/default-social-v2.png?v=83798026868201643701770919240",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Book of Reminders",
+        "url": "https://www.beardbrand.com/products/book-of-reminders",
+        "price": "10",
+        "currency": "USD",
+        "image": "https://www.beardbrand.com/cdn/shop/files/bor_72d99eff-d498-4347-9d04-939869b83997_1024x.jpg?v=1762457617",
+        "brand": "Beardbrand",
+        "rating": 4.95,
+        "review_count": 19
+      },
+      {
+        "name": "Retailers",
+        "url": "https://www.beardbrand.com/pages/our-retailers",
+        "price": "75",
+        "currency": "USD",
+        "image": null,
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Returns & Exchanges",
+        "url": "https://www.beardbrand.com/pages/returns-exchanges",
+        "price": "75",
+        "currency": "USD",
+        "image": null,
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Tweezers",
+        "url": "https://www.beardbrand.com/products/tweezers",
+        "price": "15",
+        "currency": "USD",
+        "image": "https://www.beardbrand.com/cdn/shop/files/tz_db8ebb26-5319-4e52-8d47-0b0e09fd66d0_1024x.jpg?v=1762457983",
+        "brand": "Beardbrand",
+        "rating": 4.73,
+        "review_count": 33
+      },
+      {
+        "name": "Beardbrand Cookie Policy",
+        "url": "https://www.beardbrand.com/pages/beardbrand-cookie-policy",
+        "price": "75",
+        "currency": "USD",
+        "image": null,
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Terms of Service, Privacy Policy & Trademarks",
+        "url": "https://www.beardbrand.com/pages/legal",
+        "price": "75",
+        "currency": "USD",
+        "image": null,
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Shop Beardbrand Products",
+        "url": "https://www.beardbrand.com/collections",
+        "price": "75",
+        "currency": "USD",
+        "image": "https://www.beardbrand.com/cdn/shop/files/EDP_4-pack_640x.jpg?v=1764696274",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Utility Beard Trimmer",
+        "url": "https://www.beardbrand.com/products/utility-beard-trimmer",
+        "price": "124.95",
+        "currency": "USD",
+        "image": "https://www.beardbrand.com/cdn/shop/files/ut_d4738bfb-0410-40d3-9bf1-6775c2c303ee_1024x.jpg?v=1762459278",
+        "brand": "Beardbrand",
+        "rating": 4.84,
+        "review_count": 31
+      },
+      {
+        "name": "Beard Trimming Scissors",
+        "url": "https://www.beardbrand.com/products/trimming-scissors",
+        "price": "49",
+        "currency": "USD",
+        "image": "https://www.beardbrand.com/cdn/shop/files/ts_19cd3eea-fc92-453f-bfd2-09926f90407b_1024x.jpg?v=1762457609",
+        "brand": "Beardbrand",
+        "rating": 4.81,
+        "review_count": 414
+      }
+    ],
+    "suggestions": [
+      "India ma delivery charge shu chhe?",
+      "International shipping available chhe?"
+    ],
+    "error": null,
+    "elapsed": 10.93,
+    "detected_lang": "en",
+    "admits_no_info": false,
+    "declines_irrelevant": null
+  },
+  {
+    "bot_id": "e23fcc6f-7a02-4b09-8d49-95c00a57d852",
+    "bot_name": "Crawl-Beardbrand",
+    "allowed_langs": [
+      "en",
+      "gu"
+    ],
+    "domain": "beard grooming & men's care (beardbrand.com)",
+    "query_lang": "gu",
+    "query_type": "irrelevant",
+    "query": "ક્રિકેટ World Cup 2026 ક્યા દેshma রাখবে?",
+    "response_text": "અરે, આ વાત તો ક્રિકેટ વિશ્વની છે! પણ મારી પાસે તેની માહિતી નથી — Crawl-Beardbrand ને લગતી માહિતી જ મળશે.",
+    "products": [],
+    "suggestions": [
+      "Crawl-Beardbrand ની નવી પ્રોડક્ટ શું છે?",
+      "તમારી પાસે કેટલી બેસ્ટ સેલર છે?"
+    ],
+    "error": null,
+    "elapsed": 3.47,
+    "detected_lang": "gu",
+    "admits_no_info": null,
+    "declines_irrelevant": false
+  },
+  {
+    "bot_id": "182f88cd-02d8-4c94-824d-b41432847400",
+    "bot_name": "ramraj",
+    "allowed_langs": [
+      "hi",
+      "gu"
+    ],
+    "domain": "Indian cotton traditional wear (ramraj.in)",
+    "query_lang": "hi",
+    "query_type": "missing_info",
+    "query": "क्या रामराज की wedding collection पर custom tailoring का option है?",
+    "response_text": "Are yaar, ramraj ki wedding collection mein custom tailoring ka option hai, lekin yahan details nahi hain",
+    "products": [
+      {
+        "name": "Men Art Silk Wedding Set Dhoti Shirting & Towel Set Gold Brahmotsavam B13(3*1)",
+        "url": "https://ramrajcotton.in/collections/all/products/men-art-silk-wedding-set-dhoti-shirting-towel-set-gold-brahmotsavam-b133-1",
+        "price": "5265",
+        "currency": "INR",
+        "image": "https://ramrajcotton.in/cdn/shop/files/01_4a4739c2-51ca-4936-85be-a657fe63d1da.jpg?v=1738149067&width=1024",
+        "brand": "Ramraj",
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Men Art Silk Dhoti & Shirting Set Gazal Subakalyan (2 in 1) SK05",
+        "url": "https://ramrajcotton.in/collections/all/products/men-art-silk-dhoti-shirting-set-gazal-subakalyan-2-in-1-sk05",
+        "price": "2995",
+        "currency": "INR",
+        "image": "https://ramrajcotton.in/cdn/shop/files/1_14a4a31f-0465-4919-8476-1eef4e6c93d6.jpg?v=1765883437&width=1024",
+        "brand": "Ramraj",
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Men Art Silk Wedding Shirting Dhoti & Towel Set Coral Touch Tone TT22",
+        "url": "https://ramrajcotton.in/collections/all/products/men-art-silk-wedding-shirting-dhoti-towel-set-coral-touch-tone-tt22",
+        "price": "4575",
+        "currency": "INR",
+        "image": "https://ramrajcotton.in/cdn/shop/files/3_47f0fd74-8ba9-42fb-aa07-bafb7b45cf77.jpg?v=1752921705&width=1024",
+        "brand": "Ramraj",
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Men Art Silk Dhoti & Shirting Set Peach Subakalyan (2 in 1) SK07",
+        "url": "https://ramrajcotton.in/collections/all/products/men-art-silk-dhoti-shirting-set-peach-subakalyan-2-in-1-sk07",
+        "price": "2995",
+        "currency": "INR",
+        "image": "https://ramrajcotton.in/cdn/shop/files/2_63f11da5-ddc9-44d3-b9b2-376a34ffdb69.jpg?v=1765883499&width=1024",
+        "brand": "Ramraj",
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Men Art Silk Dhoti & Shirting Set M.Green Subakalyan (2 in 1) SK03",
+        "url": "https://ramrajcotton.in/collections/all/products/men-art-silk-dhoti-shirting-set-m-green-subakalyan-2-in-1-sk03",
+        "price": "2995",
+        "currency": "INR",
+        "image": "https://ramrajcotton.in/cdn/shop/files/1_053da9cc-ffef-42b2-bc57-bf853617da01.jpg?v=1765883499&width=1024",
+        "brand": "Ramraj",
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Men Art Silk Wedding Shirting Dhoti & Towel Set F.Rose Touch Tone TT26",
+        "url": "https://ramrajcotton.in/collections/all/products/men-art-silk-wedding-shirting-dhoti-towel-set-f-rose-touch-tone-tt26",
+        "price": "4575",
+        "currency": "INR",
+        "image": "https://ramrajcotton.in/cdn/shop/files/3_f11e8792-c6cd-404c-bd69-77f4085fc9c5.jpg?v=1752921996&width=1024",
+        "brand": "Ramraj",
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Men Art Silk Dhoti & Shirting Set R.Green Subakalyan (2 in 1) SK02",
+        "url": "https://ramrajcotton.in/collections/all/products/men-art-silk-dhoti-shirting-set-r-green-subakalyan-2-in-1-sk02",
+        "price": "2995",
+        "currency": "INR",
+        "image": "https://ramrajcotton.in/cdn/shop/files/1_32293930-b3c6-4611-9a3f-27cd992244d3.jpg?v=1765883357&width=1024",
+        "brand": "Ramraj",
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Men Art Silk Dhoti & Shirting Set Coral Subakalyan (2 in 1) SK01",
+        "url": "https://ramrajcotton.in/collections/all/products/men-art-silk-dhoti-shirting-set-coral-subakalyan-2-in-1-sk01",
+        "price": "2995",
+        "currency": "INR",
+        "image": "https://ramrajcotton.in/cdn/shop/files/4_412907f4-2d94-40f1-b4d2-9e6b0ebc9132.jpg?v=1765883338&width=1024",
+        "brand": "Ramraj",
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Men Readymade Adjustable Dhoti with Matching Shirt Half Yellow C3",
+        "url": "https://ramrajcotton.in/collections/adjustable-dhoti-shirt-set/products/men-readymade-adjustable-dhoti-with-matching-shirt-half-yellow-c3",
+        "price": "1400",
+        "currency": "INR",
+        "image": "https://ramrajcotton.in/cdn/shop/files/1_ef421c25-7ba1-4fb7-9ce2-4084d2649921.jpg?v=1738921790&width=1024",
+        "brand": "Ramraj",
+        "rating": 5.0,
+        "review_count": 1
+      },
+      {
+        "name": "Men Art Silk Dhoti & Shirting Set Champ Subakalyan (2 in 1) SK08",
+        "url": "https://ramrajcotton.in/collections/all/products/men-art-silk-dhoti-shirting-set-champ-subakalyan-2-in-1-sk08",
+        "price": "2995",
+        "currency": "INR",
+        "image": "https://ramrajcotton.in/cdn/shop/files/2_2aa11a11-755d-4806-9aa1-ec4f8c3b47c5.jpg?v=1765883492&width=1024",
+        "brand": "Ramraj",
+        "rating": null,
+        "review_count": null
+      }
+    ],
+    "suggestions": [
+      "Custom tailoring ke liye kitna time lagta hai?",
+      "Kya custom tailoring ke liye extra charge hota hai?"
+    ],
+    "error": null,
+    "elapsed": 11.77,
+    "detected_lang": "en",
+    "admits_no_info": false,
+    "declines_irrelevant": null
+  },
+  {
+    "bot_id": "182f88cd-02d8-4c94-824d-b41432847400",
+    "bot_name": "ramraj",
+    "allowed_langs": [
+      "hi",
+      "gu"
+    ],
+    "domain": "Indian cotton traditional wear (ramraj.in)",
+    "query_lang": "hi",
+    "query_type": "irrelevant",
+    "query": "मुझे Python programming सीखनी है, कहाँ से शुरू करूँ?",
+    "response_text": "ओह, पाइथन प्रोग्रामिंग सीखने का फैसला बहुत अच्छा है! लेकिन मैं ramraj का एक शॉपिंग असिस्टेंट हूँ, प्रोग्रामिंग के बारे में जानकारी मेरे पास नहीं है।",
+    "products": [],
+    "suggestions": [
+      "आपके पास क्या products हैं?",
+      "ramraj की खासियत क्या है?"
+    ],
+    "error": null,
+    "elapsed": 11.76,
+    "detected_lang": "hi",
+    "admits_no_info": null,
+    "declines_irrelevant": false
+  },
+  {
+    "bot_id": "182f88cd-02d8-4c94-824d-b41432847400",
+    "bot_name": "ramraj",
+    "allowed_langs": [
+      "hi",
+      "gu"
+    ],
+    "domain": "Indian cotton traditional wear (ramraj.in)",
+    "query_lang": "gu",
+    "query_type": "missing_info",
+    "query": "રામRaj Cotton ની products international delivery thay che?",
+    "response_text": "Ahiya, ramraj cotton ni products international delivery thay che, lekin ahiya details nathi — ramraj ne directly contact karo.",
+    "products": [
+      {
+        "name": "Men 100% Premium Cotton Printed Navy Shirting & Brown Suiting Gift Box LC14",
+        "url": "https://ramrajcotton.in/collections/all/products/men-100-premium-cotton-printed-white-shirting-black-suiting-gift-box-lc14",
+        "price": "2145",
+        "currency": "INR",
+        "image": "https://ramrajcotton.in/cdn/shop/files/PRINT-05B.jpg?v=1766055933&width=1024",
+        "brand": "Ramraj",
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Men 100% Combed Cotton Assorted Colour Inner Elastic Brief (Pack of 2)",
+        "url": "https://ramrajcotton.in/collections/all/products/men-100-combed-cotton-assorted-colour-inner-elastic-brief-suriya-pack-of-2",
+        "price": "210",
+        "currency": "INR",
+        "image": "https://ramrajcotton.in/cdn/shop/products/4_dfff753b-6b0e-4fc2-a291-8b82185bb73e.jpg?v=1751882317&width=1024",
+        "brand": "Ramraj",
+        "rating": 4.93,
+        "review_count": 28
+      },
+      {
+        "name": "Men Cotton Blend Assorted Border Dhoti Combo (Pack of 3)",
+        "url": "https://ramrajcotton.in/collections/all/products/men-cotton-blend-assorted-border-dhoti-combo-pack-of-3",
+        "price": "600",
+        "currency": "INR",
+        "image": "https://ramrajcotton.in/cdn/shop/files/01_b11eefdc-29ef-4a4c-8921-7f905e4b83a2_4.jpg?v=1738411097&width=1024",
+        "brand": "Ramraj",
+        "rating": 4.81,
+        "review_count": 32
+      },
+      {
+        "name": "Men 100% Cotton White Shirt Global",
+        "url": "https://ramrajcotton.in/collections/all/products/men-100-cotton-white-shirt-global",
+        "price": "775",
+        "currency": "INR",
+        "image": "https://ramrajcotton.in/cdn/shop/files/1_dba9eabc-838c-4e7c-862f-25b38bdac19e.jpg?v=1717843357&width=1024",
+        "brand": "Ramraj",
+        "rating": 4.89,
+        "review_count": 389
+      },
+      {
+        "name": "Men 100% Cotton Green Shirt and Fancy Border Dhoti Set BT3",
+        "url": "https://ramrajcotton.in/collections/all/products/men-100-cotton-green-shirt-and-fancy-border-dhoti-set-bt3",
+        "price": "1305",
+        "currency": "INR",
+        "image": "https://ramrajcotton.in/cdn/shop/files/175A6390_fd23de57-be88-4eb5-8ef4-d267d0ab53af.jpg?v=1758256227&width=1024",
+        "brand": "Ramraj",
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Men 100% Cotton Orange Shirt and Fancy Border Dhoti Set BT4",
+        "url": "https://ramrajcotton.in/collections/all/products/men-100-cotton-orange-shirt-and-fancy-border-dhoti-set-bt4",
+        "price": "1305",
+        "currency": "INR",
+        "image": "https://ramrajcotton.in/cdn/shop/files/175A8852.jpg?v=1758523512&width=1024",
+        "brand": "Ramraj",
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Men 100% Cotton Jungle Green Shirt and Fancy Border Dhoti Set BT11",
+        "url": "https://ramrajcotton.in/collections/all/products/men-100-cotton-jungle-green-shirt-and-fancy-border-dhoti-set-bt11",
+        "price": "1305",
+        "currency": "INR",
+        "image": "https://ramrajcotton.in/cdn/shop/files/CopyofFullSleeveFront_07708c4d-9f18-40c8-8a81-283451585643.jpg?v=1758255369&width=1024",
+        "brand": "Ramraj",
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Mens Cotton Dhoti and Shirt Fabric White Leader Ship",
+        "url": "https://ramrajcotton.in/collections/all/products/mens-cotton-white-shirt-bit-with-dhoti-combo-leader-ship",
+        "price": "750",
+        "currency": "INR",
+        "image": "https://ramrajcotton.in/cdn/shop/files/01_a95b6686-f786-4388-9757-b35c4039a185.jpg?v=1727675897&width=1024",
+        "brand": "Ramraj",
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Men 100% Cotton Brown Shirt and Fancy Border Dhoti Set BT1",
+        "url": "https://ramrajcotton.in/collections/all/products/men-100-cotton-brown-shirt-and-fancy-border-dhoti-set-bt1",
+        "price": "1305",
+        "currency": "INR",
+        "image": "https://ramrajcotton.in/cdn/shop/files/CopyofFullSleeveFront_762f3b4d-352b-432c-a8c7-c90b275f3d75.jpg?v=1758256228&width=1024",
+        "brand": "Ramraj",
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Venmai Magazine",
+        "url": "https://ramrajcotton.in/collections/all/products/venmai-magazine",
+        "price": "100",
+        "currency": "INR",
+        "image": "https://ramrajcotton.in/cdn/shop/files/Venmai-Jan-2021-Web.pdf-Wrapper_compressed_page-0001-1-225x300.jpg?v=1732062089&width=1024",
+        "brand": " Ramraj Cotton",
+        "rating": null,
+        "review_count": null
+      }
+    ],
+    "suggestions": [
+      "International shipping charges kayi chhe?",
+      "Aa product export thay che?"
+    ],
+    "error": null,
+    "elapsed": 12.77,
+    "detected_lang": "en",
+    "admits_no_info": true,
+    "declines_irrelevant": null
+  },
+  {
+    "bot_id": "182f88cd-02d8-4c94-824d-b41432847400",
+    "bot_name": "ramraj",
+    "allowed_langs": [
+      "hi",
+      "gu"
+    ],
+    "domain": "Indian cotton traditional wear (ramraj.in)",
+    "query_lang": "gu",
+    "query_type": "irrelevant",
+    "query": "adsense se paisa kamava na tips apo.",
+    "response_text": "Oh nice! Adsense se paisa kamane ke liye aapko traffic badhana hoga aur relevant ads lagane honge.",
+    "products": [
+      {
+        "name": "All products",
+        "url": "https://ramrajcotton.in/collections/all?page=21",
+        "price": "4312",
+        "currency": "INR",
+        "image": null,
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      }
+    ],
+    "suggestions": [
+      "Adsense ke liye website kaise banaye?",
+      "Traffic badhane ke liye kya kare?"
+    ],
+    "error": null,
+    "elapsed": 10.85,
+    "detected_lang": "en",
+    "admits_no_info": null,
+    "declines_irrelevant": false
+  },
+  {
+    "bot_id": "1cb18dc0-4909-409d-ab03-0436524fcec4",
+    "bot_name": "kriyanta",
+    "allowed_langs": [
+      "hi"
+    ],
+    "domain": "handmade home décor & gifting (kriyanta.com)",
+    "query_lang": "hi",
+    "query_type": "missing_info",
+    "query": "क्या आपके पास corporate bulk gifting के लिए special discount है और minimum order quantity क्या है?",
+    "response_text": "Are yaar, corporate bulk gifting ke liye special discount aur minimum order quantity ke baare mein mujhe information nahi hai",
+    "products": [
+      {
+        "name": "Personalized Gifting",
+        "url": "https://www.kriyanta.com/category-view/personalised",
+        "price": "999",
+        "currency": "INR",
+        "image": "https://afd-endpoint-imgproc-fpa9f6hueadafzav.z03.azurefd.net/api/img?src=L2Ntcy9hcGkvbWVkaWEvZmlsZS9DaXJjbGUlMjBsb2dvLnBuZw%3D%3D&w=1200&h=630&q=90&fmt=jpeg&fit=cover",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Gifting",
+        "url": "https://www.kriyanta.com/category-view/gifting",
+        "price": "999",
+        "currency": "INR",
+        "image": "https://afd-endpoint-imgproc-fpa9f6hueadafzav.z03.azurefd.net/api/img?src=L2Ntcy9hcGkvbWVkaWEvZmlsZS9Db3B5JTIwb2YlMjB0ZWVwaXp6YXp6LTEucG5n&w=1200&q=85&fmt=webp",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Customized Items",
+        "url": "https://www.kriyanta.com/category-view/customized",
+        "price": "999",
+        "currency": "INR",
+        "image": "https://afd-endpoint-imgproc-fpa9f6hueadafzav.z03.azurefd.net/api/img?src=L2Ntcy9hcGkvbWVkaWEvZmlsZS9Db3B5JTIwb2YlMjB0ZWVwaXp6YXp6LTEucG5n&w=1080&q=85&fmt=webp",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Home Decor",
+        "url": "https://www.kriyanta.com/category-view/decor",
+        "price": "999",
+        "currency": "INR",
+        "image": null,
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Kitchen & Dining Warmth Collection",
+        "url": "https://www.kriyanta.com/collection-view/kitchen",
+        "price": "392",
+        "currency": "INR",
+        "image": null,
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Bedroom Bliss Collection",
+        "url": "https://www.kriyanta.com/collection-view/bedroom",
+        "price": "3999",
+        "currency": "INR",
+        "image": null,
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Living Room Luxe Collection",
+        "url": "https://www.kriyanta.com/collection-view/living",
+        "price": "3397",
+        "currency": "INR",
+        "image": null,
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Wall Art & Decor",
+        "url": "https://www.kriyanta.com/category-view/wall-art",
+        "price": "2599",
+        "currency": "INR",
+        "image": null,
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Study Room Focus Collection",
+        "url": "https://www.kriyanta.com/collection-view/study",
+        "price": "3397",
+        "currency": "INR",
+        "image": null,
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      }
+    ],
+    "suggestions": [
+      "Corporate gifting ke liye kya options hain?",
+      "Bulk order pe kitna discount milta hai?"
+    ],
+    "error": null,
+    "elapsed": 10.8,
+    "detected_lang": "en",
+    "admits_no_info": false,
+    "declines_irrelevant": null
+  },
+  {
+    "bot_id": "1cb18dc0-4909-409d-ab03-0436524fcec4",
+    "bot_name": "kriyanta",
+    "allowed_langs": [
+      "hi"
+    ],
+    "domain": "handmade home décor & gifting (kriyanta.com)",
+    "query_lang": "hi",
+    "query_type": "irrelevant",
+    "query": "मुझे अच्छा DSLR camera चाहिए under ₹30000, कौनसा लूं?",
+    "response_text": "यहाँ कुछ बढ़िया ऑप्शन हैं! हमारे पास ₹30000 के अंदर कई अच्छे DSLR कैमरे हैं, जिनमें से आप अपनी जरूरत के हिसाब से चुन सकते हैं।",
+    "products": [
+      {
+        "name": "Artistic Portrait Phone Case",
+        "url": "https://www.kriyanta.com/product-detail/artistic-portrait-phone-case",
+        "price": "999",
+        "currency": "INR",
+        "image": "https://afd-endpoint-imgproc-fpa9f6hueadafzav.z03.azurefd.net/api/img?src=aHR0cHM6Ly9hbGlwcG8tbWVkaWEtY2RuLmF6dXJlZWRnZS5uZXQvZGV2LWNhdGFsb2cvV2hhdHNBcHAlMjBJbWFnZSUyMDIwMjUtMTItMDglMjBhdCUyMDMuMDAuNDUlMjBQTSUyMCgzKS5qcGVn&w=1200&h=630&q=90&fmt=jpeg&fit=cover",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Study Room Focus Collection",
+        "url": "https://www.kriyanta.com/collection-view/study",
+        "price": "3397",
+        "currency": "INR",
+        "image": "https://afd-endpoint-imgproc-fpa9f6hueadafzav.z03.azurefd.net/api/img?src=L2Ntcy9hcGkvbWVkaWEvZmlsZS9DaXJjbGUlMjBsb2dvLnBuZw%3D%3D&w=1200&h=630&q=90&fmt=jpeg&fit=cover",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Panoramic Peaks",
+        "url": "https://www.kriyanta.com/product-detail/panoramic-peaks-1",
+        "price": "7299",
+        "currency": "INR",
+        "image": "https://afd-endpoint-imgproc-fpa9f6hueadafzav.z03.azurefd.net/api/img?src=aHR0cHM6Ly9jZG4uc2hvcGlmeS5jb20vcy9maWxlcy8xLzA2ODUvNDQ2OS8yNDY4L2ZpbGVzL2Zyb250Y29udGV4dF80NDAwNDgxNi0zYzBiLTQ3NDctODgwMS01YjlhMGJlZGE2MTcuanBnP3Y9MTcwODU4MTE2MQ%3D%3D&w=1200&h=630&q=90&fmt=jpeg&fit=cover",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Home Decor",
+        "url": "https://www.kriyanta.com/category-view/decor",
+        "price": "999",
+        "currency": "INR",
+        "image": "https://afd-endpoint-imgproc-fpa9f6hueadafzav.z03.azurefd.net/api/img?src=L2Ntcy9hcGkvbWVkaWEvZmlsZS9Db3B5JTIwb2YlMjB0ZWVwaXp6YXp6LTEucG5n&w=1200&q=85&fmt=webp",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Customized Items",
+        "url": "https://www.kriyanta.com/category-view/customized",
+        "price": "999",
+        "currency": "INR",
+        "image": "https://afd-endpoint-imgproc-fpa9f6hueadafzav.z03.azurefd.net/api/img?src=L2Ntcy9hcGkvbWVkaWEvZmlsZS9Db3B5JTIwb2YlMjB0ZWVwaXp6YXp6LTEucG5n&w=1080&q=85&fmt=webp",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Gifting",
+        "url": "https://www.kriyanta.com/category-view/gifting",
+        "price": "999",
+        "currency": "INR",
+        "image": null,
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Handmade Custom Canvas Portrait",
+        "url": "https://www.kriyanta.com/product-detail/canvas-portrait",
+        "price": "999",
+        "currency": "INR",
+        "image": "https://afd-endpoint-imgproc-fpa9f6hueadafzav.z03.azurefd.net/api/img?src=aHR0cHM6Ly9kZXZzYWFpY29mb3VuZGVyLmJsb2IuY29yZS53aW5kb3dzLm5ldC9kZXYtY2F0YWxvZy8xICgxKS0wMUtDUkc5OTBKUTZGMFhNSFpHSDMzREJSMi5wbmc%3D&w=1200&h=630&q=90&fmt=jpeg&fit=cover",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Kitchen & Dining Warmth Collection",
+        "url": "https://www.kriyanta.com/collection-view/kitchen",
+        "price": "392",
+        "currency": "INR",
+        "image": null,
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Personalized Gifting",
+        "url": "https://www.kriyanta.com/category-view/personalised",
+        "price": "999",
+        "currency": "INR",
+        "image": null,
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Modern Jungle",
+        "url": "https://www.kriyanta.com/product-detail/modern-jungle",
+        "price": "4399",
+        "currency": "INR",
+        "image": "https://afd-endpoint-imgproc-fpa9f6hueadafzav.z03.azurefd.net/api/img?src=aHR0cHM6Ly9jZG4uc2hvcGlmeS5jb20vcy9maWxlcy8xLzA2ODUvNDQ2OS8yNDY4L2ZpbGVzL2Zyb250Y29udGV4dF83NGYwZmRlMy0yMzQzLTQ3NTktOWM4My02OGY4ZWNlOTVmN2IuanBnP3Y9MTcwODUyNTE4NQ%3D%3D&w=1200&h=630&q=90&fmt=jpeg&fit=cover",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      }
+    ],
+    "suggestions": [
+      "इनमें से सबसे अच्छा कौनसा है?",
+      "क्या इनमें से कोई वीडियो रिकॉर्डिंग के लिए अच्छा है?"
+    ],
+    "error": null,
+    "elapsed": 11.06,
+    "detected_lang": "hi",
+    "admits_no_info": null,
+    "declines_irrelevant": false
+  },
+  {
+    "bot_id": "e79b3754-006d-45d5-b21d-2391710e08ca",
+    "bot_name": "zevaramaze",
+    "allowed_langs": [
+      "gu"
+    ],
+    "domain": "handmade silver jewellery (zevaramaze.com)",
+    "query_lang": "gu",
+    "query_type": "missing_info",
+    "query": "ઝેવારામઝ ઘреणа international courier service thi mangavi shay che? custom design banana mam koi charge lagse?",
+    "response_text": "Are, ahiya international courier service thi mangavu shay che, pan ahiya custom design banana ni details nathi. Custom design charge ahiya nathi, direct zevaramaze contact karo.",
+    "products": [
+      {
+        "name": "Travel Jewelry Box with Mirror - Zevar Amaze",
+        "url": "https://zevaramaze.com/collections/all/products/travel-jewelry-box-with-mirror",
+        "price": "249",
+        "currency": "INR",
+        "image": "https://zevaramaze.com/cdn/shop/files/1_64711ac8-cef5-403b-8fa5-b0b38c91cd02.jpg?v=1743929091",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Gift Wrap - Zevar Amaze",
+        "url": "https://zevaramaze.com/collections/all/products/gift-wrap",
+        "price": "49",
+        "currency": "INR",
+        "image": "https://zevaramaze.com/cdn/shop/files/646340906321eb26b1562678_GreenBoxandRedRibbonMockup.webp?v=1742045055",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Proposal LED Light Ring Box - Zevar Amaze",
+        "url": "https://zevaramaze.com/collections/all/products/proposal-ring-box",
+        "price": "249",
+        "currency": "INR",
+        "image": "https://zevaramaze.com/cdn/shop/files/1_ab1c95b5-a534-4dfd-b59f-b60f42c66e22.jpg?v=1742046589",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Gretel Pendant Set - Zevar Amaze",
+        "url": "https://zevaramaze.com/collections/all/products/gretel",
+        "price": "2649",
+        "currency": "INR",
+        "image": "https://zevaramaze.com/cdn/shop/files/Gemini_Generated_Image_r85k37r85k37r85k_1.png?v=1769684194",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Asahi pendant - Zevar Amaze",
+        "url": "https://zevaramaze.com/collections/all/products/asahi-pendant",
+        "price": "1799",
+        "currency": "INR",
+        "image": "https://zevaramaze.com/cdn/shop/files/Gemini_Generated_Image_6bnp9h6bnp9h6bnp.png?v=1769514673",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Ovid Earring - Zevar Amaze",
+        "url": "https://zevaramaze.com/collections/all/products/ovid-earring",
+        "price": "2449",
+        "currency": "INR",
+        "image": "https://zevaramaze.com/cdn/shop/files/Gemini_Generated_Image_hjays0hjays0hjay.png?v=1768996835",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Jiah Pendant Set - Zevar Amaze",
+        "url": "https://zevaramaze.com/collections/all/products/jiah",
+        "price": "2600",
+        "currency": "INR",
+        "image": "https://zevaramaze.com/cdn/shop/files/Gemini_Generated_Image_a35hyoa35hyoa35h_1.png?v=1769689575",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Ida Bracelet - Zevar Amaze",
+        "url": "https://zevaramaze.com/collections/all/products/ida-bracelet",
+        "price": "2480",
+        "currency": "INR",
+        "image": "https://zevaramaze.com/cdn/shop/products/2U4A8349.jpg?v=1642073430",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Rose Gold Div Mangalsutra - Zevar Amaze",
+        "url": "https://zevaramaze.com/collections/all/products/copy-of-rose-gold-bandhan-mangalsutra",
+        "price": "2149",
+        "currency": "INR",
+        "image": "https://zevaramaze.com/cdn/shop/files/Gemini_Generated_Image_zcd72hzcd72hzcd7.png?v=1769849551",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Levi Bracelet - Zevar Amaze",
+        "url": "https://zevaramaze.com/collections/all/products/levi-bracelet",
+        "price": "2905",
+        "currency": "INR",
+        "image": "https://zevaramaze.com/cdn/shop/products/2U4A8335.jpg?v=1642059374",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      }
+    ],
+    "suggestions": [
+      "Custom design kevi rite banavu?",
+      "International shipping charge shu chhe?"
+    ],
+    "error": null,
+    "elapsed": 11.54,
+    "detected_lang": "en",
+    "admits_no_info": true,
+    "declines_irrelevant": null
+  },
+  {
+    "bot_id": "e79b3754-006d-45d5-b21d-2391710e08ca",
+    "bot_name": "zevaramaze",
+    "allowed_langs": [
+      "gu"
+    ],
+    "domain": "handmade silver jewellery (zevaramaze.com)",
+    "query_lang": "gu",
+    "query_type": "irrelevant",
+    "query": "Weight ઘtaavaanu saukathi sarlu upay shu che?",
+    "response_text": "Are, weight ghataavva nu saukathi sarlu upay to su chhe! \nTamaru diet ni saaf safai rakhvu, regular exercise karvu, aur pani khub piyu. \n- Niyamit yoga aur walking karvu \n- Junk food ni jagya fruits and nuts khavu \n- Din ma 8 glass pani piyu",
+    "products": [],
+    "suggestions": [
+      "Diet chart batavo",
+      "Exercise routine shu chhe?"
+    ],
+    "error": null,
+    "elapsed": 2.47,
+    "detected_lang": "en",
+    "admits_no_info": null,
+    "declines_irrelevant": false
+  }
+]

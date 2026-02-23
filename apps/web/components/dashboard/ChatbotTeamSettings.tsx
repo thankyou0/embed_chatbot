@@ -285,7 +285,7 @@ export function ChatbotTeamSettings({ chatbotId }: ChatbotTeamSettingsProps) {
           <Card key={perm.id}>
             <CardContent className="p-4 flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <div className="h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 font-semibold">
+                <div className="h-10 w-10 rounded-full bg-teal-100 flex items-center justify-center text-teal-600 font-semibold">
                   {(perm.user_username || perm.user_email)[0].toUpperCase()}
                 </div>
                 <div>
@@ -309,7 +309,7 @@ export function ChatbotTeamSettings({ chatbotId }: ChatbotTeamSettingsProps) {
                     variant="outline"
                     className={
                       perm.permission_level === "owner"
-                        ? "bg-purple-50 text-purple-700 border-purple-200"
+                        ? "bg-teal-50 text-teal-700 border-teal-200"
                         : perm.permission_level === "admin"
                           ? "bg-blue-50 text-blue-700 border-blue-200"
                           : "bg-gray-50 text-gray-700 border-gray-200"
@@ -375,7 +375,7 @@ export function ChatbotTeamSettings({ chatbotId }: ChatbotTeamSettingsProps) {
                 <div className="space-y-2">
                   <Label>Select Member</Label>
                   <select
-                    className="w-full h-10 px-3 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className="w-full h-10 px-3 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
                     value={selectedMemberId}
                     onChange={(e) => setSelectedMemberId(e.target.value)}
                   >

@@ -217,7 +217,7 @@ export function CrawlScheduleModal({
   if (isLoading) {
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4">
+        <div className="bg-white dark:bg-gray-900 rounded-lg p-6 max-w-2xl w-full mx-4">
           <SectionLoader minHeight="min-h-[200px]" />
         </div>
       </div>
@@ -226,11 +226,11 @@ export function CrawlScheduleModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-white dark:bg-gray-900 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
+        <div className="sticky top-0 bg-white dark:bg-gray-900 border-b dark:border-gray-700 px-6 py-4 flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-semibold">Sync Settings</h2>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Sync Settings</h2>
             <p className="text-sm text-muted-foreground truncate">
               {sourceUrl}
             </p>
@@ -251,7 +251,7 @@ export function CrawlScheduleModal({
           </div>
 
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-md text-sm">
+            <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-300 px-4 py-3 rounded-md text-sm">
               {error}
             </div>
           )}
@@ -264,14 +264,14 @@ export function CrawlScheduleModal({
               value={scheduleType}
               onValueChange={(v: any) => setScheduleType(v)}
             >
-              <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-muted/5">
+              <div className="flex items-center space-x-2 p-3 border dark:border-gray-700 rounded-lg hover:bg-muted/5">
                 <RadioGroupItem value="manual" id="manual" />
                 <Label htmlFor="manual" className="flex-1 cursor-pointer">
                   Manual only
                 </Label>
               </div>
 
-              <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-muted/5">
+              <div className="flex items-center space-x-2 p-3 border dark:border-gray-700 rounded-lg hover:bg-muted/5">
                 <RadioGroupItem value="daily" id="daily" />
                 <Label htmlFor="daily" className="flex-1 cursor-pointer">
                   Daily
@@ -279,7 +279,7 @@ export function CrawlScheduleModal({
               </div>
 
               <div className="space-y-2">
-                <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-muted/5">
+                <div className="flex items-center space-x-2 p-3 border dark:border-gray-700 rounded-lg hover:bg-muted/5">
                   <RadioGroupItem value="weekly" id="weekly" />
                   <Label htmlFor="weekly" className="flex-1 cursor-pointer">
                     Weekly
@@ -291,7 +291,7 @@ export function CrawlScheduleModal({
                     <select
                       value={dayOfWeek}
                       onChange={(e) => setDayOfWeek(Number(e.target.value))}
-                      className="border rounded px-2 py-1 text-sm"
+                      className="border dark:border-gray-600 rounded px-2 py-1 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                     >
                       {DAYS_OF_WEEK.map((day) => (
                         <option key={day.value} value={day.value}>
@@ -303,7 +303,7 @@ export function CrawlScheduleModal({
                 )}
               </div>
 
-              <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-muted/5">
+              <div className="flex items-center space-x-2 p-3 border dark:border-gray-700 rounded-lg hover:bg-muted/5">
                 <RadioGroupItem value="monthly" id="monthly" />
                 <Label htmlFor="monthly" className="flex-1 cursor-pointer">
                   Monthly
@@ -317,7 +317,7 @@ export function CrawlScheduleModal({
                 <select
                   value={preferredHour}
                   onChange={(e) => setPreferredHour(Number(e.target.value))}
-                  className="border rounded px-2 py-1 text-sm"
+                  className="border dark:border-gray-600 rounded px-2 py-1 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                 >
                   {HOURS.map((hour) => (
                     <option key={hour.value} value={hour.value}>
@@ -331,8 +331,8 @@ export function CrawlScheduleModal({
 
           {/* Next Sync */}
           {schedule?.next_crawl_at && scheduleType !== "manual" && (
-            <div className="bg-blue-50 border border-blue-200 px-4 py-3 rounded-md">
-              <div className="flex items-center gap-2 text-sm text-blue-900">
+            <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 px-4 py-3 rounded-md">
+              <div className="flex items-center gap-2 text-sm text-blue-900 dark:text-blue-300">
                 <Clock className="h-4 w-4" />
                 <span>Next sync: {formatDate(schedule.next_crawl_at)}</span>
               </div>
@@ -376,12 +376,12 @@ export function CrawlScheduleModal({
 
           {/* History */}
           {showHistory && (
-            <div className="space-y-2 border-t pt-4">
+            <div className="space-y-2 border-t dark:border-gray-700 pt-4">
               <Label className="text-base font-semibold">Sync History</Label>
               {history.length > 0 ? (
                 <div className="space-y-2">
                   {history.map((h) => (
-                    <div key={h.id} className="border rounded-lg p-3 text-sm">
+                    <div key={h.id} className="border dark:border-gray-700 rounded-lg p-3 text-sm">
                       <div className="flex items-center justify-between mb-2">
                         <span className="font-medium">
                           {formatDate(h.started_at)}

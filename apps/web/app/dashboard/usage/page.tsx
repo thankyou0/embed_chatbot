@@ -267,7 +267,7 @@ export default function UsagePage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">Usage & Billing</h1>
+          <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 to-teal-600">Usage & Billing</h1>
           <p className="text-muted-foreground mt-2">
             Track your usage and billing information
           </p>
@@ -277,7 +277,7 @@ export default function UsagePage() {
             <div className="flex items-start space-x-3">
               <AlertCircle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
               <div>
-                <p className="font-medium text-red-900">Error</p>
+                <p className="font-medium text-red-900 dark:text-red-300">Error</p>
                 <p className="text-sm text-red-800">
                   {error || "Failed to load billing information"}
                 </p>
@@ -337,7 +337,7 @@ export default function UsagePage() {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">Usage & Billing</h1>
+          <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 to-teal-600">Usage & Billing</h1>
           <p className="text-muted-foreground mt-1">
             Track your usage, limits, and billing information
           </p>
@@ -349,16 +349,16 @@ export default function UsagePage() {
             <select
               value={selectedChatbot}
               onChange={(e) => handleChatbotSelection(e.target.value)}
-              className="bg-transparent border-0 focus:ring-0 text-sm h-8 outline-none cursor-pointer min-w-[200px]"
+              className="bg-transparent border-0 focus:ring-0 text-sm h-8 outline-none cursor-pointer min-w-[200px] text-foreground"
             >
               {(isAdmin ||
                 (!isAdmin &&
                   filteredChatbots.length > 0 &&
                   filteredChatbots.length === chatbots.length)) && (
-                <option value="all">All Chatbots (Total Usage)</option>
+                <option value="all" className="bg-background text-foreground">All Chatbots (Total Usage)</option>
               )}
               {filteredChatbots.map((bot) => (
-                <option key={bot.id} value={bot.id}>
+                <option key={bot.id} value={bot.id} className="bg-background text-foreground">
                   {bot.name}
                 </option>
               ))}
@@ -381,14 +381,14 @@ export default function UsagePage() {
 
       {/* Current Plan & Billing Period */}
       <div className="grid gap-4 md:grid-cols-3">
-        <Card className="border-l-4 border-l-indigo-500">
+        <Card className="border-l-4 border-l-emerald-500">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Current Plan
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold capitalize text-indigo-600">
+            <div className="text-2xl font-bold capitalize text-emerald-600">
               {subscription.plan_type}
             </div>
             <p className="text-xs text-muted-foreground mt-1">

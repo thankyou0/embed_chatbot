@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTheme } from "@/contexts/ThemeContext";
 import { getAccessToken } from "@/lib/auth";
 import { apiRequestWithAuth } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -23,6 +24,8 @@ import {
   Tag,
   ChevronLeft,
   Wrench,
+  Moon,
+  Sun,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -93,6 +96,7 @@ export function Sidebar({ isCollapsed = false, setIsCollapsed }: SidebarProps) {
   const [pendingHref, setPendingHref] = useState<string | null>(null);
   const pathname = usePathname();
   const { user, tenant, logout, isAdmin } = useAuth();
+  const { theme, toggleTheme } = useTheme();
 
   // Extract chatbot ID from pathname if we're on a chatbot-specific page
   // Path format: /dashboard/chatbots/[chatbotId]/...
@@ -182,11 +186,11 @@ export function Sidebar({ isCollapsed = false, setIsCollapsed }: SidebarProps) {
             )}
           >
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center shrink-0 shadow-lg shadow-indigo-500/25">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-600 to-teal-600 flex items-center justify-center shrink-0 shadow-lg shadow-emerald-500/25">
                 <MessageSquare className="h-6 w-6 text-white" />
               </div>
               {!isCollapsed && (
-                <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600 tracking-tight">
+                <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 to-teal-600 tracking-tight">
                   EmbedChat
                 </span>
               )}
@@ -269,8 +273,8 @@ export function Sidebar({ isCollapsed = false, setIsCollapsed }: SidebarProps) {
                       "flex items-center text-sm font-medium rounded-lg transition-all group relative",
                       isCollapsed ? "justify-center p-3" : "px-4 py-3",
                       isActive
-                        ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-500/25"
-                        : "text-muted-foreground hover:bg-indigo-50 hover:text-indigo-700",
+                        ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-500/25"
+                        : "text-muted-foreground hover:bg-emerald-50 hover:text-emerald-700",
                       pendingHref === href &&
                         !isActive &&
                         "bg-accent/60 text-foreground ring-1 ring-primary/30",
@@ -320,8 +324,8 @@ export function Sidebar({ isCollapsed = false, setIsCollapsed }: SidebarProps) {
                         "flex items-center text-sm font-medium rounded-lg transition-all group relative",
                         isCollapsed ? "justify-center p-3" : "px-4 py-3",
                         isActive
-                          ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-500/25"
-                          : "text-muted-foreground hover:bg-indigo-50 hover:text-indigo-700",
+                          ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-500/25"
+                          : "text-muted-foreground hover:bg-emerald-50 hover:text-emerald-700",
                       )}
                     >
                       <item.icon
@@ -342,6 +346,34 @@ export function Sidebar({ isCollapsed = false, setIsCollapsed }: SidebarProps) {
               </>
             )}
           </nav>
+
+          {/* Dark mode toggle */}
+          <div
+            className={cn(
+              "border-t border-border transition-all",
+              isCollapsed ? "p-2" : "px-4 py-3",
+            )}
+          >
+            <button
+              onClick={toggleTheme}
+              className={cn(
+                "flex items-center w-full rounded-lg text-sm font-medium transition-colors hover:bg-accent",
+                isCollapsed ? "justify-center p-3" : "px-4 py-2.5 gap-3",
+              )}
+              title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            >
+              {theme === "dark" ? (
+                <Sun className="h-5 w-5 shrink-0 text-amber-500" />
+              ) : (
+                <Moon className="h-5 w-5 shrink-0 text-muted-foreground" />
+              )}
+              {!isCollapsed && (
+                <span className="text-muted-foreground">
+                  {theme === "dark" ? "Light Mode" : "Dark Mode"}
+                </span>
+              )}
+            </button>
+          </div>
 
           {/* Account Details at Bottom */}
           {user && (
@@ -370,7 +402,7 @@ export function Sidebar({ isCollapsed = false, setIsCollapsed }: SidebarProps) {
                         isCollapsed ? "flex-col" : "space-x-2 flex-1",
                       )}
                     >
-                      <div className="h-10 w-10 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 flex items-center justify-center shrink-0 shadow-sm ring-2 ring-indigo-500/20">
+                      <div className="h-10 w-10 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 flex items-center justify-center shrink-0 shadow-sm ring-2 ring-emerald-500/20">
                         <span className="text-white font-bold text-xs">
                           {(user.name ||
                             user.username ||

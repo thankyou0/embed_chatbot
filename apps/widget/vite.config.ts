@@ -1,7 +1,7 @@
 import { defineConfig } from "vite";
 import preact from "@preact/preset-vite";
 import { readFileSync } from "fs";
-import { join } from "path";
+import { join, resolve } from "path";
 
 // Plugin to inject CSS into JS bundle
 const injectCss = () => {
@@ -76,10 +76,26 @@ const serveBuiltFiles = () => {
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [preact(), serveBuiltFiles(), injectCss()],
+  server: {
+    host: "0.0.0.0",
+    port: 3001,
+    // Enable polling-based file watching for Docker volume mounts (Windows)
+    watch: {
+      usePolling: true,
+      interval: 1000,
+    },
+    hmr: {
+      // Let the browser connect to HMR via the exposed Docker port
+      clientPort: 3001,
+    },
+  },
   resolve: {
     alias: {
       react: "preact/compat",
       "react-dom": "preact/compat",
+      // Ensure marked resolves from the widget's own node_modules
+      // (fixes pnpm strict mode not hoisting it for workspace packages)
+      marked: resolve(__dirname, "node_modules/marked"),
     },
     // Ensure workspace dependencies are resolved from root
     dedupe: ["preact", "preact/compat", "preact/jsx-runtime"],

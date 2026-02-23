@@ -144,6 +144,10 @@ class ChatbotAppearance(Base):
     # e.g., ["en"], ["en", "hi"], ["en", "hi", "gu"]
     languages = Column(JSONB, nullable=False, server_default='["en"]')
 
+    # Cached LLM translations of the welcome message for each configured language
+    # e.g., {"hi": "नमस्ते! ...", "gu": "નમસ્તે! ..."}
+    welcome_message_translations = Column(JSONB, nullable=True)
+
     created_at = Column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

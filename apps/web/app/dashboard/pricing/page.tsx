@@ -133,7 +133,7 @@ export default function PricingPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">Pricing & Plans</h1>
+        <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 to-teal-600">Pricing & Plans</h1>
         <p className="text-muted-foreground mt-2">
           Choose the perfect plan for your chatbot needs
         </p>
@@ -234,14 +234,14 @@ export default function PricingPage() {
               <Card
                 className={cn(
                   "flex flex-col h-full",
-                  plan.popular && "border-indigo-500 shadow-lg shadow-indigo-500/10",
+                  plan.popular && "border-emerald-500 shadow-lg shadow-emerald-500/10",
                   isCurrentPlan && "border-emerald-500",
                 )}
               >
                 {/* Popular Badge */}
                 {plan.popular && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <Badge className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white border-0">Most Popular</Badge>
+                    <Badge className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white border-0">Most Popular</Badge>
                   </div>
                 )}
 
@@ -278,7 +278,7 @@ export default function PricingPage() {
                     </Button>
                   ) : (
                     <Button
-                      className="w-full mt-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white"
+                      className="w-full mt-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white"
                       disabled={!!upgradingPlan}
                       onClick={() => handleUpgrade(plan.name)}
                     >

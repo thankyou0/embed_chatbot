@@ -1,0 +1,647 @@
+﻿================================================================================
+COMPREHENSIVE TEST ANALYSIS
+================================================================================
+
+============================================================
+BOT: ramraj (Fashion/Clothing)
+URL: https://ramrajcotton.in
+Pages Crawled: 256
+Total Queries: 43 | Valid: 33 | Rate-Limited: 10
+Average Score: 7.1/10
+Failed Queries: 6
+----------------------------------------
+  greeting: avg=8.8/10 (2 queries)
+  product_browse: avg=10.0/10 (3 queries)
+  specific_product: avg=10.0/10 (2 queries)
+  price_query: avg=9.5/10 (3 queries)
+  non_product: avg=8.3/10 (3 queries)
+  irrelevant: avg=5.0/10 (2 queries)
+    ISSUE: FAILED to detect irrelevant query - bot tried to answer
+  ambiguous: avg=2.8/10 (3 queries)
+    ISSUE: ERROR: ('Connection aborted.', ConnectionResetError(10054, 'An existing connection was forcibly closed by the remote host', None, 10054, None))
+    ISSUE: ERROR: ('Connection aborted.', ConnectionResetError(10054, 'An existing connection was forcibly closed by the remote host', None, 10054, None))
+  complex: avg=10.0/10 (1 queries)
+  context_start: avg=7.5/10 (1 queries)
+  context_followup: avg=7.5/10 (2 queries)
+  context_summary: avg=9.5/10 (1 queries)
+  about_brand: avg=8.0/10 (1 queries)
+  unsupported_lang: avg=2.0/10 (2 queries)
+    ISSUE: ERROR: ('Connection aborted.', ConnectionResetError(10054, 'An existing connection was forcibly closed by the remote host', None, 10054, None))
+    ISSUE: No warning about unsupported language
+  suggestions_test: avg=4.8/10 (2 queries)
+    ISSUE: No suggestions generated
+  comparison: avg=9.5/10 (1 queries)
+  variant_query: avg=7.2/10 (2 queries)
+  urgency: avg=0.0/10 (1 queries)
+    ISSUE: ERROR: ('Connection aborted.', ConnectionResetError(10054, 'An existing connection was forcibly closed by the remote host', None, 10054, None))
+  complaint: avg=8.5/10 (1 queries)
+
+  FAILED QUERIES:
+    [irrelevant] [hi] αñ¡αñ╛αñ░αññ αñòαñ╛ αñ¬αÑìαñ░αñºαñ╛αñ¿αñ«αñéαññαÑìαñ░αÑÇ αñòαÑîαñ¿ αñ╣αÑê?
+      Score: 1
+      Issues: ['FAILED to detect irrelevant query - bot tried to answer']
+      Response: α¬àα¬░α½ç, α¬å α¬╡α¬╛α¬ñ α¬àα¬«α¬╛α¬░α¬╛ α¬░α¬╛α¬«α¬░α¬╛α¬£ α¬¬α½ìα¬░α½ïα¬íα¬òα½ìα¬ƒα½ìα¬╕ α¬╕α¬╛α¬Ñα½ç α¬╕α¬éα¬¼α¬éα¬ºα¬┐α¬ñ α¬¿α¬Ñα½Ç! ...
+    [ambiguous] [en] I want something nice for a gift
+      Score: 0
+      Issues: ["ERROR: ('Connection aborted.', ConnectionResetError(10054, 'An existing connection was forcibly closed by the remote host', None, 10054, None))"]
+      Response: ...
+    [ambiguous] [en] What do you recommend for someone new here?
+      Score: 0
+      Issues: ["ERROR: ('Connection aborted.', ConnectionResetError(10054, 'An existing connection was forcibly closed by the remote host', None, 10054, None))"]
+      Response: ...
+    [unsupported_lang] [fr] Bonjour, montrez-moi vos produits les plus populaires
+      Score: 0
+      Issues: ["ERROR: ('Connection aborted.', ConnectionResetError(10054, 'An existing connection was forcibly closed by the remote host', None, 10054, None))"]
+      Response: ...
+    [suggestions_test] [hi] αñ»αñ╣αñ╛αñé αñòαÑìαñ»αñ╛-αñòαÑìαñ»αñ╛ αñ«αñ┐αñ▓αññαñ╛ αñ╣αÑê?
+      Score: 3
+      Issues: ['No suggestions generated']
+      Response: α¬àα¬░α½ç, α¬å α¬░α¬╛α¬«α¬░α¬╛α¬£ α¬òα¬ƒα½ìα¬ƒα¬¿ α¬¬α¬╛α¬╕α½ç **α¬░α¬éα¬ùα½Çα¬¿ α¬╢α¬░α½ìα¬ƒ** α¬«α¬│α½ç α¬¢α½ç! α¬àα¬╣α½Çα¬é α¬ñα¬«α¬¿α½ç α¬╡α¬┐α¬╡α¬┐α¬º α¬░α¬éα¬ùα½ïα¬«α¬╛α¬é, α¬╡α¬┐α¬╡α¬┐α¬º α¬íα¬┐α¬¥α¬╛α¬çα¬¿α¬«α¬╛α¬é α¬àα¬¿α½ç α¬╡α¬┐α¬╡α¬┐α¬º α¬╕...
+    [urgency] [en] I need shirts urgently for tomorrow, can you deliver that fa
+      Score: 0
+      Issues: ["ERROR: ('Connection aborted.', ConnectionResetError(10054, 'An existing connection was forcibly closed by the remote host', None, 10054, None))"]
+      Response: ...
+
+  LOW-SCORING QUERIES (<7):
+    [irrelevant] [hi] Score=1 - αñ¡αñ╛αñ░αññ αñòαñ╛ αñ¬αÑìαñ░αñºαñ╛αñ¿αñ«αñéαññαÑìαñ░αÑÇ αñòαÑîαñ¿ αñ╣αÑê?
+      Response: α¬àα¬░α½ç, α¬å α¬╡α¬╛α¬ñ α¬àα¬«α¬╛α¬░α¬╛ α¬░α¬╛α¬«α¬░α¬╛α¬£ α¬¬α½ìα¬░α½ïα¬íα¬òα½ìα¬ƒα½ìα¬╕ α¬╕α¬╛α¬Ñα½ç α¬╕α¬éα¬¼α¬éα¬ºα¬┐α¬ñ α¬¿α¬Ñα½Ç! ...
+      Issues: ['FAILED to detect irrelevant query - bot tried to answer']
+    [unsupported_lang] [ja] Score=4 - πüôπéôπü½πüíπü»πÇüΣ║║µ░ùσòåσôüπéÆµòÖπüêπüªπüÅπüáπüòπüä
+      Response: Oh nice, here's what we've got! We've found some popular products for you, take a look at these beauties!
+...
+      Issues: ['No warning about unsupported language']
+    [suggestions_test] [en] Score=6.5 - I'm new here, what kind of things do you sell?
+      Response: Take a look at these beauties! We've got a wide range of shirts and other apparel from Ramraj, so you're in the right pl...
+    [suggestions_test] [hi] Score=3 - αñ»αñ╣αñ╛αñé αñòαÑìαñ»αñ╛-αñòαÑìαñ»αñ╛ αñ«αñ┐αñ▓αññαñ╛ αñ╣αÑê?
+      Response: α¬àα¬░α½ç, α¬å α¬░α¬╛α¬«α¬░α¬╛α¬£ α¬òα¬ƒα½ìα¬ƒα¬¿ α¬¬α¬╛α¬╕α½ç **α¬░α¬éα¬ùα½Çα¬¿ α¬╢α¬░α½ìα¬ƒ** α¬«α¬│α½ç α¬¢α½ç! α¬àα¬╣α½Çα¬é α¬ñα¬«α¬¿α½ç α¬╡α¬┐α¬╡α¬┐α¬º α¬░α¬éα¬ùα½ïα¬«α¬╛α¬é, α¬╡α¬┐α¬╡α¬┐α¬º α¬íα¬┐α¬¥α¬╛α¬çα¬¿α¬«α¬╛α¬é α¬àα¬¿α½ç α¬╡α¬┐α¬╡α¬┐α¬º α¬╕α¬╛α¬çα¬¥α¬«α¬╛α¬é α¬╢α¬░α½ìα¬ƒ α¬«α¬│α¬╢α½ç. α¬£α½ï...
+      Issues: ['No suggestions generated']
+
+============================================================
+BOT: truff (Food/Condiments)
+URL: https://truff.com
+Pages Crawled: 262
+Total Queries: 43 | Valid: 35 | Rate-Limited: 8
+Average Score: 6.8/10
+Failed Queries: 7
+----------------------------------------
+  greeting: avg=9.0/10 (3 queries)
+  product_browse: avg=4.7/10 (3 queries)
+    ISSUE: No products/sources for product query
+    ISSUE: No products/sources for product query
+  specific_product: avg=7.3/10 (3 queries)
+    ISSUE: No products/sources for product query
+  price_query: avg=4.5/10 (3 queries)
+    ISSUE: No price info for price query
+    ISSUE: No price info for price query
+  non_product: avg=7.0/10 (3 queries)
+  irrelevant: avg=9.0/10 (3 queries)
+  ambiguous: avg=6.2/10 (2 queries)
+    ISSUE: Could give better guidance for ambiguous query
+  complex: avg=6.5/10 (2 queries)
+    ISSUE: Failed to handle multi-intent complex query fully
+  context_start: avg=7.5/10 (1 queries)
+  context_followup: avg=7.5/10 (2 queries)
+  about_brand: avg=6.8/10 (2 queries)
+  unsupported_lang: avg=4.0/10 (2 queries)
+    ISSUE: No warning about unsupported language
+    ISSUE: No warning about unsupported language
+  suggestions_test: avg=4.8/10 (2 queries)
+    ISSUE: No suggestions generated
+  comparison: avg=9.5/10 (1 queries)
+  variant_query: avg=7.5/10 (2 queries)
+  complaint: avg=8.5/10 (1 queries)
+
+  FAILED QUERIES:
+    [product_browse] [hi] αñåαñ¬αñòαÑç αñ¬αñ╛αñ╕ αñòαÑîαñ¿ αñ╕αÑç hot sauce αñëαñ¬αñ▓αñ¼αÑìαñº αñ╣αÑêαñé?
+      Score: 2
+      Issues: ['No products/sources for product query']
+      Response: I'm sorry, Hindi (αñ╣αñ┐αñéαñªαÑÇ) is not supported. I can help you in English. Please ask your question in on...
+    [product_browse] [gu] α¬ñα¬«α¬╛α¬░α½Ç α¬¬α¬╛α¬╕α½ç α¬òα¬»α¬╛ hot sauce α¬¢α½ç?
+      Score: 2
+      Issues: ['No products/sources for product query']
+      Response: I'm sorry, Gujarati (α¬ùα½üα¬£α¬░α¬╛α¬ñα½Ç) is not supported. I can help you in English. Please ask your question ...
+    [specific_product] [hi] αñ«αÑüαñ¥αÑç hot sauce αñÜαñ╛αñ╣αñ┐αñÅ αñ£αÑï αñ¼αñ╣αÑüαññ αñàαñÜαÑìαñ¢αÑÇ αñòαÑìαñ╡αñ╛αñ▓αñ┐αñƒαÑÇ αñòαñ╛ αñ╣αÑï
+      Score: 2
+      Issues: ['No products/sources for product query']
+      Response: I'm sorry, Hindi (αñ╣αñ┐αñéαñªαÑÇ) is not supported. I can help you in English. Please ask your question in on...
+    [price_query] [hi] 500 αñ░αÑüαñ¬αñ»αÑç αñ╕αÑç αñòαñ« αñòαÑç hot sauce αñ¼αññαñ╛αñô
+      Score: 2
+      Issues: ['No price info for price query']
+      Response: I'm sorry, Hindi (αñ╣αñ┐αñéαñªαÑÇ) is not supported. I can help you in English. Please ask your question in on...
+    [price_query] [gu] Γé╣1000 α¬Ñα½Ç α¬ôα¬¢α¬╛ hot sauce α¬¼α¬ñα¬╛α¬╡α½ï
+      Score: 2
+      Issues: ['No price info for price query']
+      Response: I'm sorry, Gujarati (α¬ùα½üα¬£α¬░α¬╛α¬ñα½Ç) is not supported. I can help you in English. Please ask your question ...
+    [complex] [hi] αñ«αÑçαñ░αÑÇ αñ¼αñ╣αñ¿ αñòαÑç αñ▓αñ┐αñÅ hot sauce αñÜαñ╛αñ╣αñ┐αñÅ, αñ▓αñ╛αñ▓ αñ»αñ╛ αñ¿αÑÇαñ▓αñ╛ αñ░αñéαñù, 2000 αñ░αÑüαñ¬αñ»αÑç
+      Score: 3
+      Issues: ['Failed to handle multi-intent complex query fully']
+      Response: I'm sorry, Hindi (αñ╣αñ┐αñéαñªαÑÇ) is not supported. I can help you in English. Please ask your question in on...
+    [suggestions_test] [hi] αñ»αñ╣αñ╛αñé αñòαÑìαñ»αñ╛-αñòαÑìαñ»αñ╛ αñ«αñ┐αñ▓αññαñ╛ αñ╣αÑê?
+      Score: 3
+      Issues: ['No suggestions generated']
+      Response: I'm sorry, Hindi (αñ╣αñ┐αñéαñªαÑÇ) is not supported. I can help you in English. Please ask your question in on...
+
+  LOW-SCORING QUERIES (<7):
+    [product_browse] [hi] Score=2 - αñåαñ¬αñòαÑç αñ¬αñ╛αñ╕ αñòαÑîαñ¿ αñ╕αÑç hot sauce αñëαñ¬αñ▓αñ¼αÑìαñº αñ╣αÑêαñé?
+      Response: I'm sorry, Hindi (αñ╣αñ┐αñéαñªαÑÇ) is not supported. I can help you in English. Please ask your question in one of the supported l...
+      Issues: ['No products/sources for product query']
+    [product_browse] [gu] Score=2 - α¬ñα¬«α¬╛α¬░α½Ç α¬¬α¬╛α¬╕α½ç α¬òα¬»α¬╛ hot sauce α¬¢α½ç?
+      Response: I'm sorry, Gujarati (α¬ùα½üα¬£α¬░α¬╛α¬ñα½Ç) is not supported. I can help you in English. Please ask your question in one of the suppor...
+      Issues: ['No products/sources for product query']
+    [specific_product] [hi] Score=2 - αñ«αÑüαñ¥αÑç hot sauce αñÜαñ╛αñ╣αñ┐αñÅ αñ£αÑï αñ¼αñ╣αÑüαññ αñàαñÜαÑìαñ¢αÑÇ αñòαÑìαñ╡αñ╛αñ▓αñ┐αñƒαÑÇ αñòαñ╛ αñ╣αÑï
+      Response: I'm sorry, Hindi (αñ╣αñ┐αñéαñªαÑÇ) is not supported. I can help you in English. Please ask your question in one of the supported l...
+      Issues: ['No products/sources for product query']
+    [price_query] [hi] Score=2 - 500 αñ░αÑüαñ¬αñ»αÑç αñ╕αÑç αñòαñ« αñòαÑç hot sauce αñ¼αññαñ╛αñô
+      Response: I'm sorry, Hindi (αñ╣αñ┐αñéαñªαÑÇ) is not supported. I can help you in English. Please ask your question in one of the supported l...
+      Issues: ['No price info for price query']
+    [price_query] [gu] Score=2 - Γé╣1000 α¬Ñα½Ç α¬ôα¬¢α¬╛ hot sauce α¬¼α¬ñα¬╛α¬╡α½ï
+      Response: I'm sorry, Gujarati (α¬ùα½üα¬£α¬░α¬╛α¬ñα½Ç) is not supported. I can help you in English. Please ask your question in one of the suppor...
+      Issues: ['No price info for price query']
+    [non_product] [hi] Score=4 - αñ░αñ┐αñƒαñ░αÑìαñ¿ αñ¬αÑëαñ▓αñ┐αñ╕αÑÇ αñòαÑìαñ»αñ╛ αñ╣αÑê?
+      Response: I'm sorry, Hindi (αñ╣αñ┐αñéαñªαÑÇ) is not supported. I can help you in English. Please ask your question in one of the supported l...
+    [ambiguous] [hi] Score=4 - αñòαÑüαñ¢ αñàαñÜαÑìαñ¢αñ╛ αñ¼αññαñ╛αñô αñ¿αñ╛
+      Response: I'm sorry, Hindi (αñ╣αñ┐αñéαñªαÑÇ) is not supported. I can help you in English. Please ask your question in one of the supported l...
+      Issues: ['Could give better guidance for ambiguous query']
+    [complex] [hi] Score=3 - αñ«αÑçαñ░αÑÇ αñ¼αñ╣αñ¿ αñòαÑç αñ▓αñ┐αñÅ hot sauce αñÜαñ╛αñ╣αñ┐αñÅ, αñ▓αñ╛αñ▓ αñ»αñ╛ αñ¿αÑÇαñ▓αñ╛ αñ░αñéαñù, 2000 αñ░αÑüαñ¬αñ»αÑç
+      Response: I'm sorry, Hindi (αñ╣αñ┐αñéαñªαÑÇ) is not supported. I can help you in English. Please ask your question in one of the supported l...
+      Issues: ['Failed to handle multi-intent complex query fully']
+    [about_brand] [hi] Score=5 - truff αñòαÑç αñ¼αñ╛αñ░αÑç αñ«αÑçαñé αñ¼αññαñ╛αñô
+      Response: I'm sorry, Hindi (αñ╣αñ┐αñéαñªαÑÇ) is not supported. I can help you in English. Please ask your question in one of the supported l...
+    [unsupported_lang] [fr] Score=4 - Bonjour, montrez-moi vos produits les plus populaires
+      Response: Oh nice, here's what we've got! I'd be happy to show you our most popular **truff** products....
+      Issues: ['No warning about unsupported language']
+    [unsupported_lang] [ja] Score=4 - πüôπéôπü½πüíπü»πÇüΣ║║µ░ùσòåσôüπéÆµòÖπüêπüªπüÅπüáπüòπüä
+      Response: Oh nice, here's what we've got! We've found some great options for you, and they're all featured in our product carousel...
+      Issues: ['No warning about unsupported language']
+    [suggestions_test] [en] Score=6.5 - I'm new here, what kind of things do you sell?
+      Response: Oh nice, here's what we've got! We specialize in luxury condiments, particularly truffle-infused products like hot sauce...
+    [suggestions_test] [hi] Score=3 - αñ»αñ╣αñ╛αñé αñòαÑìαñ»αñ╛-αñòαÑìαñ»αñ╛ αñ«αñ┐αñ▓αññαñ╛ αñ╣αÑê?
+      Response: I'm sorry, Hindi (αñ╣αñ┐αñéαñªαÑÇ) is not supported. I can help you in English. Please ask your question in one of the supported l...
+      Issues: ['No suggestions generated']
+
+============================================================
+BOT: kriyanta (Tech/Startup)
+URL: https://www.kriyanta.com
+Pages Crawled: 803
+Total Queries: 43 | Valid: 36 | Rate-Limited: 7
+Average Score: 6.0/10
+Failed Queries: 8
+----------------------------------------
+  greeting: avg=9.5/10 (1 queries)
+  product_browse: avg=5.5/10 (3 queries)
+    ISSUE: Sources found but no product cards
+    ISSUE: Sources found but no product cards
+    ISSUE: Sources found but no product cards
+  specific_product: avg=8.8/10 (4 queries)
+    ISSUE: Sources found but no product cards
+  price_query: avg=8.5/10 (4 queries)
+  non_product: avg=8.5/10 (3 queries)
+  irrelevant: avg=3.0/10 (3 queries)
+    ISSUE: ERROR: ('Connection aborted.', ConnectionResetError(10054, 'An existing connection was forcibly closed by the remote host', None, 10054, None))
+    ISSUE: ERROR: ('Connection aborted.', ConnectionResetError(10054, 'An existing connection was forcibly closed by the remote host', None, 10054, None))
+  ambiguous: avg=0.0/10 (3 queries)
+    ISSUE: ERROR: ('Connection aborted.', ConnectionResetError(10054, 'An existing connection was forcibly closed by the remote host', None, 10054, None))
+    ISSUE: ERROR: ('Connection aborted.', ConnectionResetError(10054, 'An existing connection was forcibly closed by the remote host', None, 10054, None))
+    ISSUE: ERROR: ('Connection aborted.', ConnectionResetError(10054, 'An existing connection was forcibly closed by the remote host', None, 10054, None))
+  complex: avg=2.8/10 (2 queries)
+    ISSUE: ERROR: ('Connection aborted.', ConnectionResetError(10054, 'An existing connection was forcibly closed by the remote host', None, 10054, None))
+    ISSUE: Failed to handle multi-intent complex query fully
+  context_start: avg=7.5/10 (1 queries)
+  context_followup: avg=7.5/10 (2 queries)
+  context_summary: avg=9.5/10 (1 queries)
+  about_brand: avg=6.8/10 (2 queries)
+  unsupported_lang: avg=4.0/10 (1 queries)
+    ISSUE: No warning about unsupported language
+  suggestions_test: avg=0.0/10 (2 queries)
+    ISSUE: ERROR: ('Connection aborted.', ConnectionResetError(10054, 'An existing connection was forcibly closed by the remote host', None, 10054, None))
+    ISSUE: ERROR: ('Connection aborted.', ConnectionResetError(10054, 'An existing connection was forcibly closed by the remote host', None, 10054, None))
+  comparison: avg=9.5/10 (1 queries)
+  variant_query: avg=7.2/10 (2 queries)
+  complaint: avg=8.0/10 (1 queries)
+
+  FAILED QUERIES:
+    [irrelevant] [hi] αñ¡αñ╛αñ░αññ αñòαñ╛ αñ¬αÑìαñ░αñºαñ╛αñ¿αñ«αñéαññαÑìαñ░αÑÇ αñòαÑîαñ¿ αñ╣αÑê?
+      Score: 0
+      Issues: ["ERROR: ('Connection aborted.', ConnectionResetError(10054, 'An existing connection was forcibly closed by the remote host', None, 10054, None))"]
+      Response: ...
+    [irrelevant] [en] What's the weather like in Tokyo today?
+      Score: 0
+      Issues: ["ERROR: ('Connection aborted.', ConnectionResetError(10054, 'An existing connection was forcibly closed by the remote host', None, 10054, None))"]
+      Response: ...
+    [ambiguous] [en] I want something nice for a gift
+      Score: 0
+      Issues: ["ERROR: ('Connection aborted.', ConnectionResetError(10054, 'An existing connection was forcibly closed by the remote host', None, 10054, None))"]
+      Response: ...
+    [ambiguous] [en] What do you recommend for someone new here?
+      Score: 0
+      Issues: ["ERROR: ('Connection aborted.', ConnectionResetError(10054, 'An existing connection was forcibly closed by the remote host', None, 10054, None))"]
+      Response: ...
+    [ambiguous] [hi] αñòαÑüαñ¢ αñàαñÜαÑìαñ¢αñ╛ αñ¼αññαñ╛αñô αñ¿αñ╛
+      Score: 0
+      Issues: ["ERROR: ('Connection aborted.', ConnectionResetError(10054, 'An existing connection was forcibly closed by the remote host', None, 10054, None))"]
+      Response: ...
+    [complex] [en] I need a gift for my sister, she likes services in red or bl
+      Score: 0
+      Issues: ["ERROR: ('Connection aborted.', ConnectionResetError(10054, 'An existing connection was forcibly closed by the remote host', None, 10054, None))"]
+      Response: ...
+    [suggestions_test] [en] I'm new here, what kind of things do you sell?
+      Score: 0
+      Issues: ["ERROR: ('Connection aborted.', ConnectionResetError(10054, 'An existing connection was forcibly closed by the remote host', None, 10054, None))"]
+      Response: ...
+    [suggestions_test] [hi] αñ»αñ╣αñ╛αñé αñòαÑìαñ»αñ╛-αñòαÑìαñ»αñ╛ αñ«αñ┐αñ▓αññαñ╛ αñ╣αÑê?
+      Score: 0
+      Issues: ["ERROR: ('Connection aborted.', ConnectionResetError(10054, 'An existing connection was forcibly closed by the remote host', None, 10054, None))"]
+      Response: ...
+
+  LOW-SCORING QUERIES (<7):
+    [product_browse] [en] Score=5.5 - Show me your best services
+      Response: We've got some amazing services at **Kriyanta**. Let me tell you about them. We offer **Free Interior Decoration Consult...
+      Issues: ['Sources found but no product cards']
+    [product_browse] [hi] Score=5.5 - αñåαñ¬αñòαÑç αñ¬αñ╛αñ╕ αñòαÑîαñ¿ αñ╕αÑç services αñëαñ¬αñ▓αñ¼αÑìαñº αñ╣αÑêαñé?
+      Response: α¬àα¬░α½ç, α¬ÿα¬úα¬╛ α¬╕α¬░α¬╕ services α¬¢α½ç! α¬£α½üα¬ô, α¬àα¬«α¬╛α¬░α½Ç α¬¬α¬╛α¬╕α½ç **α¬½α½ìα¬░α½Ç α¬çα¬¿α½ìα¬ƒα½çα¬░α¬┐α¬»α¬░ α¬íα½çα¬òα½ïα¬░α½çα¬╢α¬¿ α¬òα¬¿α½ìα¬╕α¬▓α½ìα¬ƒα½çα¬╢α¬¿** α¬¢α½ç, α¬àα¬¿α½ç **α¬╣α½çα¬¿α½ìα¬íα¬«α½çα¬í α¬ƒα½ìα¬░α½çα¬¥α¬░α½ìα¬╕** α¬¬α¬ú α¬¢α½ç! α¬àα¬«...
+      Issues: ['Sources found but no product cards']
+    [product_browse] [gu] Score=5.5 - α¬ñα¬«α¬╛α¬░α½Ç α¬¬α¬╛α¬╕α½ç α¬òα¬»α¬╛ services α¬¢α½ç?
+      Response: α¬àα¬░α½ç, α¬ÿα¬úα¬╛ saras options α¬¢α½ç! α¬£α½üα¬ô kriyanta α¬¬α¬╛α¬╕α½ç **α¬½α½ìα¬░α½Ç α¬çα¬¿α½ìα¬ƒα¬┐α¬░α¬┐α¬»α¬░ α¬íα½çα¬òα½ïα¬░α½çα¬╢α¬¿ α¬òα¬¿α½ìα¬╕α¬▓α½ìα¬ƒα½çα¬╢α¬¿**, **α¬╣α½çα¬¿α½ìα¬íα¬«α½çα¬í α¬ƒα½ìα¬░α½çα¬¥α¬░α½ìα¬╕** α¬àα¬¿α½ç **α¬½α½ìα¬░α½Ç α¬╢α¬┐...
+      Issues: ['Sources found but no product cards']
+    [specific_product] [hi] Score=5 - αñ«αÑüαñ¥αÑç services αñÜαñ╛αñ╣αñ┐αñÅ αñ£αÑï αñ¼αñ╣αÑüαññ αñàαñÜαÑìαñ¢αÑÇ αñòαÑìαñ╡αñ╛αñ▓αñ┐αñƒαÑÇ αñòαñ╛ αñ╣αÑï
+      Response: α¬àα¬░α½ç, kriyanta α¬¬α¬╛α¬╕α½ç **α¬ÿα¬úα½Ç α¬╕α¬╛α¬░α½Ç services** α¬¢α½ç! α¬ñα¬«α¬¿α½ç α¬£α½ç α¬£α¬░α½éα¬░ α¬╣α½ïα¬» α¬ñα½ç α¬åα¬¬α¬╡α¬╛α¬«α¬╛α¬é α¬àα¬«α½ç α¬«α¬ªα¬ª α¬òα¬░α½Ç α¬╢α¬òα½Çα¬Å. α¬àα¬«α¬╛α¬░α½Ç α¬¬α¬╛α¬╕α½ç **Free Interior De...
+      Issues: ['Sources found but no product cards']
+    [price_query] [en] Score=5.5 - What's the price range for your solutions?
+      Response: We've got a pretty wide range of prices to fit different budgets. Our products start from **INR 392.0** for the **Kitche...
+    [complex] [hi] Score=5.5 - αñ«αÑçαñ░αÑÇ αñ¼αñ╣αñ¿ αñòαÑç αñ▓αñ┐αñÅ services αñÜαñ╛αñ╣αñ┐αñÅ, αñ▓αñ╛αñ▓ αñ»αñ╛ αñ¿αÑÇαñ▓αñ╛ αñ░αñéαñù, 2000 αñ░αÑüαñ¬αñ»αÑç 
+      Response: α¬àα¬░α½ç, α¬ñα¬«α¬╛α¬░α½Ç α¬¼α¬╣α½çα¬¿ α¬«α¬╛α¬ƒα½ç α¬╕α¬░α¬╕ α¬ôα¬¬α½ìα¬╢α¬¿ α¬¢α½ç! α¬▓α¬╛α¬▓ α¬àα¬¿α½ç α¬¿α½Çα¬▓α¬╛ α¬░α¬éα¬ùα¬¿α¬╛ α¬╡α¬┐α¬òα¬▓α½ìα¬¬α½ï α¬ëα¬¬α¬▓α¬¼α½ìα¬º α¬¢α½ç, α¬àα¬¿α½ç α¬ñα¬«α¬╛α¬░α¬╛ α¬¼α¬£α½çα¬ƒα¬«α¬╛α¬é α¬¬α¬ú α¬åα¬╡α½ç α¬¢α½ç. α¬íα¬┐α¬▓α¬┐α¬╡α¬░α½Çα¬¿α½Ç α¬╕α¬«α¬»α¬╕α½Çα¬«α¬╛ ...
+      Issues: ['Failed to handle multi-intent complex query fully']
+    [about_brand] [hi] Score=5 - kriyanta αñòαÑç αñ¼αñ╛αñ░αÑç αñ«αÑçαñé αñ¼αññαñ╛αñô
+      Response: I'm sorry, Hindi (αñ╣αñ┐αñéαñªαÑÇ) is not supported. I can help you in English, Gujarati (α¬ùα½üα¬£α¬░α¬╛α¬ñα½Ç). Please ask your question in on...
+    [unsupported_lang] [fr] Score=4 - Bonjour, montrez-moi vos produits les plus populaires
+      Response: Oh nice, here's what we've got! Take a look at these beauties, and you'll find our most popular items showcased in the c...
+      Issues: ['No warning about unsupported language']
+
+============================================================
+BOT: kids (Kids/Toys)
+URL: https://www.cheaperzonetoys.com
+Pages Crawled: 102
+Total Queries: 43 | Valid: 36 | Rate-Limited: 7
+Average Score: 4.7/10
+Failed Queries: 16
+----------------------------------------
+  greeting: avg=8.8/10 (2 queries)
+  product_browse: avg=4.7/10 (3 queries)
+    ISSUE: No products/sources for product query
+    ISSUE: No products/sources for product query
+  specific_product: avg=6.0/10 (2 queries)
+    ISSUE: No products/sources for product query
+  price_query: avg=5.2/10 (4 queries)
+    ISSUE: No price info for price query
+    ISSUE: ERROR: ('Connection aborted.', ConnectionResetError(10054, 'An existing connection was forcibly closed by the remote host', None, 10054, None))
+  non_product: avg=0.0/10 (4 queries)
+    ISSUE: ERROR: ('Connection aborted.', ConnectionResetError(10054, 'An existing connection was forcibly closed by the remote host', None, 10054, None))
+    ISSUE: ERROR: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+    ISSUE: ERROR: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+    ISSUE: ERROR: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+  irrelevant: avg=2.5/10 (4 queries)
+    ISSUE: ERROR: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+    ISSUE: FAILED to detect irrelevant query - bot tried to answer
+    ISSUE: ERROR: ('Connection aborted.', ConnectionResetError(10054, 'An existing connection was forcibly closed by the remote host', None, 10054, None))
+  ambiguous: avg=4.2/10 (3 queries)
+    ISSUE: ERROR: ('Connection aborted.', ConnectionResetError(10054, 'An existing connection was forcibly closed by the remote host', None, 10054, None))
+    ISSUE: Could give better guidance for ambiguous query
+  complex: avg=5.0/10 (2 queries)
+    ISSUE: ERROR: ('Connection aborted.', ConnectionResetError(10054, 'An existing connection was forcibly closed by the remote host', None, 10054, None))
+  context_start: avg=0.0/10 (1 queries)
+    ISSUE: ERROR: ('Connection aborted.', ConnectionResetError(10054, 'An existing connection was forcibly closed by the remote host', None, 10054, None))
+  context_followup: avg=7.5/10 (2 queries)
+  context_summary: avg=9.5/10 (1 queries)
+  about_brand: avg=6.8/10 (2 queries)
+  unsupported_lang: avg=4.0/10 (2 queries)
+    ISSUE: No warning about unsupported language
+    ISSUE: No warning about unsupported language
+  suggestions_test: avg=3.0/10 (1 queries)
+    ISSUE: No suggestions generated
+  comparison: avg=9.5/10 (1 queries)
+  variant_query: avg=7.5/10 (1 queries)
+  urgency: avg=7.5/10 (1 queries)
+
+  FAILED QUERIES:
+    [product_browse] [hi] αñåαñ¬αñòαÑç αñ¬αñ╛αñ╕ αñòαÑîαñ¿ αñ╕αÑç toys αñëαñ¬αñ▓αñ¼αÑìαñº αñ╣αÑêαñé?
+      Score: 2
+      Issues: ['No products/sources for product query']
+      Response: I'm sorry, Hindi (αñ╣αñ┐αñéαñªαÑÇ) is not supported. I can help you in English. Please ask your question in on...
+    [product_browse] [gu] α¬ñα¬«α¬╛α¬░α½Ç α¬¬α¬╛α¬╕α½ç α¬òα¬»α¬╛ toys α¬¢α½ç?
+      Score: 2
+      Issues: ['No products/sources for product query']
+      Response: I'm sorry, Gujarati (α¬ùα½üα¬£α¬░α¬╛α¬ñα½Ç) is not supported. I can help you in English. Please ask your question ...
+    [specific_product] [hi] αñ«αÑüαñ¥αÑç toys αñÜαñ╛αñ╣αñ┐αñÅ αñ£αÑï αñ¼αñ╣αÑüαññ αñàαñÜαÑìαñ¢αÑÇ αñòαÑìαñ╡αñ╛αñ▓αñ┐αñƒαÑÇ αñòαñ╛ αñ╣αÑï
+      Score: 2
+      Issues: ['No products/sources for product query']
+      Response: I'm sorry, Hindi (αñ╣αñ┐αñéαñªαÑÇ) is not supported. I can help you in English. Please ask your question in on...
+    [price_query] [hi] 500 αñ░αÑüαñ¬αñ»αÑç αñ╕αÑç αñòαñ« αñòαÑç toys αñ¼αññαñ╛αñô
+      Score: 2
+      Issues: ['No price info for price query']
+      Response: I'm sorry, Hindi (αñ╣αñ┐αñéαñªαÑÇ) is not supported. I can help you in English. Please ask your question in on...
+    [price_query] [gu] Γé╣1000 α¬Ñα½Ç α¬ôα¬¢α¬╛ toys α¬¼α¬ñα¬╛α¬╡α½ï
+      Score: 0
+      Issues: ["ERROR: ('Connection aborted.', ConnectionResetError(10054, 'An existing connection was forcibly closed by the remote host', None, 10054, None))"]
+      Response: ...
+    [non_product] [en] What is your return policy?
+      Score: 0
+      Issues: ["ERROR: ('Connection aborted.', ConnectionResetError(10054, 'An existing connection was forcibly closed by the remote host', None, 10054, None))"]
+      Response: ...
+    [non_product] [en] How long does shipping take?
+      Score: 0
+      Issues: ["ERROR: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))"]
+      Response: ...
+    [non_product] [en] Do you offer cash on delivery?
+      Score: 0
+      Issues: ["ERROR: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))"]
+      Response: ...
+    [non_product] [hi] αñ░αñ┐αñƒαñ░αÑìαñ¿ αñ¬αÑëαñ▓αñ┐αñ╕αÑÇ αñòαÑìαñ»αñ╛ αñ╣αÑê?
+      Score: 0
+      Issues: ["ERROR: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))"]
+      Response: ...
+    [irrelevant] [en] What is the capital of France?
+      Score: 0
+      Issues: ["ERROR: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))"]
+      Response: ...
+    [irrelevant] [en] Can you write me a Python script to sort a list?
+      Score: 1
+      Issues: ['FAILED to detect irrelevant query - bot tried to answer']
+      Response: That's a bit off-topic from shopping, but I can give you a simple example. Here's a Python script to...
+    [irrelevant] [en] What's the weather like in Tokyo today?
+      Score: 0
+      Issues: ["ERROR: ('Connection aborted.', ConnectionResetError(10054, 'An existing connection was forcibly closed by the remote host', None, 10054, None))"]
+      Response: ...
+    [ambiguous] [en] What do you recommend for someone new here?
+      Score: 0
+      Issues: ["ERROR: ('Connection aborted.', ConnectionResetError(10054, 'An existing connection was forcibly closed by the remote host', None, 10054, None))"]
+      Response: ...
+    [complex] [hi] αñ«αÑçαñ░αÑÇ αñ¼αñ╣αñ¿ αñòαÑç αñ▓αñ┐αñÅ toys αñÜαñ╛αñ╣αñ┐αñÅ, αñ▓αñ╛αñ▓ αñ»αñ╛ αñ¿αÑÇαñ▓αñ╛ αñ░αñéαñù, 2000 αñ░αÑüαñ¬αñ»αÑç αñ╕αÑç αñò
+      Score: 0
+      Issues: ["ERROR: ('Connection aborted.', ConnectionResetError(10054, 'An existing connection was forcibly closed by the remote host', None, 10054, None))"]
+      Response: ...
+    [context_start] [en] Show me your most popular toys
+      Score: 0
+      Issues: ["ERROR: ('Connection aborted.', ConnectionResetError(10054, 'An existing connection was forcibly closed by the remote host', None, 10054, None))"]
+      Response: ...
+    [suggestions_test] [hi] αñ»αñ╣αñ╛αñé αñòαÑìαñ»αñ╛-αñòαÑìαñ»αñ╛ αñ«αñ┐αñ▓αññαñ╛ αñ╣αÑê?
+      Score: 3
+      Issues: ['No suggestions generated']
+      Response: I'm sorry, Hindi (αñ╣αñ┐αñéαñªαÑÇ) is not supported. I can help you in English. Please ask your question in on...
+
+  LOW-SCORING QUERIES (<7):
+    [product_browse] [hi] Score=2 - αñåαñ¬αñòαÑç αñ¬αñ╛αñ╕ αñòαÑîαñ¿ αñ╕αÑç toys αñëαñ¬αñ▓αñ¼αÑìαñº αñ╣αÑêαñé?
+      Response: I'm sorry, Hindi (αñ╣αñ┐αñéαñªαÑÇ) is not supported. I can help you in English. Please ask your question in one of the supported l...
+      Issues: ['No products/sources for product query']
+    [product_browse] [gu] Score=2 - α¬ñα¬«α¬╛α¬░α½Ç α¬¬α¬╛α¬╕α½ç α¬òα¬»α¬╛ toys α¬¢α½ç?
+      Response: I'm sorry, Gujarati (α¬ùα½üα¬£α¬░α¬╛α¬ñα½Ç) is not supported. I can help you in English. Please ask your question in one of the suppor...
+      Issues: ['No products/sources for product query']
+    [specific_product] [hi] Score=2 - αñ«αÑüαñ¥αÑç toys αñÜαñ╛αñ╣αñ┐αñÅ αñ£αÑï αñ¼αñ╣αÑüαññ αñàαñÜαÑìαñ¢αÑÇ αñòαÑìαñ╡αñ╛αñ▓αñ┐αñƒαÑÇ αñòαñ╛ αñ╣αÑï
+      Response: I'm sorry, Hindi (αñ╣αñ┐αñéαñªαÑÇ) is not supported. I can help you in English. Please ask your question in one of the supported l...
+      Issues: ['No products/sources for product query']
+    [price_query] [hi] Score=2 - 500 αñ░αÑüαñ¬αñ»αÑç αñ╕αÑç αñòαñ« αñòαÑç toys αñ¼αññαñ╛αñô
+      Response: I'm sorry, Hindi (αñ╣αñ┐αñéαñªαÑÇ) is not supported. I can help you in English. Please ask your question in one of the supported l...
+      Issues: ['No price info for price query']
+    [irrelevant] [en] Score=1 - Can you write me a Python script to sort a list?
+      Response: That's a bit off-topic from shopping, but I can give you a simple example. Here's a Python script to sort a list:
+
+```py...
+      Issues: ['FAILED to detect irrelevant query - bot tried to answer']
+    [ambiguous] [hi] Score=4 - αñòαÑüαñ¢ αñàαñÜαÑìαñ¢αñ╛ αñ¼αññαñ╛αñô αñ¿αñ╛
+      Response: I'm sorry, Hindi (αñ╣αñ┐αñéαñªαÑÇ) is not supported. I can help you in English. Please ask your question in one of the supported l...
+      Issues: ['Could give better guidance for ambiguous query']
+    [about_brand] [hi] Score=5 - kids αñòαÑç αñ¼αñ╛αñ░αÑç αñ«αÑçαñé αñ¼αññαñ╛αñô
+      Response: I'm sorry, Hindi (αñ╣αñ┐αñéαñªαÑÇ) is not supported. I can help you in English. Please ask your question in one of the supported l...
+    [unsupported_lang] [fr] Score=4 - Bonjour, montrez-moi vos produits les plus populaires
+      Response: Oh nice, here's what we've got! We've got quite a range of popular products that kids love, and I'd be happy to show you...
+      Issues: ['No warning about unsupported language']
+    [unsupported_lang] [ja] Score=4 - πüôπéôπü½πüíπü»πÇüΣ║║µ░ùσòåσôüπéÆµòÖπüêπüªπüÅπüáπüòπüä
+      Response: Oh nice, here's what we've got! Check these out!
+
+...
+      Issues: ['No warning about unsupported language']
+    [suggestions_test] [hi] Score=3 - αñ»αñ╣αñ╛αñé αñòαÑìαñ»αñ╛-αñòαÑìαñ»αñ╛ αñ«αñ┐αñ▓αññαñ╛ αñ╣αÑê?
+      Response: I'm sorry, Hindi (αñ╣αñ┐αñéαñªαÑÇ) is not supported. I can help you in English. Please ask your question in one of the supported l...
+      Issues: ['No suggestions generated']
+
+============================================================
+BOT: zevaramaze (Jewelry)
+URL: https://zevaramaze.com
+Pages Crawled: 276
+Total Queries: 38 | Valid: 27 | Rate-Limited: 11
+Average Score: 8.2/10
+Failed Queries: 1
+----------------------------------------
+  greeting: avg=9.0/10 (3 queries)
+  product_browse: avg=7.5/10 (3 queries)
+    ISSUE: No products/sources for product query
+  specific_product: avg=10.0/10 (2 queries)
+  price_query: avg=9.5/10 (3 queries)
+  non_product: avg=5.8/10 (3 queries)
+  irrelevant: avg=9.0/10 (3 queries)
+  ambiguous: avg=8.5/10 (3 queries)
+  complex: avg=9.5/10 (1 queries)
+  context_start: avg=7.5/10 (1 queries)
+  context_followup: avg=7.5/10 (2 queries)
+  context_summary: avg=9.5/10 (1 queries)
+  unsupported_lang: avg=6.0/10 (2 queries)
+    ISSUE: No warning about unsupported language
+
+  FAILED QUERIES:
+    [product_browse] [en] Show me your best bracelets
+      Score: 2.5
+      Issues: ['No products/sources for product query']
+      Response: We've got some stunning bracelets at Zevaramaze. Let me show you a few of our top picks:
+- **Elegant...
+
+  LOW-SCORING QUERIES (<7):
+    [product_browse] [en] Score=2.5 - Show me your best bracelets
+      Response: We've got some stunning bracelets at Zevaramaze. Let me show you a few of our top picks:
+- **Elegant Silver Chain Bracel...
+      Issues: ['No products/sources for product query']
+    [non_product] [en] Score=6.5 - How long does shipping take?
+      Response: Shipping times can vary, but I'd be happy to give you a general idea. Unfortunately, I don't have the exact details on s...
+    [non_product] [en] Score=6.5 - Do you offer cash on delivery?
+      Response: We've got a few payment options, but I'm not sure about cash on delivery specifically. Let me check that for you. Unfort...
+    [non_product] [hi] Score=4.5 - αñ░αñ┐αñƒαñ░αÑìαñ¿ αñ¬αÑëαñ▓αñ┐αñ╕αÑÇ αñòαÑìαñ»αñ╛ αñ╣αÑê?
+      Response: αñàαñ░αÑç, αñ░αñ┐αñƒαñ░αÑìαñ¿ αñ¬αÑëαñ▓αñ┐αñ╕αÑÇ αñòαÑç αñ¼αñ╛αñ░αÑç αñ«αÑçαñé αñ£αñ╛αñ¿αñ¿αñ╛ αñ¼αñ╣αÑüαññ αñ£αñ░αÑéαñ░αÑÇ αñ╣αÑê! **αñ░αñ┐αñƒαñ░αÑìαñ¿ αñ¬αÑëαñ▓αñ┐αñ╕αÑÇ** αñ»αñ╣ αñ╣αÑê: [αñ╕αñéαñªαñ░αÑìαñ¡ αñ╕αÑç αñ£αñ╛αñ¿αñòαñ╛αñ░αÑÇ αñ¿αñ╣αÑÇαñé αñ«αñ┐αñ▓αÑÇ] Sorry, αñ░αñ┐αñƒαñ░αÑìαñ¿...
+    [unsupported_lang] [fr] Score=4 - Bonjour, montrez-moi vos produits les plus populaires
+      Response: Oh nice! Unfortunately, I don't have any info on our products just yet, so I can't show you our most popular ones ...
+      Issues: ['No warning about unsupported language']
+
+
+================================================================================
+PRODUCT LISTING ANALYSIS
+================================================================================
+
+--- ramraj ---
+  Queries with products: 17/33
+  DATA QUALITY: [price_query] Show me shirts under Γé╣500 - 0 missing prices, 5 missing images
+
+--- truff ---
+  Queries with products: 14/35
+  MISSING PRODUCTS (should have returned products):
+    [product_browse] [hi] αñåαñ¬αñòαÑç αñ¬αñ╛αñ╕ αñòαÑîαñ¿ αñ╕αÑç hot sauce αñëαñ¬αñ▓αñ¼αÑìαñº αñ╣αÑêαñé?
+      Products: 0, Sources: 0
+    [product_browse] [gu] α¬ñα¬«α¬╛α¬░α½Ç α¬¬α¬╛α¬╕α½ç α¬òα¬»α¬╛ hot sauce α¬¢α½ç?
+      Products: 0, Sources: 0
+    [specific_product] [hi] αñ«αÑüαñ¥αÑç hot sauce αñÜαñ╛αñ╣αñ┐αñÅ αñ£αÑï αñ¼αñ╣αÑüαññ αñàαñÜαÑìαñ¢αÑÇ αñòαÑìαñ╡αñ╛αñ▓αñ┐αñƒαÑÇ αñòαñ╛ αñ╣αÑï
+      Products: 0, Sources: 0
+    [price_query] [hi] 500 αñ░αÑüαñ¬αñ»αÑç αñ╕αÑç αñòαñ« αñòαÑç hot sauce αñ¼αññαñ╛αñô
+      Products: 0, Sources: 0
+    [price_query] [gu] Γé╣1000 α¬Ñα½Ç α¬ôα¬¢α¬╛ hot sauce α¬¼α¬ñα¬╛α¬╡α½ï
+      Products: 0, Sources: 0
+    [complex] [hi] αñ«αÑçαñ░αÑÇ αñ¼αñ╣αñ¿ αñòαÑç αñ▓αñ┐αñÅ hot sauce αñÜαñ╛αñ╣αñ┐αñÅ, αñ▓αñ╛αñ▓ αñ»αñ╛ αñ¿αÑÇαñ▓αñ╛ αñ░αñéαñù, 2000 αñ░αÑüαñ¬αñ»αÑç
+      Products: 0, Sources: 0
+  DATA QUALITY: [product_browse] Show me your best hot sauce - 0 missing prices, 5 missing images
+  DATA QUALITY: [specific_product] Do you have any premium pasta sauce? - 0 missing prices, 5 missing images
+  DATA QUALITY: [complex] I need a gift for my sister, she likes h - 0 missing prices, 5 missing images
+  DATA QUALITY: [context_start] Show me your most popular hot sauce - 0 missing prices, 5 missing images
+  DATA QUALITY: [unsupported_lang] Bonjour, montrez-moi vos produits les pl - 0 missing prices, 5 missing images
+  DATA QUALITY: [unsupported_lang] πüôπéôπü½πüíπü»πÇüΣ║║µ░ùσòåσôüπéÆµòÖπüêπüªπüÅπüáπüòπüä - 0 missing prices, 5 missing images
+  DATA QUALITY: [suggestions_test] I'm new here, what kind of things do you - 0 missing prices, 5 missing images
+  DATA QUALITY: [variant_query] Do you have hot sauce in size L or XL? - 0 missing prices, 5 missing images
+  DATA QUALITY: [variant_query] hot sauce mein kya sizes available hain? - 0 missing prices, 5 missing images
+
+--- kriyanta ---
+  Queries with products: 12/36
+  MISSING PRODUCTS (should have returned products):
+    [product_browse] [en] Show me your best services
+      Products: 0, Sources: 12
+    [product_browse] [hi] αñåαñ¬αñòαÑç αñ¬αñ╛αñ╕ αñòαÑîαñ¿ αñ╕αÑç services αñëαñ¬αñ▓αñ¼αÑìαñº αñ╣αÑêαñé?
+      Products: 0, Sources: 12
+    [product_browse] [gu] α¬ñα¬«α¬╛α¬░α½Ç α¬¬α¬╛α¬╕α½ç α¬òα¬»α¬╛ services α¬¢α½ç?
+      Products: 0, Sources: 12
+    [specific_product] [hi] αñ«αÑüαñ¥αÑç services αñÜαñ╛αñ╣αñ┐αñÅ αñ£αÑï αñ¼αñ╣αÑüαññ αñàαñÜαÑìαñ¢αÑÇ αñòαÑìαñ╡αñ╛αñ▓αñ┐αñƒαÑÇ αñòαñ╛ αñ╣αÑï
+      Products: 0, Sources: 12
+    [price_query] [en] What's the price range for your solutions?
+      Products: 0, Sources: 12
+    [complex] [en] I need a gift for my sister, she likes services in red or bl
+      Products: 0, Sources: 0
+  DATA QUALITY: [specific_product] I'm looking for a black services - 0 missing prices, 1 missing images
+  DATA QUALITY: [specific_product] Do you have any premium portfolio? - 0 missing prices, 1 missing images
+  DATA QUALITY: [specific_product] best quality services dikhao - 0 missing prices, 1 missing images
+  DATA QUALITY: [price_query] Γé╣1000 α¬Ñα½Ç α¬ôα¬¢α¬╛ services α¬¼α¬ñα¬╛α¬╡α½ï - 0 missing prices, 2 missing images
+  DATA QUALITY: [complex] αñ«αÑçαñ░αÑÇ αñ¼αñ╣αñ¿ αñòαÑç αñ▓αñ┐αñÅ services αñÜαñ╛αñ╣αñ┐αñÅ, αñ▓αñ╛αñ▓ αñ»αñ╛ αñ¿ - 0 missing prices, 5 missing images
+  DATA QUALITY: [unsupported_lang] Bonjour, montrez-moi vos produits les pl - 0 missing prices, 2 missing images
+  DATA QUALITY: [comparison] What's the difference between your cheap - 0 missing prices, 2 missing images
+
+--- kids ---
+  Queries with products: 12/36
+  MISSING PRODUCTS (should have returned products):
+    [product_browse] [hi] αñåαñ¬αñòαÑç αñ¬αñ╛αñ╕ αñòαÑîαñ¿ αñ╕αÑç toys αñëαñ¬αñ▓αñ¼αÑìαñº αñ╣αÑêαñé?
+      Products: 0, Sources: 0
+    [product_browse] [gu] α¬ñα¬«α¬╛α¬░α½Ç α¬¬α¬╛α¬╕α½ç α¬òα¬»α¬╛ toys α¬¢α½ç?
+      Products: 0, Sources: 0
+    [specific_product] [hi] αñ«αÑüαñ¥αÑç toys αñÜαñ╛αñ╣αñ┐αñÅ αñ£αÑï αñ¼αñ╣αÑüαññ αñàαñÜαÑìαñ¢αÑÇ αñòαÑìαñ╡αñ╛αñ▓αñ┐αñƒαÑÇ αñòαñ╛ αñ╣αÑï
+      Products: 0, Sources: 0
+    [price_query] [hi] 500 αñ░αÑüαñ¬αñ»αÑç αñ╕αÑç αñòαñ« αñòαÑç toys αñ¼αññαñ╛αñô
+      Products: 0, Sources: 0
+    [price_query] [gu] Γé╣1000 α¬Ñα½Ç α¬ôα¬¢α¬╛ toys α¬¼α¬ñα¬╛α¬╡α½ï
+      Products: 0, Sources: 0
+    [complex] [hi] αñ«αÑçαñ░αÑÇ αñ¼αñ╣αñ¿ αñòαÑç αñ▓αñ┐αñÅ toys αñÜαñ╛αñ╣αñ┐αñÅ, αñ▓αñ╛αñ▓ αñ»αñ╛ αñ¿αÑÇαñ▓αñ╛ αñ░αñéαñù, 2000 αñ░αÑüαñ¬αñ»αÑç αñ╕αÑç αñò
+      Products: 0, Sources: 0
+
+--- zevaramaze ---
+  Queries with products: 9/27
+  MISSING PRODUCTS (should have returned products):
+    [product_browse] [en] Show me your best bracelets
+      Products: 0, Sources: 0
+  DATA QUALITY: [price_query] Show me bracelets under Γé╣500 - 0 missing prices, 5 missing images
+  DATA QUALITY: [price_query] Γé╣1000 α¬Ñα½Ç α¬ôα¬¢α¬╛ bracelets α¬¼α¬ñα¬╛α¬╡α½ï - 0 missing prices, 5 missing images
+
+
+================================================================================
+SUGGESTION ANALYSIS
+================================================================================
+
+--- ramraj ---
+  With suggestions: 24/33 (73%)
+  Missing suggestions for:
+    [greeting] [hi] αñ¿αñ«αñ╕αÑìαññαÑç! αñåαñ¬ αñ«αÑçαñ░αÑÇ αñòαÑêαñ╕αÑç αñ«αñªαñª αñòαñ░ αñ╕αñòαññαÑç αñ╣αÑêαñé?
+    [non_product] [hi] αñ░αñ┐αñƒαñ░αÑìαñ¿ αñ¬αÑëαñ▓αñ┐αñ╕αÑÇ αñòαÑìαñ»αñ╛ αñ╣αÑê?
+    [ambiguous] [en] I want something nice for a gift
+    [ambiguous] [en] What do you recommend for someone new here?
+    [about_brand] [hi] ramraj αñòαÑç αñ¼αñ╛αñ░αÑç αñ«αÑçαñé αñ¼αññαñ╛αñô
+
+--- truff ---
+  With suggestions: 22/35 (63%)
+  Missing suggestions for:
+    [greeting] [hi] αñ¿αñ«αñ╕αÑìαññαÑç! αñåαñ¬ αñ«αÑçαñ░αÑÇ αñòαÑêαñ╕αÑç αñ«αñªαñª αñòαñ░ αñ╕αñòαññαÑç αñ╣αÑêαñé?
+    [product_browse] [hi] αñåαñ¬αñòαÑç αñ¬αñ╛αñ╕ αñòαÑîαñ¿ αñ╕αÑç hot sauce αñëαñ¬αñ▓αñ¼αÑìαñº αñ╣αÑêαñé?
+    [product_browse] [gu] α¬ñα¬«α¬╛α¬░α½Ç α¬¬α¬╛α¬╕α½ç α¬òα¬»α¬╛ hot sauce α¬¢α½ç?
+    [specific_product] [hi] αñ«αÑüαñ¥αÑç hot sauce αñÜαñ╛αñ╣αñ┐αñÅ αñ£αÑï αñ¼αñ╣αÑüαññ αñàαñÜαÑìαñ¢αÑÇ αñòαÑìαñ╡αñ╛αñ▓αñ┐αñƒαÑÇ αñòαñ╛ αñ╣αÑï
+    [price_query] [hi] 500 αñ░αÑüαñ¬αñ»αÑç αñ╕αÑç αñòαñ« αñòαÑç hot sauce αñ¼αññαñ╛αñô
+
+--- kriyanta ---
+  With suggestions: 24/36 (67%)
+  Missing suggestions for:
+    [specific_product] [hi] αñ«αÑüαñ¥αÑç services αñÜαñ╛αñ╣αñ┐αñÅ αñ£αÑï αñ¼αñ╣αÑüαññ αñàαñÜαÑìαñ¢αÑÇ αñòαÑìαñ╡αñ╛αñ▓αñ┐αñƒαÑÇ αñòαñ╛ αñ╣αÑï
+    [irrelevant] [hi] αñ¡αñ╛αñ░αññ αñòαñ╛ αñ¬αÑìαñ░αñºαñ╛αñ¿αñ«αñéαññαÑìαñ░αÑÇ αñòαÑîαñ¿ αñ╣αÑê?
+    [irrelevant] [en] What's the weather like in Tokyo today?
+    [ambiguous] [en] I want something nice for a gift
+    [ambiguous] [en] What do you recommend for someone new here?
+
+--- kids ---
+  With suggestions: 17/36 (47%)
+  Missing suggestions for:
+    [greeting] [hi] αñ¿αñ«αñ╕αÑìαññαÑç! αñåαñ¬ αñ«αÑçαñ░αÑÇ αñòαÑêαñ╕αÑç αñ«αñªαñª αñòαñ░ αñ╕αñòαññαÑç αñ╣αÑêαñé?
+    [product_browse] [hi] αñåαñ¬αñòαÑç αñ¬αñ╛αñ╕ αñòαÑîαñ¿ αñ╕αÑç toys αñëαñ¬αñ▓αñ¼αÑìαñº αñ╣αÑêαñé?
+    [product_browse] [gu] α¬ñα¬«α¬╛α¬░α½Ç α¬¬α¬╛α¬╕α½ç α¬òα¬»α¬╛ toys α¬¢α½ç?
+    [specific_product] [hi] αñ«αÑüαñ¥αÑç toys αñÜαñ╛αñ╣αñ┐αñÅ αñ£αÑï αñ¼αñ╣αÑüαññ αñàαñÜαÑìαñ¢αÑÇ αñòαÑìαñ╡αñ╛αñ▓αñ┐αñƒαÑÇ αñòαñ╛ αñ╣αÑï
+    [price_query] [hi] 500 αñ░αÑüαñ¬αñ»αÑç αñ╕αÑç αñòαñ« αñòαÑç toys αñ¼αññαñ╛αñô
+
+--- zevaramaze ---
+  With suggestions: 26/27 (96%)
+  Missing suggestions for:
+    [greeting] [hi_roman] hello bhai, kya help kar sakte ho?
+
+
+================================================================================
+LANGUAGE PERFORMANCE ANALYSIS
+================================================================================
+  en: avg=7.1/10 (97 queries)
+  fr: avg=3.2/10 (5 queries)
+  gu: avg=5.6/10 (9 queries)
+  hi: avg=5.0/10 (41 queries)
+  hi_roman: avg=8.6/10 (11 queries)
+  ja: avg=5.0/10 (4 queries)
+
+  LANGUAGE-SPECIFIC ISSUES:
+    WRONG SCRIPT: [ramraj] Hindi query got Gujarati response: αñ¿αñ«αñ╕αÑìαññαÑç! αñåαñ¬ αñ«αÑçαñ░αÑÇ αñòαÑêαñ╕αÑç αñ«αñªαñª αñòαñ░ αñ╕αñòαññαÑç αñ╣αÑêαñé?
+    WRONG SCRIPT: [ramraj] Hindi query got Gujarati response: αñåαñ¬αñòαÑç αñ¬αñ╛αñ╕ αñòαÑîαñ¿ αñ╕αÑç shirts αñëαñ¬αñ▓αñ¼αÑìαñº αñ╣αÑêαñé?
+    WRONG SCRIPT: [ramraj] Hindi query got Gujarati response: αñ«αÑüαñ¥αÑç shirts αñÜαñ╛αñ╣αñ┐αñÅ αñ£αÑï αñ¼αñ╣αÑüαññ αñàαñÜαÑìαñ¢αÑÇ αñòαÑìαñ╡αñ╛αñ▓αñ┐αñƒαÑÇ
+    WRONG SCRIPT: [ramraj] Hindi query got Gujarati response: αñ░αñ┐αñƒαñ░αÑìαñ¿ αñ¬αÑëαñ▓αñ┐αñ╕αÑÇ αñòαÑìαñ»αñ╛ αñ╣αÑê?
+    WRONG SCRIPT: [ramraj] Hindi query got Gujarati response: αñ¡αñ╛αñ░αññ αñòαñ╛ αñ¬αÑìαñ░αñºαñ╛αñ¿αñ«αñéαññαÑìαñ░αÑÇ αñòαÑîαñ¿ αñ╣αÑê?
+    WRONG SCRIPT: [ramraj] Hindi query got Gujarati response: αñòαÑüαñ¢ αñàαñÜαÑìαñ¢αñ╛ αñ¼αññαñ╛αñô αñ¿αñ╛
+    WRONG SCRIPT: [ramraj] Hindi query got Gujarati response: ramraj αñòαÑç αñ¼αñ╛αñ░αÑç αñ«αÑçαñé αñ¼αññαñ╛αñô
+    WRONG SCRIPT: [ramraj] Hindi query got Gujarati response: αñ»αñ╣αñ╛αñé αñòαÑìαñ»αñ╛-αñòαÑìαñ»αñ╛ αñ«αñ┐αñ▓αññαñ╛ αñ╣αÑê?
+    WRONG SCRIPT: [kriyanta] Hindi query got Gujarati response: αñåαñ¬αñòαÑç αñ¬αñ╛αñ╕ αñòαÑîαñ¿ αñ╕αÑç services αñëαñ¬αñ▓αñ¼αÑìαñº αñ╣αÑêαñé?
+    WRONG SCRIPT: [kriyanta] Hindi query got Gujarati response: αñ«αÑüαñ¥αÑç services αñÜαñ╛αñ╣αñ┐αñÅ αñ£αÑï αñ¼αñ╣αÑüαññ αñàαñÜαÑìαñ¢αÑÇ αñòαÑìαñ╡αñ╛αñ▓αñ┐
+    WRONG SCRIPT: [kriyanta] Hindi query got Gujarati response: 500 αñ░αÑüαñ¬αñ»αÑç αñ╕αÑç αñòαñ« αñòαÑç services αñ¼αññαñ╛αñô
+    WRONG SCRIPT: [kriyanta] Hindi query got Gujarati response: αñ«αÑçαñ░αÑÇ αñ¼αñ╣αñ¿ αñòαÑç αñ▓αñ┐αñÅ services αñÜαñ╛αñ╣αñ┐αñÅ, αñ▓αñ╛αñ▓ αñ»αñ╛ αñ¿
+
+
+================================================================================
+QUERY TYPE PERFORMANCE (ALL BOTS)
+================================================================================
+  about_brand: avg=6.9/10 (7 queries, 3 below 7)
+  ambiguous: avg=4.2/10 (14 queries, 8 below 7)
+  comparison: avg=9.5/10 (4 queries, 0 below 7)
+  complaint: avg=8.3/10 (3 queries, 0 below 7)
+  complex: avg=6.0/10 (8 queries, 4 below 7)
+  context_followup: avg=7.5/10 (10 queries, 0 below 7)
+  context_start: avg=6.0/10 (5 queries, 1 below 7)
+  context_summary: avg=9.5/10 (4 queries, 0 below 7)
+  greeting: avg=9.0/10 (11 queries, 0 below 7)
+  irrelevant: avg=5.5/10 (15 queries, 6 below 7)
+  non_product: avg=5.6/10 (16 queries, 8 below 7)
+  price_query: avg=7.4/10 (17 queries, 5 below 7)
+  product_browse: avg=6.5/10 (15 queries, 8 below 7)
+  specific_product: avg=8.4/10 (13 queries, 3 below 7)
+  suggestions_test: avg=3.1/10 (7 queries, 7 below 7)
+  unsupported_lang: avg=4.0/10 (9 queries, 8 below 7)
+  urgency: avg=3.8/10 (2 queries, 1 below 7)
+  variant_query: avg=7.4/10 (7 queries, 0 below 7)
+
+
+DONE
