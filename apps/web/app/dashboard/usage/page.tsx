@@ -445,7 +445,7 @@ export default function UsagePage() {
           <CardDescription>
             {selectedChatbot === "all"
               ? "Your total account usage compared to plan limits"
-              : `Usage for ${currentBotStats?.chatbot_name} compared to total plan limits`}
+              : `Usage for ${currentBotStats?.chatbot_name}`}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -463,23 +463,29 @@ export default function UsagePage() {
               <span
                 className={cn(
                   "font-medium text-lg",
-                  getUsageColor(displayPercentages.messages),
+                  selectedChatbot === "all" ? getUsageColor(displayPercentages.messages) : "",
                 )}
               >
                 {selectedChatbot === "all"
                   ? formatNumber(displayUsage.global_message_count)
-                  : formatNumber(displayUsage.messages_count)}{" "}
-                / {formatNumber(usage.plan_limits.messages_per_month)}
+                  : formatNumber(displayUsage.messages_count)}
+                {selectedChatbot === "all" && (
+                  <> / {formatNumber(usage.plan_limits.messages_per_month)}</>
+                )}
               </span>
             </div>
-            <Progress
-              value={Math.min(displayPercentages.messages, 100)}
-              className="h-2"
-              indicatorClassName={getProgressColor(displayPercentages.messages)}
-            />
-            <p className="text-xs text-muted-foreground">
-              {displayPercentages.messages.toFixed(1)}% of monthly limit
-            </p>
+            {selectedChatbot === "all" && (
+              <>
+                <Progress
+                  value={Math.min(displayPercentages.messages, 100)}
+                  className="h-2"
+                  indicatorClassName={getProgressColor(displayPercentages.messages)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {displayPercentages.messages.toFixed(1)}% of monthly limit
+                </p>
+              </>
+            )}
           </div>
 
           {/* Chatbots - Only show if All selected, otherwise show as context if desired, or skip */}
@@ -524,20 +530,24 @@ export default function UsagePage() {
               <span
                 className={cn(
                   "font-medium",
-                  getUsageColor(displayPercentages.conversations),
+                  selectedChatbot === "all" ? getUsageColor(displayPercentages.conversations) : "",
                 )}
               >
-                {formatNumber(displayUsage.conversations_count)} /{" "}
-                {formatNumber(usage.plan_limits.conversations_per_month)}
+                {formatNumber(displayUsage.conversations_count)}
+                {selectedChatbot === "all" && (
+                  <> / {formatNumber(usage.plan_limits.conversations_per_month)}</>
+                )}
               </span>
             </div>
-            <Progress
-              value={Math.min(displayPercentages.conversations, 100)}
-              className="h-2"
-              indicatorClassName={getProgressColor(
-                displayPercentages.conversations,
-              )}
-            />
+            {selectedChatbot === "all" && (
+              <Progress
+                value={Math.min(displayPercentages.conversations, 100)}
+                className="h-2"
+                indicatorClassName={getProgressColor(
+                  displayPercentages.conversations,
+                )}
+              />
+            )}
           </div>
 
           {/* Knowledge Pages */}
@@ -554,20 +564,24 @@ export default function UsagePage() {
               <span
                 className={cn(
                   "font-medium",
-                  getUsageColor(displayPercentages.knowledge_pages),
+                  selectedChatbot === "all" ? getUsageColor(displayPercentages.knowledge_pages) : "",
                 )}
               >
-                {formatNumber(displayUsage.knowledge_pages_count)} /{" "}
-                {formatNumber(usage.plan_limits.knowledge_pages)}
+                {formatNumber(displayUsage.knowledge_pages_count)}
+                {selectedChatbot === "all" && (
+                  <> / {formatNumber(usage.plan_limits.knowledge_pages)}</>
+                )}
               </span>
             </div>
-            <Progress
-              value={Math.min(displayPercentages.knowledge_pages, 100)}
-              className="h-2"
-              indicatorClassName={getProgressColor(
-                displayPercentages.knowledge_pages,
-              )}
-            />
+            {selectedChatbot === "all" && (
+              <Progress
+                value={Math.min(displayPercentages.knowledge_pages, 100)}
+                className="h-2"
+                indicatorClassName={getProgressColor(
+                  displayPercentages.knowledge_pages,
+                )}
+              />
+            )}
           </div>
 
           {/* Storage */}
@@ -584,20 +598,24 @@ export default function UsagePage() {
               <span
                 className={cn(
                   "font-medium",
-                  getUsageColor(displayPercentages.storage),
+                  selectedChatbot === "all" ? getUsageColor(displayPercentages.storage) : "",
                 )}
               >
-                {(Number(displayUsage.storage_mb) || 0).toFixed(2)} MB /{" "}
-                {formatNumber(usage.plan_limits.storage_mb)} MB
+                {(Number(displayUsage.storage_mb) || 0).toFixed(2)} MB
+                {selectedChatbot === "all" && (
+                  <> / {formatNumber(usage.plan_limits.storage_mb)} MB</>
+                )}
               </span>
             </div>
-            <Progress
-              value={Math.min(displayPercentages.storage, 100)}
-              className="h-2"
-              indicatorClassName={getProgressColor(
-                usage.usage_percentages.storage,
-              )}
-            />
+            {selectedChatbot === "all" && (
+              <Progress
+                value={Math.min(displayPercentages.storage, 100)}
+                className="h-2"
+                indicatorClassName={getProgressColor(
+                  usage.usage_percentages.storage,
+                )}
+              />
+            )}
           </div>
         </CardContent>
       </Card>

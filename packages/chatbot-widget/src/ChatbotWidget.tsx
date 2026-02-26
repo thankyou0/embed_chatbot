@@ -369,7 +369,6 @@ function WelcomeTypewriter({
   return (
     <span>
       {displayText}
-      <span className="typewriter-cursor">|</span>
     </span>
   );
 }

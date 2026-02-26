@@ -28,6 +28,8 @@ from app.core.config import settings
 from app.core.monitoring import capture_exception_with_context
 from app.services.embedding_service import EmbeddingService
 from app.services.product_extractor import extract_product_data
+from app.services.notification_service import create_notification
+from app.models.knowledge import CrawlNotificationType
 from bs4 import BeautifulSoup
 import re
 
@@ -884,13 +886,36 @@ class CrawlerService:
                     await db.commit()
                     await db.refresh(crawl_history)
 
-                # Update status to CRAWLING
+                # Update status to CRAWLING and initialise crawl_progress
+                crawl_start_time = datetime.now(timezone.utc)
                 await db.execute(
                     update(KnowledgeSource)
                     .where(KnowledgeSource.id == knowledge_source_id)
-                    .values(status=KnowledgeSourceStatus.CRAWLING)
+                    .values(
+                        status=KnowledgeSourceStatus.CRAWLING,
+                        crawl_progress={
+                            "pages_crawled": 0,
+                            "urls_in_queue": 0,
+                            "crawl_speed": 0,
+                            "started_at": crawl_start_time.isoformat(),
+                            "estimated_remaining_seconds": None,
+                        },
+                    )
                 )
                 await db.commit()
+
+                # Persistent notification: crawl starting
+                action = "Sync" if is_recrawl else "Crawl"
+                try:
+                    await create_notification(
+                        knowledge_source_id=str(knowledge_source_id),
+                        notification_type=CrawlNotificationType.CRAWL_STARTED,
+                        message=f"{action} started for {base_url}",
+                        severity="info",
+                        db=db,
+                    )
+                except Exception:
+                    pass  # Non-fatal
 
                 # Get existing pages for this knowledge source (for recrawl detection)
                 existing_pages: Dict[str, CrawledPage] = {}
@@ -1026,6 +1051,17 @@ class CrawlerService:
                                         .values(error_message=info_msg)
                                     )
                                     await db.commit()
+                                    # Persistent notification: sitemap auto-discovered
+                                    try:
+                                        await create_notification(
+                                            knowledge_source_id=str(knowledge_source_id),
+                                            notification_type=CrawlNotificationType.SITEMAP_USED,
+                                            message=info_msg,
+                                            severity="info",
+                                            db=db,
+                                        )
+                                    except Exception:
+                                        pass
                                 else:
                                     # No sitemap — warn user with helpful guidance
                                     warning_msg = (
@@ -1047,6 +1083,17 @@ class CrawlerService:
                                         .values(error_message=warning_msg)
                                     )
                                     await db.commit()
+                                    # Persistent notification: JS-heavy warning
+                                    try:
+                                        await create_notification(
+                                            knowledge_source_id=str(knowledge_source_id),
+                                            notification_type=CrawlNotificationType.JS_HEAVY_DETECTED,
+                                            message=warning_msg,
+                                            severity="warning",
+                                            db=db,
+                                        )
+                                    except Exception:
+                                        pass
 
                 except httpx.ConnectError:
                     raise ValueError(
@@ -1230,6 +1277,34 @@ class CrawlerService:
 
                     # Update stats periodically
                     if (pages_added + pages_updated) % 5 == 0:
+                        # Also update pages_found on KnowledgeSource so the
+                        # SSE status-stream and crawl-status API return a
+                        # real count instead of 0 while crawling is in progress.
+                        running_total = (
+                            (len(existing_pages) + pages_added - 0)
+                            if is_recrawl
+                            else pages_added
+                        )
+                        # Compute crawl_progress metrics
+                        elapsed = (datetime.now(timezone.utc) - crawl_start_time).total_seconds() or 1
+                        total_processed = pages_added + pages_updated
+                        speed = total_processed / elapsed  # pages/sec
+                        queue_size = len(crawler.queue) if hasattr(crawler, 'queue') else 0
+                        est_remaining = int(queue_size / speed) if speed > 0 else None
+                        await db.execute(
+                            update(KnowledgeSource)
+                            .where(KnowledgeSource.id == knowledge_source_id)
+                            .values(
+                                pages_found=running_total,
+                                crawl_progress={
+                                    "pages_crawled": total_processed,
+                                    "urls_in_queue": queue_size,
+                                    "crawl_speed": round(speed, 2),
+                                    "started_at": crawl_start_time.isoformat(),
+                                    "estimated_remaining_seconds": est_remaining,
+                                },
+                            )
+                        )
                         await db.commit()
 
                 # Check if crawl was stopped by user
@@ -1313,12 +1388,32 @@ class CrawlerService:
 
                 if quota_warning:
                     logger.warning(f"Setting quota warning: {quota_warning}")
+                    try:
+                        await create_notification(
+                            knowledge_source_id=str(knowledge_source_id),
+                            notification_type=CrawlNotificationType.QUOTA_REACHED,
+                            message=quota_warning,
+                            severity="warning",
+                            db=db,
+                        )
+                    except Exception:
+                        pass
 
                 # Prepare stopped-by-user message
                 stopped_message = None
                 if was_cancelled:
                     stopped_message = f"Crawl stopped by user. {pages_added} page(s) were saved before stopping."
                     logger.info(stopped_message)
+                    try:
+                        await create_notification(
+                            knowledge_source_id=str(knowledge_source_id),
+                            notification_type=CrawlNotificationType.CRAWL_STOPPED,
+                            message=stopped_message,
+                            severity="info",
+                            db=db,
+                        )
+                    except Exception:
+                        pass
 
                 # The final user-facing message (priority: stopped > quota > None)
                 user_message = stopped_message or quota_warning
@@ -1338,10 +1433,26 @@ class CrawlerService:
                     )
                 )
 
+                # Emit crawl_completed notification
+                try:
+                    await create_notification(
+                        knowledge_source_id=str(knowledge_source_id),
+                        notification_type=CrawlNotificationType.CRAWL_COMPLETED,
+                        message=(
+                            f"Crawl completed: {pages_added} added, "
+                            f"{pages_updated} updated, {pages_removed} removed"
+                        ),
+                        severity="info",
+                        db=db,
+                    )
+                except Exception:
+                    pass
+
                 # Update knowledge source
                 # If quota reached or stopped by user, we still process embeddings but show message
                 update_values = {
                     "pages_found": ks_total_pages,  # Use KS total for this field
+                    "crawl_progress": None,  # Clear progress on completion
                     # Keep status as CRAWLING - embeddings will set to COMPLETED
                 }
 
@@ -1500,6 +1611,21 @@ class CrawlerService:
                         CrawlerService.cleanup_old_removed_pages, days=30
                     )
 
+                # Auto-generate scope description for the chatbot
+                # This uses crawled pages to build a structured description
+                # that helps the LLM determine if user queries are in-scope
+                if should_regenerate_embeddings or not is_recrawl:
+                    try:
+                        from app.services.scope_service import generate_scope_description
+                        chatbot_id_for_scope = current_ks.chatbot_id if current_ks else None
+                        if chatbot_id_for_scope:
+                            logger.info(f"Generating scope description for chatbot {chatbot_id_for_scope}")
+                            await generate_scope_description(chatbot_id_for_scope, db)
+                    except Exception as scope_err:
+                        logger.warning(
+                            f"Scope description generation failed (non-fatal): {scope_err}"
+                        )
+
             except Exception as e:
                 _unregister_crawl(knowledge_source_id)
                 error_msg = str(e)
@@ -1529,6 +1655,34 @@ class CrawlerService:
                 )
                 if not public_error.lower().startswith("crawl"):
                     public_error = f"Crawl failed: {public_error}"
+
+                # Persistent notification for failure
+                ntype = (
+                    CrawlNotificationType.ROBOTS_BLOCKED
+                    if isinstance(e, PermissionError)
+                    else CrawlNotificationType.CRAWL_FAILED
+                )
+                try:
+                    await create_notification(
+                        knowledge_source_id=str(knowledge_source_id),
+                        notification_type=ntype,
+                        message=public_error,
+                        severity="error",
+                        db=db,
+                    )
+                except Exception:
+                    pass
+
+                # Clear crawl_progress on failure
+                try:
+                    await db.execute(
+                        update(KnowledgeSource)
+                        .where(KnowledgeSource.id == knowledge_source_id)
+                        .values(crawl_progress=None)
+                    )
+                    await db.commit()
+                except Exception:
+                    pass
 
                 # Update crawl history with error
                 if crawl_history:

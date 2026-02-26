@@ -1,0 +1,2263 @@
+[
+  {
+    "bot_id": "799637f9-391b-4b9d-84cb-5fdd17cdf109",
+    "bot_name": "Crawl-Tentree",
+    "domain": "sustainable outdoor/eco clothing (tentree.com)",
+    "allowed_langs": [
+      "en",
+      "hi",
+      "gu"
+    ],
+    "query_lang": "en",
+    "query_type": "greeting",
+    "query": "Hello!",
+    "session_key": "s1",
+    "response_text": "Hello! It's great to have you here. We've got a wonderful collection of sustainable clothing and accessories at Crawl-Tentree. Is there something specific you're looking for or would you like me to show you around?",
+    "products": [],
+    "suggestions": [
+      "What products do you have?",
+      "I'm looking for a gift"
+    ],
+    "error": null,
+    "elapsed_s": 3.94
+  },
+  {
+    "bot_id": "799637f9-391b-4b9d-84cb-5fdd17cdf109",
+    "bot_name": "Crawl-Tentree",
+    "domain": "sustainable outdoor/eco clothing (tentree.com)",
+    "allowed_langs": [
+      "en",
+      "hi",
+      "gu"
+    ],
+    "query_lang": "en",
+    "query_type": "product",
+    "query": "Show me your hoodies",
+    "session_key": "s2",
+    "response_text": "Oh nice, here's what we've got! We've got a range of hoodies for both men and women, all made with sustainable materials.",
+    "products": [
+      {
+        "name": "Womens Elm Zip Hoodie",
+        "url": "https://www.tentree.com/products/elm-zip-hoodie-forest-pine",
+        "price": "98",
+        "currency": "USD",
+        "image": "https://cdn.shopify.com/s/files/1/2341/3995/files/Green-Regular-Fit-Rib-Panel-Raglan-Zip-Hoodie-TCW6183-5590_1.jpg?v=1749230474",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Womens Bluffs Zip Hoodie",
+        "url": "https://www.tentree.com/products/bluffs-zip-hoodie-birchwood",
+        "price": "108",
+        "currency": "USD",
+        "image": "https://cdn.shopify.com/s/files/1/2341/3995/files/Brown-TreeFleece-Oversized-Zip-Hoodie-TCW6237-5582_1.jpg?v=1753830098",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Mens Coastal Hybrid Hoodie",
+        "url": "https://www.tentree.com/products/cloud-shell-hybrid-hoodie-meteorite-black",
+        "price": "168",
+        "currency": "USD",
+        "image": "https://cdn.shopify.com/s/files/1/2341/3995/files/Black-Water-Resistant-Zip-Up-Hoodie-TCM5411-0164_7_9e13cae7-dbb0-4dca-8e7d-ed13a8ebd4ba.jpg?v=1769731211",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Womens French Terry Crop Hoodie",
+        "url": "https://www.tentree.com/products/french-terry-crop-hoodie?utm_source=blog&utm_medium=post&utm_campaign=team_picks_comfy_cozies_012023",
+        "price": "78",
+        "currency": "USD",
+        "image": "https://cdn.shopify.com/s/files/1/2341/3995/products/GreenCroppedHoodie_TCW3194-00124_3.jpg?v=1682383943",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Store Locator",
+        "url": "https://www.tentree.com/pages/store-locator",
+        "price": "100",
+        "currency": "USD",
+        "image": "https://cdn.shopify.com/s/files/1/2341/3995/files/tentreeWordmarkLogo_RGB.jpg?height=628&pad_color=ffffff&v=1614739015&width=1200",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Womens Treefleece Oversized Zip Hoodie",
+        "url": "https://www.tentree.com/products/womens-treefleece-oversized-zip-hoodie-silver-cloud-grey?utm_campaign=tips_for_working_out_at_home_012023&utm_medium=post&utm_source=blog",
+        "price": "108",
+        "currency": "USD",
+        "image": "https://cdn.shopify.com/s/files/1/2341/3995/products/grey_eco_friendly_zip_up_hoodie_TCW4770-1478_6.jpg?v=1769732880",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Mens SeaFleece Reynard Hoodie",
+        "url": "https://www.tentree.com/products/mens-seafleece-reynard-hoodie-granite-grey?utm_source=blog&utm_medium=post&utm_campaign=fabric_focus_seafleece_seablend_032023",
+        "price": "88",
+        "currency": "USD",
+        "image": "https://cdn.shopify.com/s/files/1/2341/3995/products/grey_classic_hoodie_TCM5143_2172_5.jpg?v=1684189644",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Womens Juniper Zip Hoodie",
+        "url": "https://www.tentree.com/products/w-juniper-zip-hoodie",
+        "price": "98",
+        "currency": "USD",
+        "image": "https://cdn.shopify.com/s/files/1/2341/3995/files/TCW1760-0451-meteorite-black-heather-regular-fit-longsleeve-zip-hoodie_1.jpg?v=1746037599",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Mens Treefleece Reynard Hoodie",
+        "url": "https://www.tentree.com/products/mens-treefleece-reynard-hoodie-undyed?utm_source=blog&utm_medium=post&utm_campaign=spring_capsule_wardrobe_022023",
+        "price": "88",
+        "currency": "USD",
+        "image": "https://cdn.shopify.com/s/files/1/2341/3995/products/white_basic_hoodie_TCM2561-2432_1.jpg?v=1670973694",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      }
+    ],
+    "suggestions": [
+      "What are the prices of these hoodies?",
+      "Do you have any hoodies on sale?"
+    ],
+    "error": null,
+    "elapsed_s": 14.91
+  },
+  {
+    "bot_id": "799637f9-391b-4b9d-84cb-5fdd17cdf109",
+    "bot_name": "Crawl-Tentree",
+    "domain": "sustainable outdoor/eco clothing (tentree.com)",
+    "allowed_langs": [
+      "en",
+      "hi",
+      "gu"
+    ],
+    "query_lang": "en",
+    "query_type": "follow_up",
+    "query": "What about the cheaper ones?",
+    "session_key": "s2",
+    "response_text": "Check these out! We've got some more affordable options in our sale section, with eco-friendly hoodies at lower price points.",
+    "products": [
+      {
+        "name": "Store Locator",
+        "url": "https://www.tentree.com/pages/store-locator",
+        "price": "100",
+        "currency": "USD",
+        "image": "https://cdn.shopify.com/s/files/1/2341/3995/files/tentreeWordmarkLogo_RGB.jpg?height=628&pad_color=ffffff&v=1614739015&width=1200",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      }
+    ],
+    "suggestions": [
+      "What's the most affordable hoodie you have?",
+      "Do you have any discounts on women's hoodies?"
+    ],
+    "error": null,
+    "elapsed_s": 11.42
+  },
+  {
+    "bot_id": "799637f9-391b-4b9d-84cb-5fdd17cdf109",
+    "bot_name": "Crawl-Tentree",
+    "domain": "sustainable outdoor/eco clothing (tentree.com)",
+    "allowed_langs": [
+      "en",
+      "hi",
+      "gu"
+    ],
+    "query_lang": "en",
+    "query_type": "non_product",
+    "query": "What is your return policy?",
+    "session_key": "s3",
+    "response_text": "I can only help with questions about Tentree. What are you looking for?",
+    "products": [],
+    "suggestions": [],
+    "error": null,
+    "elapsed_s": 2.06
+  },
+  {
+    "bot_id": "799637f9-391b-4b9d-84cb-5fdd17cdf109",
+    "bot_name": "Crawl-Tentree",
+    "domain": "sustainable outdoor/eco clothing (tentree.com)",
+    "allowed_langs": [
+      "en",
+      "hi",
+      "gu"
+    ],
+    "query_lang": "en",
+    "query_type": "irrelevant",
+    "query": "Who is the president of USA?",
+    "session_key": "s4",
+    "response_text": "I can only help with questions about Tentree. What are you looking for?",
+    "products": [],
+    "suggestions": [],
+    "error": null,
+    "elapsed_s": 1.35
+  },
+  {
+    "bot_id": "799637f9-391b-4b9d-84cb-5fdd17cdf109",
+    "bot_name": "Crawl-Tentree",
+    "domain": "sustainable outdoor/eco clothing (tentree.com)",
+    "allowed_langs": [
+      "en",
+      "hi",
+      "gu"
+    ],
+    "query_lang": "en",
+    "query_type": "missing_info",
+    "query": "What is my order status?",
+    "session_key": "s5",
+    "response_text": "I don't have that information",
+    "products": [],
+    "suggestions": [
+      "How can I track my order?",
+      "What's the typical shipping time?"
+    ],
+    "error": null,
+    "elapsed_s": 1.77
+  },
+  {
+    "bot_id": "799637f9-391b-4b9d-84cb-5fdd17cdf109",
+    "bot_name": "Crawl-Tentree",
+    "domain": "sustainable outdoor/eco clothing (tentree.com)",
+    "allowed_langs": [
+      "en",
+      "hi",
+      "gu"
+    ],
+    "query_lang": "hi",
+    "query_type": "product",
+    "query": "आपके पास कौन सी जैकेट उपलब्ध हैं?",
+    "session_key": "s6",
+    "response_text": "यहाँ कुछ बढ़िया ऑप्शन हैं! हमारे पास मेंस और विमेंस दोनों के लिए सस्टेनेबल जैकेट्स उपलब्ध हैं, जैसे कि पार्का, पफर जैकेट्स, और रिवर्सिबल जैकेट्स।",
+    "products": [
+      {
+        "name": "Store Locator",
+        "url": "https://www.tentree.com/pages/store-locator",
+        "price": "100",
+        "currency": "USD",
+        "image": "https://cdn.shopify.com/s/files/1/2341/3995/files/tentreeWordmarkLogo_RGB.jpg?height=628&pad_color=ffffff&v=1614739015&width=1200",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Mens Nimbus Insulated Jacket",
+        "url": "https://www.tentree.com/products/nimbus-insulated-jacket-urban-green",
+        "price": "248",
+        "currency": "USD",
+        "image": "https://cdn.shopify.com/s/files/1/2341/3995/files/Green-Water-Resistant-Insulated-Jacket-TCM6012-2277_6.jpg?v=1721776691",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      }
+    ],
+    "suggestions": [
+      "इनमें से सबसे अच्छी जैकेट कौनसी है?",
+      "क्या इन जैकेट्स का डिस्काउंट है?"
+    ],
+    "error": null,
+    "elapsed_s": 10.17
+  },
+  {
+    "bot_id": "799637f9-391b-4b9d-84cb-5fdd17cdf109",
+    "bot_name": "Crawl-Tentree",
+    "domain": "sustainable outdoor/eco clothing (tentree.com)",
+    "allowed_langs": [
+      "en",
+      "hi",
+      "gu"
+    ],
+    "query_lang": "gu",
+    "query_type": "non_product",
+    "query": "ટેન્ટ્રી પર્યાવરણ માટે શું કરે છે?",
+    "session_key": "s7",
+    "response_text": "ટેન્ટ્રી પર્યાવરણને બચાવવા માટે ઘણું કામ કરે છે! દરેક પ્રોડક્ટ પર **10 વૃક્ષો** રોપવામાં આવે છે. તેઓએ હાલમાં **115 મિલિયન**થી વધુ વૃક્ષો રોપ્યા છે. તેમનો ઉદ્દેશ્ય **1 અબજ** વૃક્ષો રોપવાનો છે. તેઓ **કાર્બન કેપ્ચર**, **ઇકોસિસ્ટમ રિસ્ટોરેશન**, **વન્યજીવન આવાસ સંરક્ષણ**, અને **સમુદાય વિકાસ** માટે પણ કામ કરે છે.",
+    "products": [],
+    "suggestions": [
+      "ટેન્ટ્રીના પ્રોડક્ટ્સ જુઓ",
+      "ટેન્ટ્રીની સસ્ટેનેબિલિટી રિપોર્ટ વાંચો"
+    ],
+    "error": null,
+    "elapsed_s": 11.86
+  },
+  {
+    "bot_id": "99fc3604-99e7-4cd0-a2a6-509ac08d9fd0",
+    "bot_name": "Crawl-Death Wish Coffee",
+    "domain": "strong/specialty coffee brand (deathwishcoffee.com)",
+    "allowed_langs": [
+      "en",
+      "hi"
+    ],
+    "query_lang": "en",
+    "query_type": "greeting",
+    "query": "Hi there!",
+    "session_key": "s1",
+    "response_text": "Welcome to Crawl-Death Wish Coffee! I'm so glad you're here. We've got a fantastic selection of specialty coffee blends, single-serve coffee pods, and some amazing merchandise to go with your coffee lover's lifestyle. What brings you here today? Are you looking for something in particular or just browsing?",
+    "products": [],
+    "suggestions": [
+      "What products do you have?",
+      "I'm looking for a gift"
+    ],
+    "error": null,
+    "elapsed_s": 5.12
+  },
+  {
+    "bot_id": "99fc3604-99e7-4cd0-a2a6-509ac08d9fd0",
+    "bot_name": "Crawl-Death Wish Coffee",
+    "domain": "strong/specialty coffee brand (deathwishcoffee.com)",
+    "allowed_langs": [
+      "en",
+      "hi"
+    ],
+    "query_lang": "en",
+    "query_type": "product",
+    "query": "Show me your ground coffee products",
+    "session_key": "s2",
+    "response_text": "Oh nice, here's what we've got! Check these out!",
+    "products": [
+      {
+        "name": "5 Ways to Reuse Your Coffee Grounds",
+        "url": "https://www.deathwishcoffee.com/pages/how-to-recycle-used-coffee-grounds",
+        "price": "50",
+        "currency": "USD",
+        "image": "http://www.deathwishcoffee.com/cdn/shop/articles/coffee-grounds-hero.jpg?v=1638913734",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Blog and TikTok Feed",
+        "url": "https://www.deathwishcoffee.com/pages/ancient-medicines-coffee-wine-honey-and-more",
+        "price": "50",
+        "currency": "USD",
+        "image": "http://www.deathwishcoffee.com/cdn/shop/files/DWC-Primary-logo_ceec8917-4619-4676-b983-7a7dc8197fad.jpg?v=1625335264",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Coconut Caramel Ground Bundle",
+        "url": "https://www.deathwishcoffee.com/products/coconut-caramel-ground-and-chocolate-bundle",
+        "price": "25",
+        "currency": "USD",
+        "image": "https://www.deathwishcoffee.com/cdn/shop/files/Coconut_Caramel_Bark_Bundle_9oz_Front_DTC_A1.jpg?v=1768571273&width=1920",
+        "brand": "Death Wish Coffee",
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Double Indulgence Ground Bundle",
+        "url": "https://www.deathwishcoffee.com/products/double-indulgence-ground-bundle",
+        "price": "39.98",
+        "currency": "USD",
+        "image": "https://www.deathwishcoffee.com/cdn/shop/files/Double_Indulgence_Ground_Bundle.jpg?v=1726759443&width=1920",
+        "brand": "Death Wish Coffee Company",
+        "rating": null,
+        "review_count": null
+      }
+    ],
+    "suggestions": [
+      "What's the difference between your ground coffee blends?",
+      "Do you offer any fair trade ground coffee options?"
+    ],
+    "error": null,
+    "elapsed_s": 10.42
+  },
+  {
+    "bot_id": "99fc3604-99e7-4cd0-a2a6-509ac08d9fd0",
+    "bot_name": "Crawl-Death Wish Coffee",
+    "domain": "strong/specialty coffee brand (deathwishcoffee.com)",
+    "allowed_langs": [
+      "en",
+      "hi"
+    ],
+    "query_lang": "en",
+    "query_type": "follow_up",
+    "query": "Which one is the strongest?",
+    "session_key": "s2",
+    "response_text": "We've got a few strong options, but our **Fiercely Strong Coffee | Dark Roast Coffee** is definitely a fan favorite for its bold flavor.",
+    "products": [
+      {
+        "name": "Fiercely Strong Coffee",
+        "url": "https://www.deathwishcoffee.com/products/death-cups",
+        "price": "14.99",
+        "currency": "USD",
+        "image": "http://www.deathwishcoffee.com/cdn/shop/files/Dark_Roast_10ct_Angle_Vertical_Pods_DTC_A4_2.jpg?v=1726752463",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Dark Roast Coffee",
+        "url": "https://www.deathwishcoffee.com/products/death-wish-coffee",
+        "price": "19.99",
+        "currency": "USD",
+        "image": "https://www.deathwishcoffee.com/cdn/shop/files/Dark_Roast_16oz_Ground_Angle_DTC_A4_2.jpg?v=1726752263&width=1920",
+        "brand": "Death Wish Coffee Company",
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Espresso Roast Coffee",
+        "url": "https://www.deathwishcoffee.com/products/espresso-roast-coffee?variant=39781001134135&utm_source=google&utm_medium=organic&utm_campaign=shopping&utm_term=shopify_US_6669374816311_39781001134135&utm_source=google&utm_medium=cpc&utm_campaign=17579479436&utm_medium=ad&utm_content=&utm_term=&gclid=EAIaIQobChMIxbG9ubmr-QIVVRx9Ch1S1w7XEAYYASABEgK77vD_BwE",
+        "price": "19.99",
+        "currency": "USD",
+        "image": "https://www.deathwishcoffee.com/cdn/shop/files/Espresso_Roast_14oz_Ground_Angle_DTC_A5_2.jpg?v=1726755281&width=1920",
+        "brand": "Death Wish Coffee Company",
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Espresso Roast Single-Serve Pods",
+        "url": "https://www.deathwishcoffee.com/products/espresso-roast-death-cups",
+        "price": "14.99",
+        "currency": "USD",
+        "image": "https://www.deathwishcoffee.com/cdn/shop/files/Espresso_Roast_10ct_Angle_Vertical_Pods_DTC_A5_2.jpg?v=1726755421&width=1920",
+        "brand": "Death Wish Coffee Company",
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Medium Roast Single-Serve Pods",
+        "url": "https://www.deathwishcoffee.com/products/medium-roast-death-cups",
+        "price": "14.99",
+        "currency": "USD",
+        "image": "https://www.deathwishcoffee.com/cdn/shop/files/Medium_Roast_10ct_Angle_Vertical_Pods_DTC_A4_2.jpg?v=1726755183&width=1920",
+        "brand": "Death Wish Coffee Company",
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Medium Roast Coffee",
+        "url": "https://www.deathwishcoffee.com/products/medium-roast",
+        "price": "19.99",
+        "currency": "USD",
+        "image": "https://www.deathwishcoffee.com/cdn/shop/files/Medium_Roast_16oz_Ground_Angle_DTC_A4_2.jpg?v=1726752632&width=1920",
+        "brand": "Death Wish Coffee Company",
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Trellis Test Product",
+        "url": "https://www.deathwishcoffee.com/products/trellis-test-product",
+        "price": "19.99",
+        "currency": "USD",
+        "image": "https://www.deathwishcoffee.com/cdn/shop/files/Dark_Roast_10oz_Ground_Angle_Cathedral_DTC_A2-_2.jpg?v=1752080457&width=1920",
+        "brand": "Death Wish Coffee Company",
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Dark Roast Death Cups for Office",
+        "url": "https://www.deathwishcoffee.com/products/dark-roast-death-cups-office",
+        "price": "59.99",
+        "currency": "USD",
+        "image": "https://www.deathwishcoffee.com/cdn/shop/products/Death_Wish_Coffee_KCUP_Dark_50_Count_19db6ba5-2b92-419c-a29d-f107ae65f620.jpg?v=1642180080&width=1920",
+        "brand": "Death Wish Coffee Company",
+        "rating": null,
+        "review_count": null
+      }
+    ],
+    "suggestions": [
+      "What's the caffeine content in this?",
+      "Is this available in single-serve pods?"
+    ],
+    "error": null,
+    "elapsed_s": 12.45
+  },
+  {
+    "bot_id": "99fc3604-99e7-4cd0-a2a6-509ac08d9fd0",
+    "bot_name": "Crawl-Death Wish Coffee",
+    "domain": "strong/specialty coffee brand (deathwishcoffee.com)",
+    "allowed_langs": [
+      "en",
+      "hi"
+    ],
+    "query_lang": "en",
+    "query_type": "non_product",
+    "query": "How should I brew your coffee?",
+    "session_key": "s3",
+    "response_text": "Oh nice, here's what we've got! We've got a page dedicated to **How to brew instant coffee in 3 steps**, and also some general tips on **5 Tips for Strong Coffee**.",
+    "products": [
+      {
+        "name": "Dark Roast + Medium Roast Single-Serve Pod Bundle",
+        "url": "https://www.deathwishcoffee.com/products/dark-roast-medium-roast-death-cup-bundle",
+        "price": "29.98",
+        "currency": "USD",
+        "image": "https://www.deathwishcoffee.com/cdn/shop/files/DarkRoast_MediumRoast_Pod_Bundle.jpg?v=1726760556&width=1920",
+        "brand": "Death Wish Coffee Company",
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Dark Roast + Medium Roast Bundle",
+        "url": "https://www.deathwishcoffee.com/products/dark-roast-medium-roast-bundle",
+        "price": "39.98",
+        "currency": "USD",
+        "image": "https://www.deathwishcoffee.com/cdn/shop/files/DarkRoast_MediumRoast_Ground_Bundle.jpg?v=1726760446&width=1920",
+        "brand": "Death Wish Coffee Company",
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Light Roast + Dark Roast Single-Serve Pod Bundle",
+        "url": "https://www.deathwishcoffee.com/products/light-roast-dark-roast-single-serve-pod-bundle",
+        "price": "29.98",
+        "currency": "USD",
+        "image": "https://www.deathwishcoffee.com/cdn/shop/files/LR_DR_10ct_Angle_A1.jpg?v=1756474200&width=1920",
+        "brand": "Death Wish Coffee",
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Dark Roast + Espresso Roast Single-Serve Pod Bundle",
+        "url": "https://www.deathwishcoffee.com/products/dark-roast-espresso-roast-death-cup-bundle",
+        "price": "29.98",
+        "currency": "USD",
+        "image": "https://www.deathwishcoffee.com/cdn/shop/files/DarkRoast_EspressoRoast_Pod_Bundle.jpg?v=1726760375&width=1920",
+        "brand": "Death Wish Coffee Company",
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Light Roast + Espresso Roast Bundle",
+        "url": "https://www.deathwishcoffee.com/products/light-roast-espresso-roast-bundle",
+        "price": "39.98",
+        "currency": "USD",
+        "image": "https://www.deathwishcoffee.com/cdn/shop/files/LR_ER_16oz_Ground_Angle_A1_Callouts.jpg?v=1758720756&width=1920",
+        "brand": "Death Wish Coffee",
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Dark Roast + Espresso Roast Bundle",
+        "url": "https://www.deathwishcoffee.com/products/dark-roast-espresso-roast-bundle",
+        "price": "39.98",
+        "currency": "USD",
+        "image": "https://www.deathwishcoffee.com/cdn/shop/files/DarkRoast_EspressoRoast_Ground_Bundle.jpg?v=1726760284&width=1920",
+        "brand": "Death Wish Coffee Company",
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Espresso Roast + Medium Roast Single-Serve Pod Bundle",
+        "url": "https://www.deathwishcoffee.com/products/espresso-roast-medium-roast-death-cup-bundle",
+        "price": "29.98",
+        "currency": "USD",
+        "image": "https://www.deathwishcoffee.com/cdn/shop/files/EspressoRoast_MediumRoast_Pod_Bundle.jpg?v=1726760838&width=1920",
+        "brand": "Death Wish Coffee Company",
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Espresso Roast + Medium Roast Bundle",
+        "url": "https://www.deathwishcoffee.com/products/espresso-roast-medium-roast-bundle",
+        "price": "39.98",
+        "currency": "USD",
+        "image": "https://www.deathwishcoffee.com/cdn/shop/files/EspressoRoast_MediumRoast_Ground_Bundle.jpg?v=1726760774&width=1920",
+        "brand": "Death Wish Coffee Company",
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Light Roast + Dark Roast Bundle",
+        "url": "https://www.deathwishcoffee.com/products/light-roast-dark-roast-bundle",
+        "price": "39.98",
+        "currency": "USD",
+        "image": "https://www.deathwishcoffee.com/cdn/shop/files/LR_DR_16oz_Ground_Angle_A1_Callouts.jpg?v=1758722131&width=1920",
+        "brand": "Death Wish Coffee",
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Light Roast + Medium Roast Single-Serve Pod Bundle",
+        "url": "https://www.deathwishcoffee.com/products/light-roast-medium-roast-single-serve-pod-bundle",
+        "price": "29.98",
+        "currency": "USD",
+        "image": "https://www.deathwishcoffee.com/cdn/shop/files/LR_MR_10ct_Angle_A1.jpg?v=1758633693&width=1920",
+        "brand": "Death Wish Coffee",
+        "rating": null,
+        "review_count": null
+      }
+    ],
+    "suggestions": [
+      "What's the best water temperature for brewing?",
+      "Do you have any coffee recipes?"
+    ],
+    "error": null,
+    "elapsed_s": 10.39
+  },
+  {
+    "bot_id": "99fc3604-99e7-4cd0-a2a6-509ac08d9fd0",
+    "bot_name": "Crawl-Death Wish Coffee",
+    "domain": "strong/specialty coffee brand (deathwishcoffee.com)",
+    "allowed_langs": [
+      "en",
+      "hi"
+    ],
+    "query_lang": "en",
+    "query_type": "irrelevant",
+    "query": "What is machine learning?",
+    "session_key": "s4",
+    "response_text": "I can only help with questions about Death Wish Coffee. What are you looking for?",
+    "products": [],
+    "suggestions": [],
+    "error": null,
+    "elapsed_s": 1.59
+  },
+  {
+    "bot_id": "99fc3604-99e7-4cd0-a2a6-509ac08d9fd0",
+    "bot_name": "Crawl-Death Wish Coffee",
+    "domain": "strong/specialty coffee brand (deathwishcoffee.com)",
+    "allowed_langs": [
+      "en",
+      "hi"
+    ],
+    "query_lang": "en",
+    "query_type": "missing_info",
+    "query": "Can I track my order?",
+    "session_key": "s5",
+    "response_text": "You can track your order with us. We've got a page dedicated to that - it's called **Track Your Order**. The price for this service is **$50.0 USD**. You can check your order status to know when it'll arrive.",
+    "products": [],
+    "suggestions": [
+      "How long does shipping usually take?",
+      "Can I change my order after it's been placed?"
+    ],
+    "error": null,
+    "elapsed_s": 8.88
+  },
+  {
+    "bot_id": "99fc3604-99e7-4cd0-a2a6-509ac08d9fd0",
+    "bot_name": "Crawl-Death Wish Coffee",
+    "domain": "strong/specialty coffee brand (deathwishcoffee.com)",
+    "allowed_langs": [
+      "en",
+      "hi"
+    ],
+    "query_lang": "hi",
+    "query_type": "product",
+    "query": "आपके पास कौन सी कॉफी उत्पाद हैं?",
+    "session_key": "s6",
+    "response_text": "यहाँ कुछ बढ़िया ऑप्शन हैं! देखो Crawl-Death Wish Coffee के पास क्या है।",
+    "products": [
+      {
+        "name": "Hario Dripper & Filter Bundle",
+        "url": "https://www.deathwishcoffee.com/products/hario-dripper-filter-bundle",
+        "price": "43",
+        "currency": "USD",
+        "image": "https://www.deathwishcoffee.com/cdn/shop/files/Hario_Pourover_132.jpg?v=1695056187&width=1920",
+        "brand": "Hario",
+        "rating": null,
+        "review_count": null
+      }
+    ],
+    "suggestions": [
+      "कॉफी बीन्स की कीमत क्या है?",
+      "कौन सी कॉफी सबसे ज़्यादा बिकती है?"
+    ],
+    "error": null,
+    "elapsed_s": 10.46
+  },
+  {
+    "bot_id": "e23fcc6f-7a02-4b09-8d49-95c00a57d852",
+    "bot_name": "Crawl-Beardbrand",
+    "domain": "beard grooming & men's care (beardbrand.com)",
+    "allowed_langs": [
+      "en",
+      "gu"
+    ],
+    "query_lang": "en",
+    "query_type": "greeting",
+    "query": "Hey!",
+    "session_key": "s1",
+    "response_text": "Welcome to Crawl-Beardbrand. We're super excited to have you here. What brings you to our corner of the internet today?",
+    "products": [],
+    "suggestions": [
+      "What products do you have?",
+      "I'm looking for grooming tips"
+    ],
+    "error": null,
+    "elapsed_s": 5.75
+  },
+  {
+    "bot_id": "e23fcc6f-7a02-4b09-8d49-95c00a57d852",
+    "bot_name": "Crawl-Beardbrand",
+    "domain": "beard grooming & men's care (beardbrand.com)",
+    "allowed_langs": [
+      "en",
+      "gu"
+    ],
+    "query_lang": "en",
+    "query_type": "product",
+    "query": "What beard oils do you sell?",
+    "session_key": "s2",
+    "response_text": "Oh nice, here's what we've got! We've got a range of beard oils, including **Bold Fortune Beard Oil** and **Old Money Beard Oil**, that help prevent beard itch, soothe dry skin, and stop beard dandruff.",
+    "products": [
+      {
+        "name": "Beard Oil",
+        "url": "https://www.beardbrand.com/products/utility-beard-oil",
+        "price": "75",
+        "currency": "USD",
+        "image": "https://www.beardbrand.com/cdn/shop/t/886/assets/default-social-v2.png?v=83798026868201643701770919240",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Temple Smoke Beard Oil",
+        "url": "https://www.beardbrand.com/products/temple-smoke-beard-oil",
+        "price": "29",
+        "currency": "USD",
+        "image": "https://www.beardbrand.com/cdn/shop/files/BOTS_50ml_1024x.jpg?v=1768591863",
+        "brand": "Beardbrand",
+        "rating": 4.62,
+        "review_count": 4559
+      },
+      {
+        "name": "Bold Fortune Beard Oil",
+        "url": "https://www.beardbrand.com/products/bold-fortune-beard-oil",
+        "price": "32",
+        "currency": "USD",
+        "image": "https://www.beardbrand.com/cdn/shop/files/BOBF_travel_1024x.jpg?v=1768512775",
+        "brand": "Beardbrand",
+        "rating": 4.62,
+        "review_count": 4559
+      },
+      {
+        "name": "Old Money Beard Oil",
+        "url": "https://www.beardbrand.com/products/old-money-beard-oil",
+        "price": "29",
+        "currency": "USD",
+        "image": "https://www.beardbrand.com/cdn/shop/files/BOOM_travel_1024x.jpg?v=1768589654",
+        "brand": "Beardbrand",
+        "rating": 4.62,
+        "review_count": 4559
+      },
+      {
+        "name": "Tree Ranger Beard Oil",
+        "url": "https://www.beardbrand.com/products/tree-ranger-beard-oil",
+        "price": "29",
+        "currency": "USD",
+        "image": "https://www.beardbrand.com/cdn/shop/files/BOTR_50ml_1024x.jpg?v=1768591178",
+        "brand": "Beardbrand",
+        "rating": 4.62,
+        "review_count": 4559
+      },
+      {
+        "name": "Norse Winter Beard Oil",
+        "url": "https://www.beardbrand.com/products/norse-winter-beard-oil",
+        "price": "32",
+        "currency": "USD",
+        "image": "https://www.beardbrand.com/cdn/shop/files/BONW_50ml_1024x.jpg?v=1764079446",
+        "brand": "Beardbrand",
+        "rating": 4.62,
+        "review_count": 4559
+      },
+      {
+        "name": "Temple Smoke Beard Oil & Cologne Bundle",
+        "url": "https://www.beardbrand.com/products/temple-smoke-beard-oil-cologne-bundle",
+        "price": "59.20",
+        "currency": "USD",
+        "image": "https://www.beardbrand.com/cdn/shop/files/BO_EDP_TS_1024x.jpg?v=1764690243",
+        "brand": "Beardbrand",
+        "rating": 4.62,
+        "review_count": 4559
+      },
+      {
+        "name": "Bold Fortune Beard Oil & Cologne Bundle",
+        "url": "https://www.beardbrand.com/products/bold-fortune-beard-oil-cologne-bundle",
+        "price": "65.60",
+        "currency": "USD",
+        "image": "https://www.beardbrand.com/cdn/shop/files/BO_1.7_EDP_BF_1024x.jpg?v=1761758849",
+        "brand": "Beardbrand",
+        "rating": 4.62,
+        "review_count": 4559
+      },
+      {
+        "name": "Old Money Beard Oil & Cologne Bundle",
+        "url": "https://www.beardbrand.com/products/old-money-beard-oil-cologne-bundle",
+        "price": "59.20",
+        "currency": "USD",
+        "image": "https://www.beardbrand.com/cdn/shop/files/BO_EDP_OM_1024x.jpg?v=1764690243",
+        "brand": "Beardbrand",
+        "rating": 4.62,
+        "review_count": 4559
+      },
+      {
+        "name": "Temple Smoke Beard Foundations Set",
+        "url": "https://www.beardbrand.com/products/temple-smoke-beard-foundations-set",
+        "price": "77.70",
+        "currency": "USD",
+        "image": "https://www.beardbrand.com/cdn/shop/files/US_BO_BB-TS_1024x.jpg?v=1765226569",
+        "brand": "Beardbrand",
+        "rating": null,
+        "review_count": null
+      }
+    ],
+    "suggestions": [
+      "What's the difference between these beard oils?",
+      "Do you have any beard oil sets or bundles?"
+    ],
+    "error": null,
+    "elapsed_s": 10.85
+  },
+  {
+    "bot_id": "e23fcc6f-7a02-4b09-8d49-95c00a57d852",
+    "bot_name": "Crawl-Beardbrand",
+    "domain": "beard grooming & men's care (beardbrand.com)",
+    "allowed_langs": [
+      "en",
+      "gu"
+    ],
+    "query_lang": "en",
+    "query_type": "follow_up",
+    "query": "Tell me more about the first one",
+    "session_key": "s2",
+    "response_text": "The **Bold Fortune Beard Oil** smells like charred white oak and vintage leather coupled with hits of saffron and oud, and it's available for **$32.0 USD**. It's designed to prevent beard itch, soothe dry skin, and stop beard dandruff, leaving your beard healthy, soft, and smelling awesome.",
+    "products": [
+      {
+        "name": "Bold Fortune Grooming Set",
+        "url": "https://www.beardbrand.com/products/bold-fortune-grooming-set",
+        "price": "75.60",
+        "currency": "USD",
+        "image": "https://www.beardbrand.com/cdn/shop/files/BO_small_EDP_BF_comb_1024x.jpg?v=1761760572",
+        "brand": "Beardbrand",
+        "rating": 4.62,
+        "review_count": 4559
+      },
+      {
+        "name": "Bold Fortune Beard Oil",
+        "url": "https://www.beardbrand.com/products/bold-fortune-beard-oil",
+        "price": "32",
+        "currency": "USD",
+        "image": "https://www.beardbrand.com/cdn/shop/files/BOBF_travel_1024x.jpg?v=1768512775",
+        "brand": "Beardbrand",
+        "rating": 4.62,
+        "review_count": 4559
+      },
+      {
+        "name": "Bold Fortune Beard Oil & Cologne Bundle",
+        "url": "https://www.beardbrand.com/products/bold-fortune-beard-oil-cologne-bundle",
+        "price": "65.60",
+        "currency": "USD",
+        "image": "https://www.beardbrand.com/cdn/shop/files/BO_1.7_EDP_BF_1024x.jpg?v=1761758849",
+        "brand": "Beardbrand",
+        "rating": 4.62,
+        "review_count": 4559
+      },
+      {
+        "name": "Old Money Fortune Beard Foundations Set",
+        "url": "https://www.beardbrand.com/products/old-money-fortune-beard-foundations-set",
+        "price": "77.70",
+        "currency": "USD",
+        "image": "https://www.beardbrand.com/cdn/shop/files/US_BO_BB-OM_1024x.jpg?v=1765226569",
+        "brand": "Beardbrand",
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Bold Fortune Beard Foundations Set",
+        "url": "https://www.beardbrand.com/products/bold-fortune-beard-foundations-set",
+        "price": "84",
+        "currency": "USD",
+        "image": "https://www.beardbrand.com/cdn/shop/files/US_BO_BB-BF_1024x.jpg?v=1765225764",
+        "brand": "Beardbrand",
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Old Money Beard Oil & Cologne Bundle",
+        "url": "https://www.beardbrand.com/products/old-money-beard-oil-cologne-bundle",
+        "price": "59.20",
+        "currency": "USD",
+        "image": "https://www.beardbrand.com/cdn/shop/files/BO_EDP_OM_1024x.jpg?v=1764690243",
+        "brand": "Beardbrand",
+        "rating": 4.62,
+        "review_count": 4559
+      },
+      {
+        "name": "Old Money Beard Oil",
+        "url": "https://www.beardbrand.com/products/old-money-beard-oil",
+        "price": "29",
+        "currency": "USD",
+        "image": "https://www.beardbrand.com/cdn/shop/files/BOOM_travel_1024x.jpg?v=1768589654",
+        "brand": "Beardbrand",
+        "rating": 4.62,
+        "review_count": 4559
+      },
+      {
+        "name": "Bold Fortune Utility Beard Wash",
+        "url": "https://www.beardbrand.com/products/bold-fortune-utility-beard-wash",
+        "price": "39",
+        "currency": "USD",
+        "image": "https://www.beardbrand.com/cdn/shop/files/uw_bf_1024x.jpg?v=1762458707",
+        "brand": "Beardbrand",
+        "rating": 4.55,
+        "review_count": 440
+      },
+      {
+        "name": "Bold Fortune Utility Beard Softener",
+        "url": "https://www.beardbrand.com/products/bold-fortune-utility-beard-softener",
+        "price": "39",
+        "currency": "USD",
+        "image": "https://www.beardbrand.com/cdn/shop/files/us_bf_1024x.jpg?v=1768598469",
+        "brand": "Beardbrand",
+        "rating": 4.58,
+        "review_count": 448
+      },
+      {
+        "name": "Bold Fortune Beard Balm",
+        "url": "https://www.beardbrand.com/products/bold-fortune-beard-balm",
+        "price": "39",
+        "currency": "USD",
+        "image": "https://www.beardbrand.com/cdn/shop/files/BBBF_1024x.jpg?v=1769118313",
+        "brand": "Beardbrand",
+        "rating": 4.38,
+        "review_count": 963
+      }
+    ],
+    "suggestions": [
+      "What are the ingredients in this oil?",
+      "Is this oil suitable for sensitive skin?"
+    ],
+    "error": null,
+    "elapsed_s": 10.58
+  },
+  {
+    "bot_id": "e23fcc6f-7a02-4b09-8d49-95c00a57d852",
+    "bot_name": "Crawl-Beardbrand",
+    "domain": "beard grooming & men's care (beardbrand.com)",
+    "allowed_langs": [
+      "en",
+      "gu"
+    ],
+    "query_lang": "en",
+    "query_type": "non_product",
+    "query": "How do I grow a thicker beard?",
+    "session_key": "s3",
+    "response_text": "Oh nice, here's what we've got! We have a range of products and guides to help you achieve a fuller beard, like our **How To Grow A Fuller Beard In Thirty Days** guide.",
+    "products": [
+      {
+        "name": "No Shave November",
+        "url": "https://www.beardbrand.com/2015/10/no-shave-november-movember-checklist",
+        "price": "75",
+        "currency": "USD",
+        "image": "https://www.beardbrand.com/cdn/shop/t/886/assets/default-social-v2.png?v=83798026868201643701770919240",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      }
+    ],
+    "suggestions": [
+      "What are the best beard care products for growth?",
+      "Do you have any tips for growing a beard as a teenager?"
+    ],
+    "error": null,
+    "elapsed_s": 10.73
+  },
+  {
+    "bot_id": "e23fcc6f-7a02-4b09-8d49-95c00a57d852",
+    "bot_name": "Crawl-Beardbrand",
+    "domain": "beard grooming & men's care (beardbrand.com)",
+    "allowed_langs": [
+      "en",
+      "gu"
+    ],
+    "query_lang": "en",
+    "query_type": "irrelevant",
+    "query": "Write me a Python script",
+    "session_key": "s4",
+    "response_text": "I can only help with questions about Beardbrand. What are you looking for?",
+    "products": [],
+    "suggestions": [],
+    "error": null,
+    "elapsed_s": 1.45
+  },
+  {
+    "bot_id": "e23fcc6f-7a02-4b09-8d49-95c00a57d852",
+    "bot_name": "Crawl-Beardbrand",
+    "domain": "beard grooming & men's care (beardbrand.com)",
+    "allowed_langs": [
+      "en",
+      "gu"
+    ],
+    "query_lang": "en",
+    "query_type": "missing_info",
+    "query": "What is your phone number?",
+    "session_key": "s5",
+    "response_text": "I can only help with questions about Beardbrand. What are you looking for?",
+    "products": [],
+    "suggestions": [],
+    "error": null,
+    "elapsed_s": 1.31
+  },
+  {
+    "bot_id": "e23fcc6f-7a02-4b09-8d49-95c00a57d852",
+    "bot_name": "Crawl-Beardbrand",
+    "domain": "beard grooming & men's care (beardbrand.com)",
+    "allowed_langs": [
+      "en",
+      "gu"
+    ],
+    "query_lang": "gu",
+    "query_type": "product",
+    "query": "તમારી પાસે ક્યા દાઢી ઓઈલ ઉપલબ્ધ છે?",
+    "session_key": "s6",
+    "response_text": "અહીં કેટલાક સરસ ઓપ્શન છે! જુઓ Crawl-Beardbrand પાસે શું છે.",
+    "products": [
+      {
+        "name": "Temple Smoke Beard Oil",
+        "url": "https://www.beardbrand.com/products/temple-smoke-beard-oil",
+        "price": "29",
+        "currency": "USD",
+        "image": "https://www.beardbrand.com/cdn/shop/files/BOTS_50ml_1024x.jpg?v=1768591863",
+        "brand": "Beardbrand",
+        "rating": 4.62,
+        "review_count": 4559
+      },
+      {
+        "name": "Temple Smoke Beard Oil & Cologne Bundle",
+        "url": "https://www.beardbrand.com/products/temple-smoke-beard-oil-cologne-bundle",
+        "price": "59.20",
+        "currency": "USD",
+        "image": "https://www.beardbrand.com/cdn/shop/files/BO_EDP_TS_1024x.jpg?v=1764690243",
+        "brand": "Beardbrand",
+        "rating": 4.62,
+        "review_count": 4559
+      },
+      {
+        "name": "Bold Fortune Beard Oil",
+        "url": "https://www.beardbrand.com/products/bold-fortune-beard-oil",
+        "price": "32",
+        "currency": "USD",
+        "image": "https://www.beardbrand.com/cdn/shop/files/BOBF_travel_1024x.jpg?v=1768512775",
+        "brand": "Beardbrand",
+        "rating": 4.62,
+        "review_count": 4559
+      },
+      {
+        "name": "Beard Oil",
+        "url": "https://www.beardbrand.com/products/utility-beard-oil",
+        "price": "75",
+        "currency": "USD",
+        "image": "https://www.beardbrand.com/cdn/shop/t/886/assets/default-social-v2.png?v=83798026868201643701770919240",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Bold Fortune Beard Oil & Cologne Bundle",
+        "url": "https://www.beardbrand.com/products/bold-fortune-beard-oil-cologne-bundle",
+        "price": "65.60",
+        "currency": "USD",
+        "image": "https://www.beardbrand.com/cdn/shop/files/BO_1.7_EDP_BF_1024x.jpg?v=1761758849",
+        "brand": "Beardbrand",
+        "rating": 4.62,
+        "review_count": 4559
+      },
+      {
+        "name": "Old Money Beard Oil & Cologne Bundle",
+        "url": "https://www.beardbrand.com/products/old-money-beard-oil-cologne-bundle",
+        "price": "59.20",
+        "currency": "USD",
+        "image": "https://www.beardbrand.com/cdn/shop/files/BO_EDP_OM_1024x.jpg?v=1764690243",
+        "brand": "Beardbrand",
+        "rating": 4.62,
+        "review_count": 4559
+      },
+      {
+        "name": "Old Money Beard Oil",
+        "url": "https://www.beardbrand.com/products/old-money-beard-oil",
+        "price": "29",
+        "currency": "USD",
+        "image": "https://www.beardbrand.com/cdn/shop/files/BOOM_travel_1024x.jpg?v=1768589654",
+        "brand": "Beardbrand",
+        "rating": 4.62,
+        "review_count": 4559
+      },
+      {
+        "name": "Norse Winter Beard Oil",
+        "url": "https://www.beardbrand.com/products/norse-winter-beard-oil",
+        "price": "32",
+        "currency": "USD",
+        "image": "https://www.beardbrand.com/cdn/shop/files/BONW_50ml_1024x.jpg?v=1764079446",
+        "brand": "Beardbrand",
+        "rating": 4.62,
+        "review_count": 4559
+      },
+      {
+        "name": "Tree Ranger Beard Oil",
+        "url": "https://www.beardbrand.com/products/tree-ranger-beard-oil",
+        "price": "29",
+        "currency": "USD",
+        "image": "https://www.beardbrand.com/cdn/shop/files/BOTR_50ml_1024x.jpg?v=1768591178",
+        "brand": "Beardbrand",
+        "rating": 4.62,
+        "review_count": 4559
+      },
+      {
+        "name": "Temple Smoke Beard Foundations Set",
+        "url": "https://www.beardbrand.com/products/temple-smoke-beard-foundations-set",
+        "price": "77.70",
+        "currency": "USD",
+        "image": "https://www.beardbrand.com/cdn/shop/files/US_BO_BB-TS_1024x.jpg?v=1765226569",
+        "brand": "Beardbrand",
+        "rating": null,
+        "review_count": null
+      }
+    ],
+    "suggestions": [
+      "દાઢી ઓઈલ નું પ્રાઇસ શું છે?",
+      "કયા દાઢી ઓઈલ નો સૌથી વધુ ઉપયોગ થાય છે?"
+    ],
+    "error": null,
+    "elapsed_s": 10.52
+  },
+  {
+    "bot_id": "182f88cd-02d8-4c94-824d-b41432847400",
+    "bot_name": "ramraj",
+    "domain": "Indian cotton traditional wear (ramraj.in)",
+    "allowed_langs": [
+      "hi",
+      "gu",
+      "en"
+    ],
+    "query_lang": "en",
+    "query_type": "greeting",
+    "query": "Hello!",
+    "session_key": "s1",
+    "response_text": "Welcome to ramraj! It's great to have you here. We've got a wonderful collection of traditional and ethnic clothing, including silk and cotton dhotis, kurtas, shirts, sarees, and more. How can I help you today?",
+    "products": [],
+    "suggestions": [
+      "What products do you have?",
+      "I'm looking for a gift"
+    ],
+    "error": null,
+    "elapsed_s": 5.26
+  },
+  {
+    "bot_id": "182f88cd-02d8-4c94-824d-b41432847400",
+    "bot_name": "ramraj",
+    "domain": "Indian cotton traditional wear (ramraj.in)",
+    "allowed_langs": [
+      "hi",
+      "gu",
+      "en"
+    ],
+    "query_lang": "en",
+    "query_type": "product",
+    "query": "Show me cotton dhotis",
+    "session_key": "s2",
+    "response_text": "Take a look at these beauties! We've got a variety of cotton dhotis from Ramraj that you might like.",
+    "products": [
+      {
+        "name": "Men Premium Cotton Rose Gold Border Double Layer Dhoti Silver Cotton",
+        "url": "https://ramrajcotton.in/collections/all/products/men-premium-cotton-rose-gold-border-double-layer-dhoti-silver-cotton",
+        "price": "1425",
+        "currency": "INR",
+        "image": "https://ramrajcotton.in/cdn/shop/files/03_b2153374-ce0c-4cb7-ad7d-381cb7c471ac.jpg?v=1732529673&width=1024",
+        "brand": "Ramraj",
+        "rating": 5.0,
+        "review_count": 2
+      },
+      {
+        "name": "Men 100% Cotton Gold Border Double Dhoti Luxury Club",
+        "url": "https://ramrajcotton.in/collections/all/products/men-100-cotton-gold-border-double-dhoti-luxury-club",
+        "price": "1350",
+        "currency": "INR",
+        "image": "https://ramrajcotton.in/cdn/shop/files/01_7f35fc0f-b8c7-4518-a58a-367f5a9a149f.jpg?v=1771569755&width=1024",
+        "brand": "Ramraj",
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Men 100% Cotton Gold Border Double Dhoti Luxury Club Aroma",
+        "url": "https://ramrajcotton.in/collections/all/products/men-100-cotton-gold-border-double-dhoti-luxury-club-copy",
+        "price": "1760",
+        "currency": "INR",
+        "image": "https://ramrajcotton.in/cdn/shop/files/03_f290f7a5-5ac7-4a86-ae06-d057fcf0873d.jpg?v=1771575456&width=1024",
+        "brand": "Ramraj",
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Men Cotton Blend 8-Meter White Dhoti with Assorted Border",
+        "url": "https://ramrajcotton.in/collections/all/products/men-cotton-blend-8-meter-white-dhoti-with-assorted-border",
+        "price": "960",
+        "currency": "INR",
+        "image": "https://ramrajcotton.in/cdn/shop/files/01_fb535bd5-390d-4642-b8b7-77a182950f8c.jpg?v=1743158045&width=1024",
+        "brand": "Ramraj",
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Men Cotton Blend Assorted Border Dhoti Combo (Pack of 3)",
+        "url": "https://ramrajcotton.in/collections/all/products/men-cotton-blend-assorted-border-dhoti-combo-pack-of-3",
+        "price": "600",
+        "currency": "INR",
+        "image": "https://ramrajcotton.in/cdn/shop/files/01_b11eefdc-29ef-4a4c-8921-7f905e4b83a2_4.jpg?v=1738411097&width=1024",
+        "brand": "Ramraj",
+        "rating": 4.81,
+        "review_count": 32
+      },
+      {
+        "name": "Boys Silk Cotton Shirt with Dhoti Set Brick",
+        "url": "https://ramrajcotton.in/collections/all/products/boys-silk-cotton-shirt-with-dhoti-set-brick",
+        "price": "715",
+        "currency": "INR",
+        "image": "https://ramrajcotton.in/cdn/shop/files/5_7abc787b-20fb-43b3-b9e1-235e0de608e4.jpg?v=1725699447&width=1024",
+        "brand": "Little Stars",
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Men Cotton Rich Mustard Shirt and Tissue Dhoti Set C1",
+        "url": "https://ramrajcotton.in/collections/most-popular/products/men-cotton-rich-mustard-shirt-and-tissue-dhoti-set-c1",
+        "price": "1500",
+        "currency": "INR",
+        "image": "https://ramrajcotton.in/cdn/shop/files/5_c5f86559-8168-446c-8654-d39cb3ee84a2.jpg?v=1713941271&width=1024",
+        "brand": "Ramraj",
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Men Bamboo Cotton White Shirting and Small Border Dhoti Set",
+        "url": "https://ramrajcotton.in/collections/all/products/men-bamboo-cotton-white-shirting-and-small-border-dhoti-set-1",
+        "price": "785",
+        "currency": "INR",
+        "image": "https://ramrajcotton.in/cdn/shop/files/04_160c86e2-e666-4ddd-a400-6b9f0fce6bf7.jpg?v=1739358544&width=1024",
+        "brand": "Ramraj",
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Men Pure Cotton Silver Jari Border Double Dhoti Silver Coin",
+        "url": "https://ramrajcotton.in/collections/all/products/mens-pure-cotton-silver-jari-border-double-dhoti-silver-coin",
+        "price": "1585",
+        "currency": "INR",
+        "image": "https://ramrajcotton.in/cdn/shop/files/01_a26a87c3-d046-467a-a0df-fb258f3e9f5d.jpg?v=1762777156&width=1024",
+        "brand": "Ramraj",
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Men Premium Cotton Fancy Jari Border Handloom Dhoti HLM29",
+        "url": "https://ramrajcotton.in/collections/all/products/men-premium-cotton-fancy-jari-border-handloom-dhoti-hlm29",
+        "price": "3985",
+        "currency": "INR",
+        "image": "https://ramrajcotton.in/cdn/shop/files/03_acca4e60-f468-4859-b6de-37caacc5348b.jpg?v=1744098598&width=1024",
+        "brand": "Ramraj",
+        "rating": null,
+        "review_count": null
+      }
+    ],
+    "suggestions": [
+      "What are the prices of these dhotis?",
+      "Do you have cotton dhotis in different colors?"
+    ],
+    "error": null,
+    "elapsed_s": 10.55
+  },
+  {
+    "bot_id": "182f88cd-02d8-4c94-824d-b41432847400",
+    "bot_name": "ramraj",
+    "domain": "Indian cotton traditional wear (ramraj.in)",
+    "allowed_langs": [
+      "hi",
+      "gu",
+      "en"
+    ],
+    "query_lang": "en",
+    "query_type": "follow_up",
+    "query": "What material is it made of?",
+    "session_key": "s2",
+    "response_text": "It's made of **cotton**, a natural and breathable fabric that's perfect for comfort and durability.",
+    "products": [
+      {
+        "name": "Women Pure Cotton Printed Dress Material Light Blue DM354",
+        "url": "https://ramrajcotton.in/collections/all/products/women-pure-cotton-printed-dress-material-light-blue-dm354",
+        "price": "1255",
+        "currency": "INR",
+        "image": "https://ramrajcotton.in/cdn/shop/files/3_b8cb1bb8-aeaa-4f45-809c-60e339225cf4.jpg?v=1769602645&width=1024",
+        "brand": "Ramyyam",
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Men TENCEL™ Modal Micro Elastane Stretch Trunk Graphite Grey",
+        "url": "https://ramrajcotton.in/collections/all/products/men-tencel%E2%84%A2-modal-micro-elastane-stretch-trunk-graphite-grey",
+        "price": "390",
+        "currency": "INR",
+        "image": "https://ramrajcotton.in/cdn/shop/files/BHU06344.jpg?v=1761895077&width=1024",
+        "brand": "Unibro",
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Men's Tencel Micro Modal Elastane Stretch Brief Graphite Grey",
+        "url": "https://ramrajcotton.in/collections/all/products/mens-tencel-micro-modal-elastane-stretch-brief-graphite-grey",
+        "price": "315",
+        "currency": "INR",
+        "image": "https://ramrajcotton.in/cdn/shop/files/BHU06448-Edit.jpg?v=1761891755&width=1024",
+        "brand": "Unibro",
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Men's Tencel Micro Modal Elastane Stretch Brief Assorted Colour",
+        "url": "https://ramrajcotton.in/collections/all/products/mens-tencel-micro-modal-elastane-stretch-brief-assorted-colour",
+        "price": "295",
+        "currency": "INR",
+        "image": "https://ramrajcotton.in/cdn/shop/files/2A407635-Edit.jpg?v=1761893862&width=1024",
+        "brand": "Unibro",
+        "rating": 4.0,
+        "review_count": 1
+      },
+      {
+        "name": "Men TENCEL™ Air Modal Fiber Assorted Colour M.Trunk",
+        "url": "https://ramrajcotton.in/collections/all/products/men-tencel%E2%84%A2-air-modal-fiber-assorted-colour-trunk",
+        "price": "325",
+        "currency": "INR",
+        "image": "https://ramrajcotton.in/cdn/shop/files/1_7b32019e-ec05-4bed-9e76-cf9dc15d9218.jpg?v=1744720505&width=1024",
+        "brand": "Unibro",
+        "rating": 5.0,
+        "review_count": 1
+      },
+      {
+        "name": "Men's Tencel Micro Modal Elastane Stretch Boxer Brief Assorted Colour",
+        "url": "https://ramrajcotton.in/collections/all/products/mens-tencel-micro-modal-elastane-stretch-boxer-brief-assorted-colour",
+        "price": "355",
+        "currency": "INR",
+        "image": "https://ramrajcotton.in/cdn/shop/files/BHU06204-Edit.jpg?v=1761894655&width=1024",
+        "brand": "Unibro",
+        "rating": 4.5,
+        "review_count": 4
+      },
+      {
+        "name": "TENCEL™ Modal Stretch  Brief Ultimate Comfort from Monday to Sunday (Pack of 7)",
+        "url": "https://ramrajcotton.in/collections/all/products/tencel%E2%84%A2-modal-stretch-brief-ultimate-comfort-from-monday-to-sunday-pack-of-7",
+        "price": "2205",
+        "currency": "INR",
+        "image": "https://ramrajcotton.in/cdn/shop/files/65_f9dab092-8000-4953-afd1-aa9d3b41605e.jpg?v=1761881972&width=1024",
+        "brand": "Unibro",
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Men's Tencel Micro Modal Elastane Stretch Brief Green",
+        "url": "https://ramrajcotton.in/collections/all/products/mens-tencel-micro-modal-elastane-stretch-brief-green",
+        "price": "315",
+        "currency": "INR",
+        "image": "https://ramrajcotton.in/cdn/shop/files/2A407740-Edit.jpg?v=1761891753&width=1024",
+        "brand": "Unibro",
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Men's Tencel Micro Modal Elastane Stretch Brief Sky Blue",
+        "url": "https://ramrajcotton.in/collections/all/products/mens-tencel-micro-modal-elastane-stretch-brief-sky-blue",
+        "price": "315",
+        "currency": "INR",
+        "image": "https://ramrajcotton.in/cdn/shop/files/2A407716-Edit.jpg?v=1761891154&width=1024",
+        "brand": "Unibro",
+        "rating": 5.0,
+        "review_count": 2
+      },
+      {
+        "name": "Men TENCEL™ Modal Micro Elastane Stretch Trunk Green",
+        "url": "https://ramrajcotton.in/collections/all/products/men-tencel%E2%84%A2-modal-micro-elastane-stretch-trunk-green",
+        "price": "390",
+        "currency": "INR",
+        "image": "https://ramrajcotton.in/cdn/shop/files/1_0162ac8b-cb5a-4a6d-814f-bdb1122bab29.jpg?v=1755327983&width=1024",
+        "brand": "Unibro",
+        "rating": 5.0,
+        "review_count": 1
+      }
+    ],
+    "suggestions": [
+      "What are the available colors?",
+      "Is it suitable for everyday wear?"
+    ],
+    "error": null,
+    "elapsed_s": 9.55
+  },
+  {
+    "bot_id": "182f88cd-02d8-4c94-824d-b41432847400",
+    "bot_name": "ramraj",
+    "domain": "Indian cotton traditional wear (ramraj.in)",
+    "allowed_langs": [
+      "hi",
+      "gu",
+      "en"
+    ],
+    "query_lang": "en",
+    "query_type": "non_product",
+    "query": "What is your return policy?",
+    "session_key": "s3",
+    "response_text": "I can only help with questions about Ramraj. What are you looking for?",
+    "products": [],
+    "suggestions": [],
+    "error": null,
+    "elapsed_s": 1.33
+  },
+  {
+    "bot_id": "182f88cd-02d8-4c94-824d-b41432847400",
+    "bot_name": "ramraj",
+    "domain": "Indian cotton traditional wear (ramraj.in)",
+    "allowed_langs": [
+      "hi",
+      "gu",
+      "en"
+    ],
+    "query_lang": "en",
+    "query_type": "irrelevant",
+    "query": "Tell me a joke",
+    "session_key": "s4",
+    "response_text": "I can only help with questions about Ramraj. What are you looking for?",
+    "products": [],
+    "suggestions": [],
+    "error": null,
+    "elapsed_s": 1.36
+  },
+  {
+    "bot_id": "182f88cd-02d8-4c94-824d-b41432847400",
+    "bot_name": "ramraj",
+    "domain": "Indian cotton traditional wear (ramraj.in)",
+    "allowed_langs": [
+      "hi",
+      "gu",
+      "en"
+    ],
+    "query_lang": "en",
+    "query_type": "missing_info",
+    "query": "What is my order status?",
+    "session_key": "s5",
+    "response_text": "I don't have that information",
+    "products": [],
+    "suggestions": [
+      "How can I track my order?",
+      "What is the estimated delivery time?"
+    ],
+    "error": null,
+    "elapsed_s": 7.98
+  },
+  {
+    "bot_id": "182f88cd-02d8-4c94-824d-b41432847400",
+    "bot_name": "ramraj",
+    "domain": "Indian cotton traditional wear (ramraj.in)",
+    "allowed_langs": [
+      "hi",
+      "gu",
+      "en"
+    ],
+    "query_lang": "hi",
+    "query_type": "product",
+    "query": "मुझे पुरुषों के लिए सूती धोती दिखाओ",
+    "session_key": "s6",
+    "response_text": "यहाँ कुछ बढ़िया ऑप्शन हैं! देखो ramraj के पास क्या है।",
+    "products": [
+      {
+        "name": "Men Linen Cotton Single Layer White Dhoti with Small Border",
+        "url": "https://ramrajcotton.in/collections/all/products/men-linen-cotton-single-layer-white-dhoti-with-small-border",
+        "price": "1220",
+        "currency": "INR",
+        "image": "https://ramrajcotton.in/cdn/shop/files/05_eb7e701e-49b5-4ce3-a908-6b2265b1a4fb.jpg?v=1740562266&width=1024",
+        "brand": "Ramraj",
+        "rating": 5.0,
+        "review_count": 21
+      },
+      {
+        "name": "Men Cotton Blend 8-Meter White Dhoti with Assorted Border",
+        "url": "https://ramrajcotton.in/collections/all/products/men-cotton-blend-8-meter-white-dhoti-with-assorted-border",
+        "price": "960",
+        "currency": "INR",
+        "image": "https://ramrajcotton.in/cdn/shop/files/01_fb535bd5-390d-4642-b8b7-77a182950f8c.jpg?v=1743158045&width=1024",
+        "brand": "Ramraj",
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Men 100% Cotton Gold Border Double Dhoti Luxury Club",
+        "url": "https://ramrajcotton.in/collections/all/products/men-100-cotton-gold-border-double-dhoti-luxury-club",
+        "price": "1350",
+        "currency": "INR",
+        "image": "https://ramrajcotton.in/cdn/shop/files/01_7f35fc0f-b8c7-4518-a58a-367f5a9a149f.jpg?v=1771569755&width=1024",
+        "brand": "Ramraj",
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Men Cotton Blend Assorted Border Dhoti Combo (Pack of 3)",
+        "url": "https://ramrajcotton.in/collections/all/products/men-cotton-blend-assorted-border-dhoti-combo-pack-of-3",
+        "price": "600",
+        "currency": "INR",
+        "image": "https://ramrajcotton.in/cdn/shop/files/01_b11eefdc-29ef-4a4c-8921-7f905e4b83a2_4.jpg?v=1738411097&width=1024",
+        "brand": "Ramraj",
+        "rating": 4.81,
+        "review_count": 32
+      },
+      {
+        "name": "Men Cotton Blend Aqua Blue Shirt and Tissue Dhoti Set VB8",
+        "url": "https://ramrajcotton.in/collections/all/products/men-cotton-blend-aqua-blue-shirt-and-tissue-dhoti-set-vb8",
+        "price": "1500",
+        "currency": "INR",
+        "image": "https://ramrajcotton.in/cdn/shop/files/1_1e181914-58cc-493a-b5c0-cd6b3463802b.jpg?v=1744349451&width=1024",
+        "brand": "Ramraj",
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Men 100% Cotton Single Layer White Dhoti with Small Border AY01",
+        "url": "https://ramrajcotton.in/collections/all/products/men-100-cotton-single-layer-white-dhoti-with-small-border-ay01",
+        "price": "785",
+        "currency": "INR",
+        "image": "https://ramrajcotton.in/cdn/shop/files/03_33f1f012-7cb2-4405-be80-0d1b15462aa8.jpg?v=1754461326&width=1024",
+        "brand": "Ramraj",
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Men 100% Cotton Paramas Single Layer Dhoti Luxury Club",
+        "url": "https://ramrajcotton.in/collections/all/products/men-100-cotton-paramas-single-layer-dhoti-luxury-club",
+        "price": "1185",
+        "currency": "INR",
+        "image": "https://ramrajcotton.in/cdn/shop/files/04_3eff20bc-5aa6-4039-8471-316011c19f45.jpg?v=1744112607&width=1024",
+        "brand": "Ramraj",
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Men Premium Cotton Rose Gold Border Double Layer Dhoti Silver Cotton",
+        "url": "https://ramrajcotton.in/collections/all/products/men-premium-cotton-rose-gold-border-double-layer-dhoti-silver-cotton",
+        "price": "1425",
+        "currency": "INR",
+        "image": "https://ramrajcotton.in/cdn/shop/files/03_b2153374-ce0c-4cb7-ad7d-381cb7c471ac.jpg?v=1732529673&width=1024",
+        "brand": "Ramraj",
+        "rating": 5.0,
+        "review_count": 2
+      },
+      {
+        "name": "Men Cotton Rich Mustard Shirt and Tissue Dhoti Set C1",
+        "url": "https://ramrajcotton.in/collections/most-popular/products/men-cotton-rich-mustard-shirt-and-tissue-dhoti-set-c1",
+        "price": "1500",
+        "currency": "INR",
+        "image": "https://ramrajcotton.in/cdn/shop/files/5_c5f86559-8168-446c-8654-d39cb3ee84a2.jpg?v=1713941271&width=1024",
+        "brand": "Ramraj",
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Men Cotton Rich Blue Shirt and Tissue Dhoti Set C11",
+        "url": "https://ramrajcotton.in/collections/most-popular/products/men-cotton-rich-blue-shirt-and-tissue-dhoti-set-c11",
+        "price": "1500",
+        "currency": "INR",
+        "image": "https://ramrajcotton.in/cdn/shop/files/250301_Ramraj_E-Com31579.jpg?v=1741409025&width=1024",
+        "brand": "Ramraj",
+        "rating": null,
+        "review_count": null
+      }
+    ],
+    "suggestions": [
+      "सूती धोती की कीमत क्या है?",
+      "कौनसा रंग ज़्यादा बिकता है?"
+    ],
+    "error": null,
+    "elapsed_s": 39.89
+  },
+  {
+    "bot_id": "182f88cd-02d8-4c94-824d-b41432847400",
+    "bot_name": "ramraj",
+    "domain": "Indian cotton traditional wear (ramraj.in)",
+    "allowed_langs": [
+      "hi",
+      "gu",
+      "en"
+    ],
+    "query_lang": "gu",
+    "query_type": "non_product",
+    "query": "રામરાજ કૉટન વિશે જણાવો.",
+    "session_key": "s7",
+    "response_text": "રામરાજ કૉટન એ અમારી પ્રથમ પસંદગી છે! અહીં **રામરાજ કૉટન** નું પ્રાઇસ **₹645.0** છે. આ એક **ટ્રાડિશનલ** અને **એથનિક** કપડાં છે. \n- **પ્રોડક્ટ નામ:** રામરાજ કૉટન\n- **પ્રાઇસ:** ₹645.0\n- **વિશેષતા:** ટ્રાડિશનલ અને એથનિક કપડાં\n\nઅમે આશા રાખીએ છીએ કે આ માહિતી તમને મદદરૂપ થશે. જો તમને વધુ પ્રશ્નો હોય, તો કૃપા કરીને આપના પ્રશ્નો પૂછો!",
+    "products": [],
+    "suggestions": [
+      "રામરાજ કૉટન ના સાઇઝ શું છે?",
+      "રામરાજ કૉટન નો રંગ શું છે?"
+    ],
+    "error": null,
+    "elapsed_s": 21.24
+  },
+  {
+    "bot_id": "1cb18dc0-4909-409d-ab03-0436524fcec4",
+    "bot_name": "kriyanta",
+    "domain": "handmade home décor & gifting (kriyanta.com)",
+    "allowed_langs": [
+      "en",
+      "gu"
+    ],
+    "query_lang": "en",
+    "query_type": "greeting",
+    "query": "Hi!",
+    "session_key": "s1",
+    "response_text": "Hey, welcome to Kriyanta! We're all about unique, handmade, and eco-friendly home decor and gifting products. What brings you here today?",
+    "products": [],
+    "suggestions": [
+      "What products do you have?",
+      "I'm looking for a gift"
+    ],
+    "error": null,
+    "elapsed_s": 9.67
+  },
+  {
+    "bot_id": "1cb18dc0-4909-409d-ab03-0436524fcec4",
+    "bot_name": "kriyanta",
+    "domain": "handmade home décor & gifting (kriyanta.com)",
+    "allowed_langs": [
+      "en",
+      "gu"
+    ],
+    "query_lang": "en",
+    "query_type": "product",
+    "query": "Show me wall clocks",
+    "session_key": "s2",
+    "response_text": "Oh nice, here's what we've got! We have a variety of wall clocks that are handmade, eco-friendly, and customized to suit your home decor needs.",
+    "products": [
+      {
+        "name": "Wooden Wall Clock",
+        "url": "https://www.kriyanta.com/product-detail/wooden-wall-clock-designer-wall-clock-timeless-elegance-the-beauty-of-wooden-designer-wall-clocks",
+        "price": "1499",
+        "currency": "INR",
+        "image": "https://afd-endpoint-imgproc-fpa9f6hueadafzav.z03.azurefd.net/api/img?src=aHR0cHM6Ly9jZG4uc2hvcGlmeS5jb20vcy9maWxlcy8xLzA2ODUvNDQ2OS8yNDY4L2ZpbGVzL1doYXRzQXBwSW1hZ2UyMDIzLTA2LTE2YXQ2LjAyLjA3UE1fNzIweF82NTJkYjdlNy1jMDkxLTRiNGUtOWIzZC03OGZhMGQzNjFmZGYuanBnP3Y9MTczNjAwMjMxNA%3D%3D&w=1200&h=630&q=90&fmt=jpeg&fit=cover",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Wooden Decorative Round Wall Clock for Home and Office",
+        "url": "https://www.kriyanta.com/product-detail/wooden-decorative-round-wall-clock-for-home-and-office-premium-quality-wall-clock-royal-looking-wall-clock",
+        "price": "1069",
+        "currency": "INR",
+        "image": "https://afd-endpoint-imgproc-fpa9f6hueadafzav.z03.azurefd.net/api/img?src=aHR0cHM6Ly9jZG4uc2hvcGlmeS5jb20vcy9maWxlcy8xLzA2ODUvNDQ2OS8yNDY4L2ZpbGVzLzQxNTFfNzIweF8wMjQ0MGJjMy1mZDM0LTQ0ZjQtYjE4Zi1iZmU2NjMzOTU2NTEuanBnP3Y9MTczNjAwMTcxMw%3D%3D&w=1200&h=630&q=90&fmt=jpeg&fit=cover",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Personalize Your Time: Custom Wall Clocks",
+        "url": "https://www.kriyanta.com/product-detail/personalize-your-time-custom-wall-clocks",
+        "price": "2999",
+        "currency": "INR",
+        "image": "https://afd-endpoint-imgproc-fpa9f6hueadafzav.z03.azurefd.net/api/img?src=aHR0cHM6Ly9jZG4uc2hvcGlmeS5jb20vcy9maWxlcy8xLzA2ODUvNDQ2OS8yNDY4L2ZpbGVzL1pvb21Gcm9udF9lODVjZjhlZi02NmUwLTQxMGMtYTc3Ny1iOWUzYzk4ODI5ZDgucG5nP3Y9MTcwOTI3ODUxNw%3D%3D&w=1200&h=630&q=90&fmt=jpeg&fit=cover",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Modern Home Decor Wall Clock",
+        "url": "https://www.kriyanta.com/product-detail/modern-home-decor-wall-clock",
+        "price": "12100",
+        "currency": "INR",
+        "image": "https://afd-endpoint-imgproc-fpa9f6hueadafzav.z03.azurefd.net/api/img?src=aHR0cHM6Ly9jZG4uc2hvcGlmeS5jb20vcy9maWxlcy8xLzA2ODUvNDQ2OS8yNDY4L2ZpbGVzLzJfZWU0ODFmYTUtODMzOC00ODY3LTliYjgtZGNkMDg1YTc2ZWVhLmpwZz92PTE3MjYzMjYzOTg%3D&w=1200&h=630&q=90&fmt=jpeg&fit=cover",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "ANTIQUE HANGING WALL CLOCK",
+        "url": "https://www.kriyanta.com/product-detail/antique-hanging-wall-clock",
+        "price": "2799",
+        "currency": "INR",
+        "image": "https://afd-endpoint-imgproc-fpa9f6hueadafzav.z03.azurefd.net/api/img?src=aHR0cHM6Ly9jZG4uc2hvcGlmeS5jb20vcy9maWxlcy8xLzA2ODUvNDQ2OS8yNDY4L2ZpbGVzL1VudGl0bGVkZGVzaWduXzQ3OWQzNjMxLTdmOWItNDliYi05ZGVlLTczYzdlZDI4MDA5MC5wbmc%2Fdj0xNzE1NDIwNDc3&w=1200&h=630&q=90&fmt=jpeg&fit=cover",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Wall-mounted plate clock",
+        "url": "https://www.kriyanta.com/product-detail/wall-mounted-plate-clock",
+        "price": "4350",
+        "currency": "INR",
+        "image": "https://afd-endpoint-imgproc-fpa9f6hueadafzav.z03.azurefd.net/api/img?src=aHR0cHM6Ly9jZG4uc2hvcGlmeS5jb20vcy9maWxlcy8xLzA2ODUvNDQ2OS8yNDY4L2ZpbGVzLzJfZjIzMjRlOGUtYTY1NC00MTk2LTgwNjgtNzM5NWY1NjU1YzdkLmpwZz92PTE3MjU5Nzg4ODU%3D&w=1200&h=630&q=90&fmt=jpeg&fit=cover",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "MINIMAL HANGING WALL CLOCK",
+        "url": "https://www.kriyanta.com/product-detail/minimal-hanging-wall-clock",
+        "price": "3899",
+        "currency": "INR",
+        "image": "https://afd-endpoint-imgproc-fpa9f6hueadafzav.z03.azurefd.net/api/img?src=aHR0cHM6Ly9jZG4uc2hvcGlmeS5jb20vcy9maWxlcy8xLzA2ODUvNDQ2OS8yNDY4L2ZpbGVzLzcxRng1SEJUM3dMLl9TTDE1MDAuanBnP3Y9MTcxNTQyMDM5Nw%3D%3D&w=1200&h=630&q=90&fmt=jpeg&fit=cover",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Designer Stylish Metal Wall Clock for Living Room, Bedroom, Office, Kitchen, Home and Hall, Antique Big Size Modern Wall Watch for Home Decor",
+        "url": "https://www.kriyanta.com/product-detail/designer-stylish-metal-wall-clock-for-living-room-bedroom-office-kitchen-home-and-hall-antique-big-size-modern-wall-watch-for-home-decor-1",
+        "price": "1599",
+        "currency": "INR",
+        "image": "https://afd-endpoint-imgproc-fpa9f6hueadafzav.z03.azurefd.net/api/img?src=aHR0cHM6Ly9jZG4uc2hvcGlmeS5jb20vcy9maWxlcy8xLzA2ODUvNDQ2OS8yNDY4L2ZpbGVzLzYxMkJRT3V6VnhMLl9TTDE0NzlfMjY2ZmFhMGMtNThlZi00MTY5LTg4N2MtNWI5MjhiNTZkOGJmLmpwZz92PTE3MTU0MjAxMzE%3D&w=1200&h=630&q=90&fmt=jpeg&fit=cover",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Simple Wall Clock",
+        "url": "https://www.kriyanta.com/product-detail/simple-wall-clock",
+        "price": "7100",
+        "currency": "INR",
+        "image": "https://afd-endpoint-imgproc-fpa9f6hueadafzav.z03.azurefd.net/api/img?src=aHR0cHM6Ly9jZG4uc2hvcGlmeS5jb20vcy9maWxlcy8xLzA2ODUvNDQ2OS8yNDY4L2ZpbGVzLzFfNzgyODM0YTctYmMwMC00ODVlLWI4NTAtNzQ1MDFmMGNmOTVmLmpwZz92PTE3MjU5NzkyODE%3D&w=1200&h=630&q=90&fmt=jpeg&fit=cover",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Modern Antique Wall Clock",
+        "url": "https://www.kriyanta.com/product-detail/modern-antique-wall-clock",
+        "price": "3850",
+        "currency": "INR",
+        "image": "https://afd-endpoint-imgproc-fpa9f6hueadafzav.z03.azurefd.net/api/img?src=aHR0cHM6Ly9jZG4uc2hvcGlmeS5jb20vcy9maWxlcy8xLzA2ODUvNDQ2OS8yNDY4L2ZpbGVzLzVfNDdkZmJmNTEtM2NhZS00ODE4LThmOGYtMjU5MWMxZGYxNmUyLmpwZz92PTE3MjM2NDg5MTE%3D&w=1200&h=630&q=90&fmt=jpeg&fit=cover",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      }
+    ],
+    "suggestions": [
+      "What are the prices of these clocks?",
+      "Do you have any clocks with a modern design?"
+    ],
+    "error": null,
+    "elapsed_s": 10.96
+  },
+  {
+    "bot_id": "1cb18dc0-4909-409d-ab03-0436524fcec4",
+    "bot_name": "kriyanta",
+    "domain": "handmade home décor & gifting (kriyanta.com)",
+    "allowed_langs": [
+      "en",
+      "gu"
+    ],
+    "query_lang": "en",
+    "query_type": "follow_up",
+    "query": "What is the material of this clock?",
+    "session_key": "s2",
+    "response_text": "We've got clocks made from different materials, such as **metal** and **wood** - let me check the specific one you're looking at.",
+    "products": [
+      {
+        "name": "Modern Home Decor Wall Clock",
+        "url": "https://www.kriyanta.com/product-detail/modern-home-decor-wall-clock",
+        "price": "12100",
+        "currency": "INR",
+        "image": "https://afd-endpoint-imgproc-fpa9f6hueadafzav.z03.azurefd.net/api/img?src=aHR0cHM6Ly9jZG4uc2hvcGlmeS5jb20vcy9maWxlcy8xLzA2ODUvNDQ2OS8yNDY4L2ZpbGVzLzJfZWU0ODFmYTUtODMzOC00ODY3LTliYjgtZGNkMDg1YTc2ZWVhLmpwZz92PTE3MjYzMjYzOTg%3D&w=1200&h=630&q=90&fmt=jpeg&fit=cover",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Designs Modern Handmade Metal Wall Clock for Home Décor",
+        "url": "https://www.kriyanta.com/product-detail/designs-modern-handmade-metal-wall-clock-for-home-d-cor",
+        "price": "10450",
+        "currency": "INR",
+        "image": "https://afd-endpoint-imgproc-fpa9f6hueadafzav.z03.azurefd.net/api/img?src=aHR0cHM6Ly9jZG4uc2hvcGlmeS5jb20vcy9maWxlcy8xLzA2ODUvNDQ2OS8yNDY4L2ZpbGVzLzZfYjQ0NWFmYWMtZDQ0ZC00NzQ0LWI4NmYtNWY4MWZlZjhkNzNjLmpwZz92PTE3MjYyNDU3NjE%3D&w=1200&h=630&q=90&fmt=jpeg&fit=cover",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Simple Wall Clock",
+        "url": "https://www.kriyanta.com/product-detail/simple-wall-clock",
+        "price": "7100",
+        "currency": "INR",
+        "image": "https://afd-endpoint-imgproc-fpa9f6hueadafzav.z03.azurefd.net/api/img?src=aHR0cHM6Ly9jZG4uc2hvcGlmeS5jb20vcy9maWxlcy8xLzA2ODUvNDQ2OS8yNDY4L2ZpbGVzLzFfNzgyODM0YTctYmMwMC00ODVlLWI4NTAtNzQ1MDFmMGNmOTVmLmpwZz92PTE3MjU5NzkyODE%3D&w=1200&h=630&q=90&fmt=jpeg&fit=cover",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Personalize Your Time: Custom Wall Clocks",
+        "url": "https://www.kriyanta.com/product-detail/personalize-your-time-custom-wall-clocks",
+        "price": "2999",
+        "currency": "INR",
+        "image": "https://afd-endpoint-imgproc-fpa9f6hueadafzav.z03.azurefd.net/api/img?src=aHR0cHM6Ly9jZG4uc2hvcGlmeS5jb20vcy9maWxlcy8xLzA2ODUvNDQ2OS8yNDY4L2ZpbGVzL1pvb21Gcm9udF9lODVjZjhlZi02NmUwLTQxMGMtYTc3Ny1iOWUzYzk4ODI5ZDgucG5nP3Y9MTcwOTI3ODUxNw%3D%3D&w=1200&h=630&q=90&fmt=jpeg&fit=cover",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Handmade Customizable Resin Wall Clock",
+        "url": "https://www.kriyanta.com/product-detail/resin-wall-clock",
+        "price": "1",
+        "currency": "USD",
+        "image": "https://afd-endpoint-imgproc-fpa9f6hueadafzav.z03.azurefd.net/api/img?src=aHR0cHM6Ly9kZXZzYWFpY29mb3VuZGVyLmJsb2IuY29yZS53aW5kb3dzLm5ldC9kZXYtY2F0YWxvZy8wZTM1ZWEzMWQ4MWI4YzY3MWExMDgxNDMzYzc3OWY2OS0wMUtDUlJFN1ExV0VQTkNaOFE4ODRWRDhYSC5qcGc%3D&w=1200&h=630&q=90&fmt=jpeg&fit=cover",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "MODERN DECORATIVE WALL CLOCK ART",
+        "url": "https://www.kriyanta.com/product-detail/modern-decorative-wall-clock-art",
+        "price": "6299",
+        "currency": "INR",
+        "image": "https://afd-endpoint-imgproc-fpa9f6hueadafzav.z03.azurefd.net/api/img?src=aHR0cHM6Ly9jZG4uc2hvcGlmeS5jb20vcy9maWxlcy8xLzA2ODUvNDQ2OS8yNDY4L2ZpbGVzLzExXzcwYzk2MDI0LTk0OTctNGE0NS1iOGU2LWUyOWNhMzZmOWQ0Yi5qcGc%2Fdj0xNzE1NDIwNTA2&w=1200&h=630&q=90&fmt=jpeg&fit=cover",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Unique and Premium Modern Wall Clock",
+        "url": "https://www.kriyanta.com/product-detail/unique-and-premium-modern-wall-clock",
+        "price": "3650",
+        "currency": "INR",
+        "image": "https://afd-endpoint-imgproc-fpa9f6hueadafzav.z03.azurefd.net/api/img?src=aHR0cHM6Ly9jZG4uc2hvcGlmeS5jb20vcy9maWxlcy8xLzA2ODUvNDQ2OS8yNDY4L2ZpbGVzLzNfY2JmZDMxM2UtOGY4Ny00YzZkLWI2YzYtY2JmNDA1ZjAxZDk2LmpwZz92PTE3MjM2NDgwMTk%3D&w=1200&h=630&q=90&fmt=jpeg&fit=cover",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "METAL WALL CLOCK",
+        "url": "https://www.kriyanta.com/product-detail/metal-wall-clock",
+        "price": "3299",
+        "currency": "INR",
+        "image": "https://afd-endpoint-imgproc-fpa9f6hueadafzav.z03.azurefd.net/api/img?src=aHR0cHM6Ly9jZG4uc2hvcGlmeS5jb20vcy9maWxlcy8xLzA2ODUvNDQ2OS8yNDY4L2ZpbGVzL1VudGl0bGVkZGVzaWduMV9kMmQ5ZDFjMC0wNTg2LTQ3ZDItYTgzOC0wYTY1NGVjNDkzMTEucG5nP3Y9MTcxNTQyMDQ5Ng%3D%3D&w=1200&h=630&q=90&fmt=jpeg&fit=cover",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Premium Wall Clock",
+        "url": "https://www.kriyanta.com/product-detail/premium-wall-clock",
+        "price": "7550",
+        "currency": "INR",
+        "image": "https://afd-endpoint-imgproc-fpa9f6hueadafzav.z03.azurefd.net/api/img?src=aHR0cHM6Ly9jZG4uc2hvcGlmeS5jb20vcy9maWxlcy8xLzA2ODUvNDQ2OS8yNDY4L2ZpbGVzLzJfMTc1MjcwNDUtZjc3MC00ZTQ3LTgzZjItNzhmYzFhMTA2ZGI4LmpwZz92PTE3MjU5ODIzOTA%3D&w=1200&h=630&q=90&fmt=jpeg&fit=cover",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "DECORATIVE METAL WALL CLOCK",
+        "url": "https://www.kriyanta.com/product-detail/decorative-metal-wall-clock",
+        "price": "5999",
+        "currency": "INR",
+        "image": "https://afd-endpoint-imgproc-fpa9f6hueadafzav.z03.azurefd.net/api/img?src=aHR0cHM6Ly9jZG4uc2hvcGlmeS5jb20vcy9maWxlcy8xLzA2ODUvNDQ2OS8yNDY4L2ZpbGVzL2RlY29yYXRpdmUtc2hvd3BpZWNlLTEwMDB4MTAwMC5qcGc%2Fdj0xNzE1NDIwMzU3&w=1200&h=630&q=90&fmt=jpeg&fit=cover",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      }
+    ],
+    "suggestions": [
+      "What are the dimensions of this clock?",
+      "Is this clock handmade?"
+    ],
+    "error": null,
+    "elapsed_s": 10.29
+  },
+  {
+    "bot_id": "1cb18dc0-4909-409d-ab03-0436524fcec4",
+    "bot_name": "kriyanta",
+    "domain": "handmade home décor & gifting (kriyanta.com)",
+    "allowed_langs": [
+      "en",
+      "gu"
+    ],
+    "query_lang": "en",
+    "query_type": "non_product",
+    "query": "What makes Kriyanta unique?",
+    "session_key": "s3",
+    "response_text": "Kriyanta is unique because it offers **handmade, eco-friendly, and customized home decor and gifting products**. What sets them apart is their collection of **unique treasures from over 350 Indian artists**, providing a platform for these artists to showcase their skills. Additionally, Kriyanta provides **free interior decoration consultation**, helping customers choose the perfect pieces for their space. They also offer **free shipping on orders above 1000**, making it a convenient and rewarding shopping experience.",
+    "products": [],
+    "suggestions": [
+      "What kind of handmade products do you offer?",
+      "Can I customize a gift for someone?"
+    ],
+    "error": null,
+    "elapsed_s": 12.16
+  },
+  {
+    "bot_id": "1cb18dc0-4909-409d-ab03-0436524fcec4",
+    "bot_name": "kriyanta",
+    "domain": "handmade home décor & gifting (kriyanta.com)",
+    "allowed_langs": [
+      "en",
+      "gu"
+    ],
+    "query_lang": "en",
+    "query_type": "irrelevant",
+    "query": "How can I grow my business?",
+    "session_key": "s4",
+    "response_text": "I can only help with questions about Kriyanta. What are you looking for?",
+    "products": [],
+    "suggestions": [],
+    "error": null,
+    "elapsed_s": 1.71
+  },
+  {
+    "bot_id": "1cb18dc0-4909-409d-ab03-0436524fcec4",
+    "bot_name": "kriyanta",
+    "domain": "handmade home décor & gifting (kriyanta.com)",
+    "allowed_langs": [
+      "en",
+      "gu"
+    ],
+    "query_lang": "en",
+    "query_type": "missing_info",
+    "query": "How can I contact you?",
+    "session_key": "s5",
+    "response_text": "I can only help with questions about Kriyanta. What are you looking for?",
+    "products": [],
+    "suggestions": [],
+    "error": null,
+    "elapsed_s": 1.46
+  },
+  {
+    "bot_id": "1cb18dc0-4909-409d-ab03-0436524fcec4",
+    "bot_name": "kriyanta",
+    "domain": "handmade home décor & gifting (kriyanta.com)",
+    "allowed_langs": [
+      "en",
+      "gu"
+    ],
+    "query_lang": "gu",
+    "query_type": "product",
+    "query": "ઘરની સજાવટ માટે શું છે?",
+    "session_key": "s6",
+    "response_text": "અરે, ઘરની સજાવટ માટે ઘણા સરસ ઓપ્શન છે! જુઓ kriyanta પાસે શું છે.",
+    "products": [
+      {
+        "name": "Light Up Your Bedroom in Style:",
+        "url": "https://www.kriyanta.com/blogs",
+        "price": "1",
+        "currency": "USD",
+        "image": "https://afd-endpoint-imgproc-fpa9f6hueadafzav.z03.azurefd.net/api/img?src=L2Ntcy9hcGkvbWVkaWEvZmlsZS9DaXJjbGUlMjBsb2dvLnBuZw%3D%3D&w=1200&h=630&q=90&fmt=jpeg&fit=cover",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "DECORATIVE LED WALL DECOR",
+        "url": "https://www.kriyanta.com/product-detail/decorative-led-wall-decor",
+        "price": "20200",
+        "currency": "INR",
+        "image": "https://afd-endpoint-imgproc-fpa9f6hueadafzav.z03.azurefd.net/api/img?src=aHR0cHM6Ly9jZG4uc2hvcGlmeS5jb20vcy9maWxlcy8xLzA2ODUvNDQ2OS8yNDY4L2ZpbGVzL08xQ04wMXJnUXBCSzFrRElCNU5jclVXX18yMjA4MDI0NjY0NjQ5LmpwZ180Njh4NDY4UTc1XzU0NjZhYTg5LWQzMTItNDE2Yi1hZTlkLWJjZjk4Zjg1YmJjZS53ZWJwP3Y9MTcxNTQyMDUyNQ%3D%3D&w=1200&h=630&q=90&fmt=jpeg&fit=cover",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Modern Home Decor Wall Clock",
+        "url": "https://www.kriyanta.com/product-detail/modern-home-decor-wall-clock",
+        "price": "12100",
+        "currency": "INR",
+        "image": "https://afd-endpoint-imgproc-fpa9f6hueadafzav.z03.azurefd.net/api/img?src=aHR0cHM6Ly9jZG4uc2hvcGlmeS5jb20vcy9maWxlcy8xLzA2ODUvNDQ2OS8yNDY4L2ZpbGVzLzJfZWU0ODFmYTUtODMzOC00ODY3LTliYjgtZGNkMDg1YTc2ZWVhLmpwZz92PTE3MjYzMjYzOTg%3D&w=1200&h=630&q=90&fmt=jpeg&fit=cover",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Home Decor",
+        "url": "https://www.kriyanta.com/category-view/decor",
+        "price": "999",
+        "currency": "INR",
+        "image": "https://afd-endpoint-imgproc-fpa9f6hueadafzav.z03.azurefd.net/api/img?src=L2Ntcy9hcGkvbWVkaWEvZmlsZS9Db3B5JTIwb2YlMjB0ZWVwaXp6YXp6LTEucG5n&w=1200&q=85&fmt=webp",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Wall Mounted Wooden Home Pooja Temple Room Items Stand Home Decor Office",
+        "url": "https://www.kriyanta.com/product-detail/wall-mounted-wooden-home-pooja-temple-room-items-stand-home-decor-office",
+        "price": "599",
+        "currency": "INR",
+        "image": "https://afd-endpoint-imgproc-fpa9f6hueadafzav.z03.azurefd.net/api/img?src=aHR0cHM6Ly9jZG4uc2hvcGlmeS5jb20vcy9maWxlcy8xLzA2ODUvNDQ2OS8yNDY4L2ZpbGVzL1NGU18xMzA0XzkwMHhfYTk1MGU2NjEtYmM5Yy00NDhiLTg4NmUtMTM1MGE0MmU4NjRhLmpwZz92PTE3MzUyMjI1MTM%3D&w=1200&h=630&q=90&fmt=jpeg&fit=cover",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "NATURE CRYSTAL WALL DECOR",
+        "url": "https://www.kriyanta.com/product-detail/nature-crystal-wall-decor-2",
+        "price": "14499",
+        "currency": "INR",
+        "image": "https://afd-endpoint-imgproc-fpa9f6hueadafzav.z03.azurefd.net/api/img?src=aHR0cHM6Ly9jZG4uc2hvcGlmeS5jb20vcy9maWxlcy8xLzA2ODUvNDQ2OS8yNDY4L2ZpbGVzL1VudGl0bGVkZGVzaWduMl9hNDEyZmIyNy1jYzQzLTRlYzItYmY1ZC0zN2FlYjFiMjc5YWUucG5nP3Y9MTcxNTQyMDU0OA%3D%3D&w=1200&h=630&q=90&fmt=jpeg&fit=cover",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Personalize Your Walls: Handmade Wall Art (Combo of 2)",
+        "url": "https://www.kriyanta.com/product-detail/personalize-your-walls-handmade-wall-art-combo-of-2",
+        "price": "4449",
+        "currency": "INR",
+        "image": "https://afd-endpoint-imgproc-fpa9f6hueadafzav.z03.azurefd.net/api/img?src=aHR0cHM6Ly9jZG4uc2hvcGlmeS5jb20vcy9maWxlcy8xLzA2ODUvNDQ2OS8yNDY4L2ZpbGVzL2Zyb250Y29udGV4dF83YzdhZWUwZS1mMmUxLTQ2Y2MtODE4NS0wMmNkZmUwZjkzN2QuanBnP3Y9MTcwOTI5MDQzMQ%3D%3D&w=1200&h=630&q=90&fmt=jpeg&fit=cover",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Mix Media Candle",
+        "url": "https://www.kriyanta.com/product-detail/mix-media-candle-aesthetic-home-decor-gift",
+        "price": "699",
+        "currency": "INR",
+        "image": "https://afd-endpoint-imgproc-fpa9f6hueadafzav.z03.azurefd.net/api/img?src=aHR0cHM6Ly9jZG4uc2hvcGlmeS5jb20vcy9maWxlcy8xLzA2ODUvNDQ2OS8yNDY4L2ZpbGVzLzIwMjQwNzAyXzE1MjYzMC5qcGc%2Fdj0xNzMzNzUyNTAz&w=1200&h=630&q=90&fmt=jpeg&fit=cover",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Personalize Your Walls: Handmade Wall Art (Combo of 3)",
+        "url": "https://www.kriyanta.com/product-detail/personalize-your-walls-handmade-wall-art-combo-of-3",
+        "price": "6199",
+        "currency": "INR",
+        "image": "https://afd-endpoint-imgproc-fpa9f6hueadafzav.z03.azurefd.net/api/img?src=aHR0cHM6Ly9jZG4uc2hvcGlmeS5jb20vcy9maWxlcy8xLzA2ODUvNDQ2OS8yNDY4L2ZpbGVzLzAxLmpwZz92PTE3MDkyODQxNTc%3D&w=1200&h=630&q=90&fmt=jpeg&fit=cover",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Wall Mounted Wooden Home Temple for home or office will definitely uplift the positive vibrations",
+        "url": "https://www.kriyanta.com/product-detail/wall-mounted-wooden-home-temple-for-home-or-office-will-definitely-uplift-the-positive-vibrations",
+        "price": "259",
+        "currency": "INR",
+        "image": "https://afd-endpoint-imgproc-fpa9f6hueadafzav.z03.azurefd.net/api/img?src=aHR0cHM6Ly9jZG4uc2hvcGlmeS5jb20vcy9maWxlcy8xLzA2ODUvNDQ2OS8yNDY4L2ZpbGVzL1NGU18xMzMzXzkwMHhfZmRhYzBjOWItZTg1NC00NzdiLWFhYTctNWVmNjI2Zjc5NTc2LmpwZz92PTE3MzUyMjI2ODY%3D&w=1200&h=630&q=90&fmt=jpeg&fit=cover",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      }
+    ],
+    "suggestions": [
+      "ટેબલ ટોપ ડેકોર",
+      "વોલ આર્ટ ઓપ્શન"
+    ],
+    "error": null,
+    "elapsed_s": 15.7
+  },
+  {
+    "bot_id": "e79b3754-006d-45d5-b21d-2391710e08ca",
+    "bot_name": "zevaramaze",
+    "domain": "handmade silver jewellery (zevaramaze.com)",
+    "allowed_langs": [
+      "gu"
+    ],
+    "query_lang": "gu",
+    "query_type": "greeting",
+    "query": "નમસ્તે",
+    "session_key": "s1",
+    "response_text": "નમસ્તે! તમને શું મદદ કરી શકીએ? અમે zevaramaze ની પાસે ઘણી **sterling silver jewelry** છે, જેમાં **pendants**, **earrings**, **mangalsutras**, **rings**, **bracelets**, **hoop earrings** નો સમાવેશ થાય છે.",
+    "products": [],
+    "suggestions": [
+      "પ્રોડક્ટ જોવા માંગુ છુ",
+      "પ્રાઇસ વિશે જાણવા માંગુ છુ"
+    ],
+    "error": null,
+    "elapsed_s": 5.0
+  },
+  {
+    "bot_id": "e79b3754-006d-45d5-b21d-2391710e08ca",
+    "bot_name": "zevaramaze",
+    "domain": "handmade silver jewellery (zevaramaze.com)",
+    "allowed_langs": [
+      "gu"
+    ],
+    "query_lang": "gu",
+    "query_type": "product",
+    "query": "ચાંદીની વીંટી બતાવો",
+    "session_key": "s2",
+    "response_text": "અરે, ઘણા saras ચાંદીની વીંટી ઓપ્શન છે! જુઓ અહીં કેટલાક સરસ વીંટીઓ છે.",
+    "products": [
+      {
+        "name": "Silver Drop Pendant - Zevar Amaze",
+        "url": "https://zevaramaze.com/collections/all/products/silver-drop-pendant-1",
+        "price": "1849",
+        "currency": "INR",
+        "image": "https://zevaramaze.com/cdn/shop/files/Gemini_Generated_Image_eeioxkeeioxkeeio.png?v=1769514064",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Shine Yellow Gold Pendant - Zevar Amaze",
+        "url": "https://zevaramaze.com/collections/all/products/copy-of-giza-yellow-gold-pendant-set",
+        "price": "1949",
+        "currency": "INR",
+        "image": "https://zevaramaze.com/cdn/shop/files/Gemini_Generated_Image_41k7n541k7n541k7.png?v=1769686445",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Buy Silver Chain For Men Online - Zevar Amaze",
+        "url": "https://zevaramaze.com/collections/all/products/bead-silver-chain-for-men",
+        "price": "2899",
+        "currency": "INR",
+        "image": "https://zevaramaze.com/cdn/shop/files/1.png?v=1715777934",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Windmill yellow gold pendant set - Zevar Amaze",
+        "url": "https://zevaramaze.com/collections/all/products/windmill-yellow-gold-pendant-set",
+        "price": "1949",
+        "currency": "INR",
+        "image": "https://zevaramaze.com/cdn/shop/files/Gemini_Generated_Image_4il9az4il9az4il9.png?v=1769685508",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Kasumi Silver Pendant - Zevar Amaze",
+        "url": "https://zevaramaze.com/collections/all/products/kasumi-silver-pendant",
+        "price": "1749",
+        "currency": "INR",
+        "image": "https://zevaramaze.com/cdn/shop/files/Gemini_Generated_Image_yb9gjwyb9gjwyb9g.png?v=1769513265",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "GIZA YELLOW GOLD PENDANT SET - Zevar Amaze",
+        "url": "https://zevaramaze.com/collections/all/products/copy-of-agnes-pendant-set",
+        "price": "2349",
+        "currency": "INR",
+        "image": "https://zevaramaze.com/cdn/shop/files/Gemini_Generated_Image_lfcepvlfcepvlfce.png?v=1769689418",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Buy Silver Snake Chain For Men Online - Zevar Amaze",
+        "url": "https://zevaramaze.com/collections/all/products/silver-snake-chain-for-men",
+        "price": "2499",
+        "currency": "INR",
+        "image": "https://zevaramaze.com/cdn/shop/files/2.png?v=1715776419",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Adonia Pendant Set - Zevar Amaze",
+        "url": "https://zevaramaze.com/collections/all/products/adonia-zae3111ps",
+        "price": "2700",
+        "currency": "INR",
+        "image": "https://zevaramaze.com/cdn/shop/files/Gemini_Generated_Image_y1v2tgy1v2tgy1v2.png?v=1769690408",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Lenora Pendant Set - Zevar Amaze",
+        "url": "https://zevaramaze.com/collections/all/products/lenora",
+        "price": "3649",
+        "currency": "INR",
+        "image": "https://zevaramaze.com/cdn/shop/files/Gemini_Generated_Image_lkgvo1lkgvo1lkgv.png?v=1769683962",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      },
+      {
+        "name": "Cassia Pendant Set - Zevar Amaze",
+        "url": "https://zevaramaze.com/collections/all/products/cassia-pendant-set",
+        "price": "2700",
+        "currency": "INR",
+        "image": "https://zevaramaze.com/cdn/shop/files/Gemini_Generated_Image_dx8k3qdx8k3qdx8k.png?v=1769685609",
+        "brand": null,
+        "rating": null,
+        "review_count": null
+      }
+    ],
+    "suggestions": [
+      "ચાંદીની વીંટીનું પ્રાઇસ શું છે?",
+      "ચાંદીની વીંટીની ડિસ્ક્રિપ્શન વાંચો"
+    ],
+    "error": null,
+    "elapsed_s": 16.99
+  },
+  {
+    "bot_id": "e79b3754-006d-45d5-b21d-2391710e08ca",
+    "bot_name": "zevaramaze",
+    "domain": "handmade silver jewellery (zevaramaze.com)",
+    "allowed_langs": [
+      "gu"
+    ],
+    "query_lang": "gu",
+    "query_type": "follow_up",
+    "query": "આનો ભાવ શું છે?",
+    "session_key": "s2",
+    "response_text": "ઓહ, તમે ચાંદીની વીંટીનો ભાવ જાણવા માંગો છો! ત્યારે હું તમને કહું છું કે ચાંદીની વીંટીનો ભાવ આશરે **₹500** થી **₹2000** સુધી હોઈ શકે છે. પણ ચોક્કસ ભાવ જાણવા માટે તમારે અમારી વેબસાઇટ પર જવું પડશે.",
+    "products": [],
+    "suggestions": [
+      "ચાંદીની વીંટીના વિવિધ પ્રકાર",
+      "ચાંદીની વીંટીની ખાસિયત"
+    ],
+    "error": null,
+    "elapsed_s": 2.9
+  },
+  {
+    "bot_id": "e79b3754-006d-45d5-b21d-2391710e08ca",
+    "bot_name": "zevaramaze",
+    "domain": "handmade silver jewellery (zevaramaze.com)",
+    "allowed_langs": [
+      "gu"
+    ],
+    "query_lang": "gu",
+    "query_type": "non_product",
+    "query": "ઝેવારામઝ વિશે જણાવો.",
+    "session_key": "s3",
+    "response_text": "ઝેવારામઝ એ ઓનલાઇન ઝેવરાત સ્ટોર છે જે સ્ટર્લિંગ સિલ્વર ઝેવરાતની વિવિધ શ્રેણીઓ ઓફર કરે છે, જેમાં પેંડન્ટ, ઈઅરરિંગ્સ, મંગલસૂત્ર, રિંગ્સ, બ્રેસલેટ્સ, હૂપ ઈઅરરિંગ્સ અને વધુનો સમાવેશ થાય છે. તેઓ હોલમાર્કડ ઝેવરાત, લાઇફટાઇમ એક્સચેન્જ, ફ્રી રીફાઇનિશિંગ અને ગુણવત્તાની ખાતરી પણ ઓફર કરે છે.",
+    "products": [],
+    "suggestions": [
+      "ઝેવારામઝ પર શું ખરીદી શકાય?",
+      "સ્ટર્લિંગ સિલ્વરની ગુણવત્તા શું છે?"
+    ],
+    "error": null,
+    "elapsed_s": 11.96
+  },
+  {
+    "bot_id": "e79b3754-006d-45d5-b21d-2391710e08ca",
+    "bot_name": "zevaramaze",
+    "domain": "handmade silver jewellery (zevaramaze.com)",
+    "allowed_langs": [
+      "gu"
+    ],
+    "query_lang": "en",
+    "query_type": "irrelevant",
+    "query": "Who won the world cup?",
+    "session_key": "s4",
+    "response_text": "I can only help with questions about Zevar Amaze. What are you looking for?",
+    "products": [],
+    "suggestions": [],
+    "error": null,
+    "elapsed_s": 1.38
+  },
+  {
+    "bot_id": "e79b3754-006d-45d5-b21d-2391710e08ca",
+    "bot_name": "zevaramaze",
+    "domain": "handmade silver jewellery (zevaramaze.com)",
+    "allowed_langs": [
+      "gu"
+    ],
+    "query_lang": "gu",
+    "query_type": "missing_info",
+    "query": "ઓર્ડર ટ્રેક કેવી રીતે કરવો?",
+    "session_key": "s5",
+    "response_text": "ઓર્ડર ટ્રેક કરવા માટે, તમારે તમારા ઓર્ડર નંબર અને તમારી ઇમેઇલ આઇડીનો ઉપયોગ કરવો પડશે. તમે આ માહિતીનો ઉપયોગ કરીને અમારી વેબસાઇટ પરથી તમારો ઓર્ડર ટ્રેક કરી શકો છો. જો તમને કોઈ મદદની જરૂર હોય, તો તમે અમારા કસ્ટમર સપોર્ટ ટીમનો સંપર્ક કરી શકો છો.",
+    "products": [],
+    "suggestions": [
+      "મારો ઓર્ડર ટ્રેક કરવો",
+      "ઓર્ડર સ્થિતિ જાણવી"
+    ],
+    "error": null,
+    "elapsed_s": 2.67
+  }
+]

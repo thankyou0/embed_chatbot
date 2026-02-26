@@ -82,14 +82,14 @@ from pathlib import Path
 import pandas as pd
 import hashlib
 import httpx
-from app.core.config import settings, get_groq_api_key, get_openrouter_api_key
+from app.core.config import settings, get_groq_api_key
 
 logger = get_logger(__name__)
 
 
 # ---------------------------------------------------------------------------
 #  Welcome-message translation helper
-#  Translates a welcome message to each target language using OpenRouter/Groq.
+#  Translates a welcome message to each target language using Groq.
 # ---------------------------------------------------------------------------
 
 LANG_NAMES = {"hi": "Hindi", "gu": "Gujarati", "en": "English"}
@@ -111,19 +111,10 @@ async def _translate_welcome_message(
     for lang in targets:
         lang_name = LANG_NAMES.get(lang, lang)
 
-        # Pick provider: OpenRouter > Groq
-        _use_openrouter = bool(settings.OPENROUTER_API_KEYS or settings.OPENROUTER_API_KEY)
-        _url = (
-            "https://openrouter.ai/api/v1/chat/completions"
-            if _use_openrouter
-            else "https://api.groq.com/openai/v1/chat/completions"
-        )
-        _key = get_openrouter_api_key() if _use_openrouter else get_groq_api_key()
-        _model = (
-            settings.OPENROUTER_TRANSLATION_MODEL
-            if _use_openrouter
-            else settings.GROQ_TRANSLATION_MODEL
-        )
+        # Pick provider: Groq
+        _url = "https://api.groq.com/openai/v1/chat/completions"
+        _key = get_groq_api_key()
+        _model = settings.GROQ_TRANSLATION_MODEL
 
         try:
             async with httpx.AsyncClient(timeout=15.0) as client:

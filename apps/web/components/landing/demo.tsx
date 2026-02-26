@@ -1,8 +1,15 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { motion, useInView } from "framer-motion";
-import { Send, ArrowRight } from "lucide-react";
+import { useRef, useState, useCallback } from "react";
+import {
+  motion,
+  useInView,
+  useMotionValue,
+  useSpring,
+  useTransform,
+  AnimatePresence,
+} from "framer-motion";
+import { Send, ArrowRight, MessageSquare } from "lucide-react";
 
 const demoConversations = [
   {
@@ -22,19 +29,88 @@ const demoConversations = [
   },
 ];
 
+/* ── 3D tilt wrapper for the chat window ── */
+function TiltChatWindow({ children }: { children: React.ReactNode }) {
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+  const rotateX = useSpring(useTransform(y, [-0.5, 0.5], [4, -4]), {
+    stiffness: 200,
+    damping: 20,
+  });
+  const rotateY = useSpring(useTransform(x, [-0.5, 0.5], [-4, 4]), {
+    stiffness: 200,
+    damping: 20,
+  });
+
+  const onMove = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      const rect = e.currentTarget.getBoundingClientRect();
+      x.set((e.clientX - rect.left) / rect.width - 0.5);
+      y.set((e.clientY - rect.top) / rect.height - 0.5);
+    },
+    [x, y]
+  );
+
+  const onLeave = useCallback(() => {
+    x.set(0);
+    y.set(0);
+  }, [x, y]);
+
+  return (
+    <div className="perspective-1000">
+      <motion.div
+        style={{ rotateX, rotateY }}
+        className="preserve-3d"
+        onMouseMove={onMove}
+        onMouseLeave={onLeave}
+      >
+        {children}
+      </motion.div>
+    </div>
+  );
+}
+
+/* ── Typing dots animation ── */
+function TypingDots() {
+  return (
+    <div className="flex gap-2.5">
+      <div className="w-7 h-7 rounded-full bg-emerald-500/20 flex-shrink-0 flex items-center justify-center text-xs">
+        <MessageSquare className="w-3.5 h-3.5 text-emerald-400" />
+      </div>
+      <div className="px-4 py-3 rounded-2xl rounded-tl-sm bg-white/5 flex items-center gap-1">
+        {[0, 1, 2].map((i) => (
+          <motion.span
+            key={i}
+            animate={{ opacity: [0.3, 1, 0.3], y: [0, -3, 0] }}
+            transition={{
+              duration: 0.8,
+              repeat: Infinity,
+              delay: i * 0.15,
+            }}
+            className="w-1.5 h-1.5 rounded-full bg-emerald-400/60"
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function DemoSection() {
   const ref = useRef(null);
   const inView = useInView(ref, { once: true, margin: "-100px" });
   const [activeDemo, setActiveDemo] = useState(0);
-  const [showAnswer, setShowAnswer] = useState(true);
+  const [phase, setPhase] = useState<"answer" | "typing" | "hidden">("answer");
 
   const handleDemoClick = (index: number) => {
     if (index === activeDemo) return;
-    setShowAnswer(false);
+    setPhase("hidden");
     setTimeout(() => {
       setActiveDemo(index);
-      setShowAnswer(true);
+      setPhase("typing");
     }, 200);
+    setTimeout(() => {
+      setPhase("answer");
+    }, 1000);
   };
 
   return (
@@ -43,7 +119,8 @@ export function DemoSection() {
         {/* Section header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
-          animate={inView ? { opacity: 1, y: 0 } : {}}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
           transition={{ duration: 0.6 }}
           className="text-center mb-16"
         >
@@ -64,7 +141,8 @@ export function DemoSection() {
 
         <motion.div
           initial={{ opacity: 0, y: 30 }}
-          animate={inView ? { opacity: 1, y: 0 } : {}}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
           transition={{ duration: 0.7, delay: 0.2 }}
           className="max-w-4xl mx-auto"
         >
@@ -75,18 +153,20 @@ export function DemoSection() {
                 Try a question
               </p>
               {demoConversations.map((conv, i) => (
-                <button
+                <motion.button
                   key={i}
                   onClick={() => handleDemoClick(i)}
-                  className={`w-full text-left p-4 rounded-xl border transition-all duration-200 ${
+                  whileHover={{ x: 4 }}
+                  whileTap={{ scale: 0.98 }}
+                  className={`w-full text-left p-4 rounded-xl border transition-all duration-300 ${
                     activeDemo === i
-                      ? "border-emerald-500/40 bg-emerald-500/10 text-white"
-                      : "border-white/5 bg-white/[0.02] text-white/50 hover:text-white/70 hover:bg-white/[0.04]"
+                      ? "border-emerald-500/40 bg-emerald-500/10 text-white shadow-lg shadow-emerald-500/5"
+                      : "border-white/5 bg-white/[0.02] text-white/50 hover:text-white/70 hover:bg-white/[0.04] hover:border-white/10"
                   }`}
                 >
                   <div className="flex items-start gap-3">
                     <Send
-                      className={`w-4 h-4 mt-0.5 flex-shrink-0 ${
+                      className={`w-4 h-4 mt-0.5 flex-shrink-0 transition-colors ${
                         activeDemo === i ? "text-emerald-400" : "text-white/20"
                       }`}
                     />
@@ -94,78 +174,112 @@ export function DemoSection() {
                       {conv.question}
                     </span>
                   </div>
-                </button>
+                </motion.button>
               ))}
             </div>
 
-            {/* Chat window */}
+            {/* Chat window with 3D tilt */}
             <div className="lg:col-span-3">
-              <div className="rounded-2xl border border-white/10 bg-[#111118] overflow-hidden shadow-2xl shadow-emerald-500/5">
-                {/* Chat header */}
-                <div className="px-5 py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-sm">
-                    🤖
-                  </div>
-                  <div>
-                    <div className="text-sm font-semibold text-white">
-                      EmbedChat Demo
+              <TiltChatWindow>
+                <div className="rounded-2xl border border-white/10 bg-[#111118] overflow-hidden shadow-2xl shadow-emerald-500/5">
+                  {/* Chat header */}
+                  <div className="px-5 py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+                      <MessageSquare className="w-4 h-4 text-white" />
                     </div>
-                    <div className="text-[10px] text-white/70 flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 bg-green-400 rounded-full" />
-                      Powered by your knowledge base
+                    <div>
+                      <div className="text-sm font-semibold text-white">
+                        EmbedChat Demo
+                      </div>
+                      <div className="text-[10px] text-white/70 flex items-center gap-1">
+                        <motion.span
+                          animate={{ scale: [1, 1.3, 1] }}
+                          transition={{ duration: 2, repeat: Infinity }}
+                          className="w-1.5 h-1.5 bg-green-400 rounded-full inline-block"
+                        />
+                        Powered by your knowledge base
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Messages */}
+                  <div className="p-5 space-y-4 min-h-[280px]">
+                    {/* Bot welcome */}
+                    <div className="flex gap-2.5">
+                      <div className="w-7 h-7 rounded-full bg-emerald-500/20 flex-shrink-0 flex items-center justify-center text-xs">
+                        <MessageSquare className="w-3.5 h-3.5 text-emerald-400" />
+                      </div>
+                      <div className="px-4 py-2.5 rounded-2xl rounded-tl-sm bg-white/5 text-sm text-white/70 max-w-[80%]">
+                        Hi! I&apos;m trained on your knowledge base. Ask me anything!
+                      </div>
+                    </div>
+
+                    {/* User question */}
+                    <AnimatePresence mode="wait">
+                      <motion.div
+                        key={`q-${activeDemo}`}
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -20 }}
+                        transition={{ duration: 0.3 }}
+                        className="flex justify-end"
+                      >
+                        <div className="px-4 py-2.5 rounded-2xl rounded-tr-sm bg-emerald-600 text-sm text-white max-w-[80%]">
+                          {demoConversations[activeDemo].question}
+                        </div>
+                      </motion.div>
+                    </AnimatePresence>
+
+                    {/* Typing indicator or bot answer */}
+                    <AnimatePresence mode="wait">
+                      {phase === "typing" && (
+                        <motion.div
+                          key="typing"
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          <TypingDots />
+                        </motion.div>
+                      )}
+                      {phase === "answer" && (
+                        <motion.div
+                          key={`a-${activeDemo}`}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: 10 }}
+                          transition={{ duration: 0.4 }}
+                          className="flex gap-2.5"
+                        >
+                          <div className="w-7 h-7 rounded-full bg-emerald-500/20 flex-shrink-0 flex items-center justify-center text-xs">
+                            <MessageSquare className="w-3.5 h-3.5 text-emerald-400" />
+                          </div>
+                          <div className="px-4 py-2.5 rounded-2xl rounded-tl-sm bg-white/5 text-sm text-white/70 max-w-[80%] leading-relaxed">
+                            {demoConversations[activeDemo].answer}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+
+                  {/* Input */}
+                  <div className="px-5 pb-5">
+                    <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 transition-colors hover:border-white/20">
+                      <span className="text-sm text-white/30 flex-1">
+                        Type your question...
+                      </span>
+                      <motion.div
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        className="w-8 h-8 rounded-lg bg-emerald-600 flex items-center justify-center cursor-pointer hover:bg-emerald-500 transition"
+                      >
+                        <ArrowRight className="w-4 h-4 text-white" />
+                      </motion.div>
                     </div>
                   </div>
                 </div>
-
-                {/* Messages */}
-                <div className="p-5 space-y-4 min-h-[280px]">
-                  {/* Bot welcome */}
-                  <div className="flex gap-2.5">
-                    <div className="w-7 h-7 rounded-full bg-emerald-500/20 flex-shrink-0 flex items-center justify-center text-xs">
-                      🤖
-                    </div>
-                    <div className="px-4 py-2.5 rounded-2xl rounded-tl-sm bg-white/5 text-sm text-white/70 max-w-[80%]">
-                      Hi! I&apos;m trained on your knowledge base. Ask me anything!
-                    </div>
-                  </div>
-
-                  {/* User question */}
-                  <div className="flex justify-end">
-                    <div className="px-4 py-2.5 rounded-2xl rounded-tr-sm bg-emerald-600 text-sm text-white max-w-[80%]">
-                      {demoConversations[activeDemo].question}
-                    </div>
-                  </div>
-
-                  {/* Bot answer */}
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={
-                      showAnswer ? { opacity: 1, y: 0 } : { opacity: 0, y: 10 }
-                    }
-                    transition={{ duration: 0.4 }}
-                    className="flex gap-2.5"
-                  >
-                    <div className="w-7 h-7 rounded-full bg-emerald-500/20 flex-shrink-0 flex items-center justify-center text-xs">
-                      🤖
-                    </div>
-                    <div className="px-4 py-2.5 rounded-2xl rounded-tl-sm bg-white/5 text-sm text-white/70 max-w-[80%] leading-relaxed">
-                      {demoConversations[activeDemo].answer}
-                    </div>
-                  </motion.div>
-                </div>
-
-                {/* Input */}
-                <div className="px-5 pb-5">
-                  <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10">
-                    <span className="text-sm text-white/30 flex-1">
-                      Type your question...
-                    </span>
-                    <div className="w-8 h-8 rounded-lg bg-emerald-600 flex items-center justify-center cursor-pointer hover:bg-emerald-500 transition">
-                      <ArrowRight className="w-4 h-4 text-white" />
-                    </div>
-                  </div>
-                </div>
-              </div>
+              </TiltChatWindow>
             </div>
           </div>
         </motion.div>

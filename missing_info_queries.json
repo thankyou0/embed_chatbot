@@ -1,0 +1,302 @@
+{
+  "tentree": {
+    "bot_id": "799637f9-391b-4b9d-84cb-5fdd17cdf109",
+    "languages": ["en", "hi", "gu"],
+    "available_info": [
+      "Contact email: support@tentree.com",
+      "Business hours: Mon-Fri 10AM-5PM PST",
+      "Office address: 230-1275 Venables St, Vancouver BC, Canada V6A 2E4",
+      "Privacy policy",
+      "Category pages (accessories, clothing, shoes, men's, women's, kids)",
+      "Product names and prices (USD)",
+      "Tree planting mission (every item plants 10 trees)",
+      "Subscription plans (monthly tree planting)",
+      "Sale/discount information",
+      "Sustainability messaging"
+    ],
+    "missing_info": [
+      "No return/exchange/refund policy page",
+      "No shipping policy or delivery timeframes",
+      "No size guide or size chart",
+      "No phone number (only email)",
+      "No warranty information",
+      "No product care/washing instructions",
+      "No product materials or fabric composition per item (only generic sustainability claims)",
+      "No FAQ page with detailed answers"
+    ],
+    "test_queries": [
+      {
+        "lang": "en",
+        "query": "What is tentree's return and exchange policy?",
+        "expected_behavior": "Should acknowledge it doesn't have specific return/exchange policy details. May suggest contacting support@tentree.com.",
+        "why_missing": "No return/exchange policy page exists in crawled data. Help Center page only has contact info, no policy details."
+      },
+      {
+        "lang": "en",
+        "query": "Do you have a size guide for your women's clothing?",
+        "expected_behavior": "Should acknowledge it doesn't have size guide information. May suggest contacting support.",
+        "why_missing": "No size guide or size chart page exists in crawled data."
+      },
+      {
+        "lang": "hi",
+        "query": "tentree की शिपिंग पॉलिसी क्या है? डिलीवरी में कितना समय लगता है?",
+        "expected_behavior": "Should acknowledge it doesn't have shipping policy details. May suggest contacting support.",
+        "why_missing": "No shipping policy page with delivery timeframes exists in crawled data."
+      },
+      {
+        "lang": "gu",
+        "query": "tentree ના કપડાં ધોવાની સૂચનાઓ શું છે? શું મશીન વોશ કરી શકાય?",
+        "expected_behavior": "Should acknowledge it doesn't have care/washing instructions for products.",
+        "why_missing": "Product pages only have name and price - no care instructions, fabric details, or washing guidelines exist."
+      }
+    ]
+  },
+  "death_wish_coffee": {
+    "bot_id": "99fc3604-99e7-4cd0-a2a6-509ac08d9fd0",
+    "languages": ["en", "hi"],
+    "available_info": [
+      "About Us: sourcing from Peru, India, Guatemala, Honduras, Ethiopia, Sumatra",
+      "USDA Organic and Fair Trade certified",
+      "FAQ: shelf life (12 months unopened), brewing ratio (2.5 tbsp per 6oz), instant coffee details (300mg caffeine)",
+      "Email: hey@deathwishcoffee.com",
+      "Careers page",
+      "Blog articles on coffee tips, health benefits, brewing methods",
+      "Product names and prices (USD)",
+      "Some product descriptions (espresso capsules, tea towels, etc.)",
+      "Bean origins and sourcing practices"
+    ],
+    "missing_info": [
+      "No return/refund policy page",
+      "No shipping policy or delivery timeframes",
+      "No phone number or physical address/store location",
+      "No subscription management details (how to cancel/pause/modify)",
+      "No nutritional facts or allergen information beyond basic caffeine content",
+      "No detailed product ingredients list per item",
+      "No international shipping information"
+    ],
+    "test_queries": [
+      {
+        "lang": "en",
+        "query": "What is Death Wish Coffee's return or refund policy if I don't like the coffee?",
+        "expected_behavior": "Should acknowledge it doesn't have specific return/refund policy details. May suggest contacting hey@deathwishcoffee.com.",
+        "why_missing": "No return/refund policy page exists in crawled data. FAQ page doesn't cover returns."
+      },
+      {
+        "lang": "en",
+        "query": "How long does shipping take for Death Wish Coffee orders?",
+        "expected_behavior": "Should acknowledge it doesn't have shipping timeframe details.",
+        "why_missing": "No shipping policy page exists in crawled data with delivery timeframes."
+      },
+      {
+        "lang": "hi",
+        "query": "Death Wish Coffee में कौन से एलर्जन होते हैं? क्या यह ग्लूटेन-फ्री है?",
+        "expected_behavior": "Should acknowledge it doesn't have allergen or gluten-free information. May mention it's USDA Organic.",
+        "why_missing": "No allergen info or nutritional details page exists. FAQ only covers caffeine and organic certification."
+      },
+      {
+        "lang": "en",
+        "query": "How do I cancel or pause my Death Wish Coffee subscription?",
+        "expected_behavior": "Should acknowledge it doesn't have subscription management details. May suggest contacting support.",
+        "why_missing": "No subscription management page exists in crawled data. Products mention subscription but no management instructions."
+      }
+    ]
+  },
+  "beardbrand": {
+    "bot_id": "e23fcc6f-7a02-4b09-8d49-95c00a57d852",
+    "languages": ["en", "gu"],
+    "available_info": [
+      "Contact email: support@beardbrand.com",
+      "Phone: 844-662-3273",
+      "FAQ: return/exchange policy (100% satisfaction guarantee), free shipping over $75, damage coverage, lost package replacement",
+      "Privacy policy",
+      "Product descriptions with ingredients (parabens/sulfates/silicones/phthalates free)",
+      "Fragrance details (notes, family, type) for each scent",
+      "Product category pages (beard oil, wash, balm, styling paste, deodorant, cologne, combs, brushes)",
+      "Beardbrand Alliance membership mention",
+      "Swaps always free policy",
+      "Disability accessibility info"
+    ],
+    "missing_info": [
+      "No physical store or retail location list (only 'Authorized Retailers' page title exists but minimal content)",
+      "No product shelf life or expiration information",
+      "No information on whether products are vegan or cruelty-free/animal testing policy",
+      "No loyalty program details (Beardbrand Alliance benefits not explained)",
+      "No detailed ingredient sourcing information (where oils/butters come from)"
+    ],
+    "test_queries": [
+      {
+        "lang": "en",
+        "query": "Are Beardbrand products vegan and cruelty-free? Do you test on animals?",
+        "expected_behavior": "Should acknowledge it doesn't have information about animal testing or vegan status of products.",
+        "why_missing": "No page discusses vegan status, cruelty-free certification, or animal testing policy. Products list 'no parabens/sulfates' but not vegan/cruelty-free status."
+      },
+      {
+        "lang": "en",
+        "query": "What is the shelf life of Beardbrand beard oil? Does it expire?",
+        "expected_behavior": "Should acknowledge it doesn't have shelf life or expiration information for products.",
+        "why_missing": "No product pages or FAQ mentions shelf life, expiration dates, or storage recommendations."
+      },
+      {
+        "lang": "gu",
+        "query": "Beardbrand Alliance મેમ્બરશિપના ફાયદા શું છે? તેમાં કેવી રીતે જોડાવું?",
+        "expected_behavior": "Should acknowledge limited info about Beardbrand Alliance. May mention free shipping for members.",
+        "why_missing": "Beardbrand Alliance is mentioned briefly (free shipping for US members) but no dedicated page explains benefits, pricing, or how to join."
+      },
+      {
+        "lang": "gu",
+        "query": "Beardbrand ના ઉત્પાદનોમાં વપરાતા તેલ ક્યાંથી આવે છે?",
+        "expected_behavior": "Should acknowledge it doesn't have detailed sourcing information for ingredients.",
+        "why_missing": "Products list ingredients (jojoba, castor, babassu oils) but no information about where they are sourced from."
+      }
+    ]
+  },
+  "ramraj": {
+    "bot_id": "182f88cd-02d8-4c94-824d-b41432847400",
+    "languages": ["en", "hi"],
+    "available_info": [
+      "Contact: Phone +91 9842274147, WhatsApp 6380015147, Email customercare@ramrajcotton.net",
+      "Working hours: Monday-Saturday 9:00 AM - 6:00 PM",
+      "Product details: material, color, fit, sleeve type, dhoti sizes",
+      "Product names and prices in INR",
+      "Wide range: dhotis, shirts, kurtas, innerwear, silk dhotis, linen fabrics, gift boxes",
+      "Free shipping for prepaid orders",
+      "Cash on delivery available",
+      "24 hours chat support mentioned"
+    ],
+    "missing_info": [
+      "No return/exchange/refund policy page",
+      "No shipping policy or delivery timeframes",
+      "No about us or brand story page",
+      "No size guide or measurement chart for dhotis/shirts",
+      "No care/washing instructions for cotton or silk items",
+      "No physical store locator (Ramraj is a major retail chain with 200+ stores but no store list in data)",
+      "No warranty or quality guarantee information"
+    ],
+    "test_queries": [
+      {
+        "lang": "en",
+        "query": "What is Ramraj Cotton's return policy? Can I return a dhoti if it doesn't fit?",
+        "expected_behavior": "Should acknowledge it doesn't have return policy details. May suggest contacting customer support.",
+        "why_missing": "No return/exchange/refund policy page exists in crawled data."
+      },
+      {
+        "lang": "en",
+        "query": "Where is the nearest Ramraj Cotton store in Chennai?",
+        "expected_behavior": "Should acknowledge it doesn't have store location information. May suggest contacting support.",
+        "why_missing": "No store locator or physical store address list exists in crawled data despite Ramraj having 200+ retail stores."
+      },
+      {
+        "lang": "hi",
+        "query": "Ramraj Cotton की सिल्क धोती को कैसे धोना चाहिए? क्या ड्राई क्लीन करवाना जरूरी है?",
+        "expected_behavior": "Should acknowledge it doesn't have care/washing instructions for silk products.",
+        "why_missing": "No care/washing instructions page exists. Product pages list material but not how to maintain items."
+      },
+      {
+        "lang": "hi",
+        "query": "Ramraj Cotton की धोती का साइज़ गाइड क्या है? मेरी कमर 32 इंच है तो कौन सा साइज़ लूं?",
+        "expected_behavior": "Should acknowledge it doesn't have a size guide. May mention available dhoti sizes from product data.",
+        "why_missing": "No size guide or measurement chart exists in crawled data. Products mention dhoti dimensions in meters but no body measurement to size mapping."
+      }
+    ]
+  },
+  "kriyanta": {
+    "bot_id": "1cb18dc0-4909-409d-ab03-0436524fcec4",
+    "languages": ["en", "gu"],
+    "available_info": [
+      "Founder: Ar. Utsav Lodaliya",
+      "Email: modernofurnitures22@gmail.com",
+      "Brand story: handmade products from 350+ Indian artists",
+      "Free interior decoration consultation",
+      "Shipping policy: 5-7 business days, same day dispatch available",
+      "Returns policy: 3-day replacement/exchange policy",
+      "Free shipping on orders above ₹1000",
+      "Terms of service",
+      "Privacy policy",
+      "Product names and prices in INR (wall art, crystal decor)"
+    ],
+    "missing_info": [
+      "No phone number or WhatsApp contact",
+      "No product dimensions or size information",
+      "No care/maintenance instructions for wall art and decor items",
+      "No information about materials used in specific products (only generic 'handmade' claim)",
+      "No warranty or damage guarantee information",
+      "No information about customization process or timeline",
+      "No installation guide for wall-mounted products"
+    ],
+    "test_queries": [
+      {
+        "lang": "en",
+        "query": "What are the dimensions of the Crystal Wall Decor products? Will they fit a small wall?",
+        "expected_behavior": "Should acknowledge it doesn't have specific product dimensions. May suggest contacting via email.",
+        "why_missing": "Product pages only have name and price. No dimensions, weight, or size specifications are included."
+      },
+      {
+        "lang": "en",
+        "query": "Does Kriyanta offer warranty on their wall art? What if it gets damaged during delivery?",
+        "expected_behavior": "Should acknowledge no warranty info is available. May mention the 3-day replacement policy for exchanges.",
+        "why_missing": "No warranty page exists. The returns page mentions 3-day replacement but doesn't address damage during delivery or product warranty."
+      },
+      {
+        "lang": "gu",
+        "query": "Kriyanta ના વોલ આર્ટ ને કેવી રીતે ઇન્સ્ટોલ કરવું? શું તેમાં માઉન્ટિંગ હાર્ડવેર આવે છે?",
+        "expected_behavior": "Should acknowledge it doesn't have installation guide or mounting hardware information.",
+        "why_missing": "No installation guide, hanging instructions, or mounting hardware information exists in crawled data."
+      },
+      {
+        "lang": "gu",
+        "query": "Kriyanta નો ફોન નંબર શું છે? હું ફોન પર ઓર્ડર કરવા માંગુ છું.",
+        "expected_behavior": "Should acknowledge no phone number is available. May provide email modernofurnitures22@gmail.com.",
+        "why_missing": "No phone number exists in crawled data. Only email contact is available."
+      }
+    ]
+  },
+  "zevaramaze": {
+    "bot_id": "e79b3754-006d-45d5-b21d-2391710e08ca",
+    "languages": ["gu"],
+    "available_info": [
+      "Phone: 9137690196",
+      "Product descriptions with material (925 sterling silver, rhodium-coated, rose gold plating)",
+      "Product names and prices in INR",
+      "Jewelry categories: rings, pendants, earrings, necklaces, bracelets, mangalsutra, studs",
+      "Moissanite and diamond jewelry available",
+      "Product archive pages with descriptions"
+    ],
+    "missing_info": [
+      "No return/exchange/refund policy page",
+      "No shipping policy or delivery timeframes",
+      "No about us or brand story",
+      "No ring size guide or sizing information",
+      "No care/cleaning instructions for silver jewelry",
+      "No certification info for diamonds or moissanite (GIA, IGI etc.)",
+      "No warranty or guarantee information",
+      "No email address or physical store location",
+      "No information about chain lengths for necklaces/pendants"
+    ],
+    "test_queries": [
+      {
+        "lang": "gu",
+        "query": "Zevar Amaze ની રિટર્ન પોલિસી શું છે? જો રિંગ ફિટ ન આવે તો શું કરવું?",
+        "expected_behavior": "Should acknowledge it doesn't have return policy information. May suggest calling 9137690196.",
+        "why_missing": "No return/exchange/refund policy page exists in crawled data."
+      },
+      {
+        "lang": "gu",
+        "query": "Zevar Amaze ની રિંગ માટે સાઈઝ ગાઈડ આપો. મારી આંગળીનું માપ કેવી રીતે લેવું?",
+        "expected_behavior": "Should acknowledge it doesn't have ring size guide information.",
+        "why_missing": "No ring size guide or finger measurement chart exists in crawled data despite selling many rings."
+      },
+      {
+        "lang": "gu",
+        "query": "Zevar Amaze ની સિલ્વર જ્વેલરી ની સફાઈ કેવી રીતે કરવી? શું પાણીમાં પહેરી શકાય?",
+        "expected_behavior": "Should acknowledge it doesn't have jewelry care instructions.",
+        "why_missing": "No care/cleaning instructions exist for silver jewelry. Products mention material but not maintenance."
+      },
+      {
+        "lang": "gu",
+        "query": "શું Zevar Amaze ના હીરા GIA સર્ટિફાઈડ છે? મોઈસેનાઈટ માટે કોઈ પ્રમાણપત્ર આવે છે?",
+        "expected_behavior": "Should acknowledge it doesn't have diamond/moissanite certification information.",
+        "why_missing": "No certification details (GIA, IGI, etc.) exist in crawled data. Products mention moissanite and diamonds but no authentication or grading info."
+      }
+    ]
+  }
+}

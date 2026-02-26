@@ -109,6 +109,13 @@ interface KnowledgeSource {
   error_message: string | null; // Error messages or warnings (e.g., quota reached)
   created_at: string;
   updated_at: string;
+  crawl_progress?: {
+    pages_crawled: number;
+    urls_in_queue: number;
+    crawl_speed: number;
+    started_at: string;
+    estimated_remaining_seconds: number | null;
+  } | null;
   files?: {
     id: string;
     filename: string;
@@ -219,6 +226,15 @@ export default function ChatbotDetailPage() {
   const chatbotId = params.chatbotId as string;
   const { isAdmin, isOrgOwner } = useAuth();
 
+  // Chatbot switcher state
+  const [allChatbots, setAllChatbots] = useState<
+    { id: string; name: string; status: string }[]
+  >([]);
+  const [isSwitcherOpen, setIsSwitcherOpen] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const switcherRef = useRef<HTMLDivElement>(null);
+  const prevChatbotIdRef = useRef<string>(chatbotId);
+
   const [chatbot, setChatbot] = useState<ChatbotDetail | null>(null);
   const [knowledgeSources, setKnowledgeSources] = useState<KnowledgeSource[]>(
     [],
@@ -319,6 +335,18 @@ export default function ChatbotDetailPage() {
   const autoDeletedSourcesRef = useRef<Set<string>>(new Set());
   // SSE connection for the 'processing' phase (embedding in progress)
   const eventSourceRef = useRef<EventSource | null>(null);
+
+  // Persistent crawl notifications
+  const [crawlNotifications, setCrawlNotifications] = useState<
+    {
+      id: string;
+      notification_type: string;
+      message: string;
+      severity: "info" | "warning" | "error";
+      is_read: boolean;
+      created_at: string;
+    }[]
+  >([]);
 
   // Appearance form setup
   const {
@@ -440,10 +468,27 @@ export default function ChatbotDetailPage() {
   // Keep primaryColor for backward compatibility
   const primaryColor = watchedPrimaryColor ?? watch("primary_color");
 
+  // Smooth data swap when switching chatbots (no loader, just fade)
   useEffect(() => {
+    if (prevChatbotIdRef.current !== chatbotId) {
+      prevChatbotIdRef.current = chatbotId;
+      // Mark as transitioning — content stays but is hidden (opacity 0)
+      setIsTransitioning(true);
+      // Reset load flags so data re-fetches
+      setHasLoadedKnowledge(false);
+      setHasLoadedAppearance(false);
+      setCrawlNotifications([]);
+    }
+  }, [chatbotId]);
+
+  useEffect(() => {
+    const isSwitching = isTransitioning;
     const initializePage = async () => {
       // 1. High Priority: Get basic info, stats, and appearance (for widget preview)
-      await fetchChatbotDetails();
+      // Skip loading spinner when switching chatbots (keeps page visible)
+      await fetchChatbotDetails(!isSwitching);
+      // End transition once primary data is loaded — content fades in
+      setIsTransitioning(false);
       fetchChatbotStats();
       fetchRecentActivity(1);
       fetchAppearance();
@@ -457,6 +502,117 @@ export default function ChatbotDetailPage() {
 
     initializePage();
   }, [chatbotId]);
+
+  // Fetch all chatbots for the switcher dropdown (once)
+  useEffect(() => {
+    const fetchAllChatbots = async () => {
+      try {
+        const token = getAccessToken();
+        if (!token) return;
+        const res = await apiRequestWithAuth<{
+          chatbots: { id: string; name: string; status: string }[];
+        }>("/api/v1/chatbots", token, { method: "GET" });
+        setAllChatbots(res.chatbots || []);
+      } catch {
+        // non-fatal
+      }
+    };
+    fetchAllChatbots();
+  }, []);
+
+  // Close switcher on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        switcherRef.current &&
+        !switcherRef.current.contains(e.target as Node)
+      ) {
+        setIsSwitcherOpen(false);
+      }
+    };
+    if (isSwitcherOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [isSwitcherOpen]);
+
+  // Handle chatbot switch with smooth transition
+  const handleSwitchChatbot = (targetId: string) => {
+    if (targetId === chatbotId) {
+      setIsSwitcherOpen(false);
+      return;
+    }
+    setIsSwitcherOpen(false);
+    setIsTransitioning(true);
+    // Navigate after a brief fade-out (200ms matches half the CSS duration)
+    setTimeout(() => {
+      router.push(`/dashboard/chatbots/${targetId}`);
+    }, 200);
+  };
+
+  // Fetch persistent crawl notifications
+  const fetchCrawlNotifications = async () => {
+    try {
+      const token = getAccessToken();
+      if (!token) return;
+      const res = await apiRequestWithAuth<
+        {
+          id: string;
+          notification_type: string;
+          message: string;
+          severity: "info" | "warning" | "error";
+          is_read: boolean;
+          created_at: string;
+        }[]
+      >(`/chatbots/${chatbotId}/notifications?unread_only=true`, { token });
+      setCrawlNotifications(res || []);
+    } catch {
+      // non-fatal
+    }
+  };
+
+  useEffect(() => {
+    fetchCrawlNotifications();
+  }, [chatbotId]);
+
+  const dismissNotification = async (notificationId: string) => {
+    try {
+      const token = getAccessToken();
+      if (!token) return;
+      await apiRequestWithAuth(
+        `/chatbots/${chatbotId}/notifications/mark-read`,
+        {
+          token,
+          method: "POST",
+          body: { notification_ids: [notificationId] },
+        },
+      );
+      setCrawlNotifications((prev) =>
+        prev.filter((n) => n.id !== notificationId),
+      );
+    } catch {
+      // non-fatal
+    }
+  };
+
+  const dismissAllNotifications = async () => {
+    try {
+      const token = getAccessToken();
+      if (!token) return;
+      await apiRequestWithAuth(
+        `/chatbots/${chatbotId}/notifications/mark-read`,
+        {
+          token,
+          method: "POST",
+          body: { mark_all: true },
+        },
+      );
+      setCrawlNotifications([]);
+    } catch {
+      // non-fatal
+    }
+  };
 
   const fetchRecentActivity = async (
     page = 1,
@@ -570,12 +726,16 @@ export default function ChatbotDetailPage() {
                 message: `${verb} completed for ${displayName}`,
               });
             }
+            // Refresh persistent notifications on completion
+            fetchCrawlNotifications();
           } else if (current.status === "failed") {
             setToastMessage({
               type: "error",
               message:
                 current.error_message || `${verb} failed for ${displayName}`,
             });
+            // Refresh persistent notifications on failure
+            fetchCrawlNotifications();
           }
           // Refresh stats when any status changes
           fetchChatbotStats();
@@ -728,6 +888,7 @@ export default function ChatbotDetailPage() {
                   pages_found: updated.pages_found ?? p.pages_found,
                   error_message: updated.error_message ?? p.error_message,
                   updated_at: updated.updated_at ?? p.updated_at,
+                  crawl_progress: updated.crawl_progress ?? p.crawl_progress,
                 };
               }),
             );
@@ -792,9 +953,9 @@ export default function ChatbotDetailPage() {
     }
   }, [toastMessage]);
 
-  const fetchChatbotDetails = async () => {
+  const fetchChatbotDetails = async (showLoading = true) => {
     try {
-      setIsLoading(true);
+      if (showLoading) setIsLoading(true);
       const token = getAccessToken();
       if (!token) {
         router.push("/login");
@@ -817,7 +978,7 @@ export default function ChatbotDetailPage() {
         setTimeout(() => router.push("/dashboard/chatbots"), 2000);
       }
     } finally {
-      setIsLoading(false);
+      if (showLoading) setIsLoading(false);
     }
   };
 
@@ -1620,7 +1781,7 @@ export default function ChatbotDetailPage() {
     );
   };
 
-  if (isLoading) {
+  if (isLoading && !chatbot) {
     return <PageLoader />;
   }
 
@@ -1703,7 +1864,14 @@ export default function ChatbotDetailPage() {
   const crawlSourcesWithPages = crawlSources;
 
   return (
-    <div className="space-y-6">
+    <div
+      className={cn(
+        "space-y-6 transition-all duration-300 ease-in-out",
+        isTransitioning
+          ? "opacity-0 translate-y-1"
+          : "opacity-100 translate-y-0",
+      )}
+    >
       {/* Toast Notification */}
       {toastMessage && (
         <div
@@ -1738,14 +1906,71 @@ export default function ChatbotDetailPage() {
       <div className="flex items-center justify-between max-w-4xl">
         <div className="space-y-1">
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold">
+            <h1 className="text-2xl font-bold flex items-center">
               <Link
                 href="/dashboard/chatbots"
                 className="text-muted-foreground hover:text-foreground transition-colors"
               >
                 Chatbots
               </Link>
-              <ChevronRight className="h-4 w-4 inline-block mx-2 text-muted-foreground" />
+              {/* Chatbot switcher dropdown trigger */}
+              <div className="relative inline-flex items-center" ref={switcherRef}>
+                <button
+                  onClick={() => setIsSwitcherOpen(!isSwitcherOpen)}
+                  className="mx-1.5 p-0.5 rounded hover:bg-muted/60 transition-colors group"
+                  title="Switch chatbot"
+                >
+                  <ChevronRight
+                    className={cn(
+                      "h-4 w-4 text-muted-foreground group-hover:text-foreground transition-transform duration-200",
+                      isSwitcherOpen && "rotate-90",
+                    )}
+                  />
+                </button>
+                {isSwitcherOpen && (
+                  <div className="absolute left-0 top-full mt-1 w-64 bg-popover border rounded-lg shadow-lg z-50 py-1 animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-150">
+                    <div className="px-3 py-1.5 text-xs font-medium text-muted-foreground border-b mb-1">
+                      Switch chatbot
+                    </div>
+                    <div className="max-h-64 overflow-y-auto">
+                      {allChatbots.map((bot) => (
+                        <button
+                          key={bot.id}
+                          onClick={() => handleSwitchChatbot(bot.id)}
+                          className={cn(
+                            "w-full text-left px-3 py-2 text-sm hover:bg-muted/60 transition-colors flex items-center justify-between gap-2",
+                            bot.id === chatbotId && "bg-muted/40 font-medium",
+                          )}
+                        >
+                          <span className="truncate">{bot.name}</span>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <Badge
+                              variant={
+                                bot.status === "active"
+                                  ? "active"
+                                  : bot.status === "paused"
+                                    ? "paused"
+                                    : "draft"
+                              }
+                              className="text-[10px] px-1.5 py-0"
+                            >
+                              {bot.status}
+                            </Badge>
+                            {bot.id === chatbotId && (
+                              <Check className="h-3.5 w-3.5 text-emerald-600" />
+                            )}
+                          </div>
+                        </button>
+                      ))}
+                      {allChatbots.length === 0 && (
+                        <div className="px-3 py-4 text-sm text-muted-foreground text-center">
+                          No chatbots found
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 to-teal-600">
                 {chatbot.name}
               </span>
@@ -2472,6 +2697,52 @@ export default function ChatbotDetailPage() {
                       )}
                       {crawlSourcesWithPages.length > 0 ? (
                         <div className="space-y-4">
+                          {/* Persistent crawl notifications */}
+                          {crawlNotifications.length > 0 && (
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs font-medium text-muted-foreground">
+                                  Recent Notifications
+                                </span>
+                                {crawlNotifications.length > 1 && (
+                                  <button
+                                    onClick={dismissAllNotifications}
+                                    className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                                  >
+                                    Dismiss all
+                                  </button>
+                                )}
+                              </div>
+                              {crawlNotifications.map((notif) => (
+                                <div
+                                  key={notif.id}
+                                  className={cn(
+                                    "px-3 py-2 rounded-lg border text-sm flex items-start gap-2",
+                                    notif.severity === "error"
+                                      ? "bg-red-50 border-red-200 text-red-800"
+                                      : notif.severity === "warning"
+                                        ? "bg-amber-50 border-amber-200 text-amber-800"
+                                        : "bg-blue-50 border-blue-200 text-blue-800",
+                                  )}
+                                >
+                                  {notif.severity === "error" ? (
+                                    <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                                  ) : notif.severity === "warning" ? (
+                                    <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                                  ) : (
+                                    <RefreshCw className="h-4 w-4 mt-0.5 shrink-0" />
+                                  )}
+                                  <p className="flex-1">{notif.message}</p>
+                                  <button
+                                    onClick={() => dismissNotification(notif.id)}
+                                    className="p-0.5 hover:bg-black/10 rounded shrink-0"
+                                  >
+                                    <X className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                           {Array.from(
                             new Map(
                               crawlSourcesWithPages.map((ks) => [

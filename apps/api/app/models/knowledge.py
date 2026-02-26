@@ -120,6 +120,9 @@ class KnowledgeSource(Base):
     error_message = Column(
         Text, nullable=True
     )  # Error messages (FAILED status) or warnings (quota reached, etc.)
+    crawl_progress = Column(
+        JSONB, nullable=True
+    )  # Real-time crawl progress: {pages_crawled, urls_in_queue, crawl_speed, started_at}
     created_at = Column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -152,6 +155,12 @@ class KnowledgeSource(Base):
         back_populates="knowledge_source",
         cascade="all, delete-orphan",
         uselist=False,
+    )
+    notifications = relationship(
+        "CrawlNotification",
+        back_populates="knowledge_source",
+        cascade="all, delete-orphan",
+        order_by="desc(CrawlNotification.created_at)",
     )
 
 
@@ -360,3 +369,46 @@ class CrawlHistory(Base):
 
     # Relationships
     knowledge_source = relationship("KnowledgeSource", back_populates="crawl_history")
+
+
+class CrawlNotificationType(str, enum.Enum):
+    """Notification types for crawl events."""
+    CRAWL_STARTED = "crawl_started"
+    CRAWL_COMPLETED = "crawl_completed"
+    CRAWL_FAILED = "crawl_failed"
+    CRAWL_STOPPED = "crawl_stopped"
+    JS_HEAVY_DETECTED = "js_heavy_detected"
+    SITEMAP_USED = "sitemap_used"
+    ROBOTS_BLOCKED = "robots_blocked"
+    QUOTA_REACHED = "quota_reached"
+    EMBEDDING_STARTED = "embedding_started"
+    EMBEDDING_COMPLETED = "embedding_completed"
+    INFO = "info"
+    WARNING = "warning"
+
+
+class CrawlNotification(Base):
+    """Persistent notification for crawl events.
+
+    These are displayed as banners/toasts on the frontend and persist
+    until the user explicitly dismisses them — solving the problem of
+    ephemeral toasts that are missed when the user is away.
+    """
+    __tablename__ = "crawl_notifications"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, index=True, default=uuid.uuid4)
+    knowledge_source_id = Column(
+        ForeignKey("knowledge_sources.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    notification_type = Column(String(50), nullable=False)  # CrawlNotificationType value
+    message = Column(Text, nullable=False)
+    severity = Column(
+        String(20), nullable=False, default="info"
+    )  # "info" | "success" | "warning" | "error"
+    is_read = Column(Boolean, nullable=False, default=False, index=True)
+    created_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False, index=True
+    )
+
+    # Relationships
+    knowledge_source = relationship("KnowledgeSource", back_populates="notifications")

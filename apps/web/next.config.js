@@ -9,6 +9,9 @@ const nextConfig = {
   // Disable x-powered-by header for security
   poweredByHeader: false,
 
+  // Transpile Three.js packages for Next.js compatibility
+  transpilePackages: ["three", "@react-three/fiber", "@react-three/drei", "@react-three/postprocessing"],
+
   // Disable ESLint during builds (for production deployment)
   eslint: {
     // Warning: This allows production builds to successfully complete even if

@@ -84,17 +84,7 @@ class Settings(BaseSettings):
     GROQ_API_KEYS: Optional[str] = None  # Comma-separated list for round-robin rotation
     DEEPSEEK_API_KEY: Optional[str] = None
 
-    # OpenRouter API (alternative LLM provider — supports many models)
-    OPENROUTER_API_KEY: Optional[str] = None
-    OPENROUTER_API_KEYS: Optional[str] = None  # Comma-separated list for round-robin rotation
-    # Model for Call1 (classification/analysis) — fast, cheap
-    OPENROUTER_CALL1_MODEL: str = "google/gemini-2.5-flash"
-    # Model for Call2 (main response) — best quality, humanized
-    OPENROUTER_CALL2_MODEL: str = "google/gemini-2.5-flash-lite"
-    # Model for translation
-    OPENROUTER_TRANSLATION_MODEL: str = "google/gemini-2.5-flash"
-
-    # GROQ Models (Fallback)
+    # GROQ Models
     GROQ_CALL1_MODEL: str = "llama-3.1-8b-instant"
     GROQ_CALL2_MODEL: str = "llama-3.3-70b-versatile"
     GROQ_TRANSLATION_MODEL: str = "llama-3.3-70b-versatile"
@@ -173,16 +163,18 @@ class Settings(BaseSettings):
 settings = Settings()
 
 
-# ── GROQ API Key Rotation (circuit-breaker: permanently skip exhausted keys) ──
+# ── GROQ API Key Rotation (circuit-breaker + rate-limit rotation) ──
 class _GroqKeyRotator:
-    """Thread-safe Groq API key rotator with circuit-breaker for exhausted keys.
+    """Thread-safe Groq API key rotator with circuit-breaker and rate-limit rotation.
 
-    Once a key is marked as exhausted (rate-limited / credits gone) it is
-    permanently skipped for the lifetime of the process.  Restart the server
-    to reset the circuit-breaker (or refill the key and restart).
+    - Permanently exhausted keys (402 / credits gone) are blacklisted forever.
+    - Rate-limited keys (429) are rotated to end of queue and recover after cooldown.
     """
 
+    _RATE_LIMIT_COOLDOWN = 60  # seconds before a rate-limited key is retried
+
     def __init__(self):
+        import time as _time
         self._lock = threading.Lock()
         keys: list[str] = []
         if settings.GROQ_API_KEYS:
@@ -191,17 +183,32 @@ class _GroqKeyRotator:
             keys = [settings.GROQ_API_KEY]
         self._all_keys = keys
         self._dead_keys: set[str] = set()
+        self._rate_limited: dict[str, float] = {}  # key -> timestamp
         self._index = 0
         self._count = len(keys)
 
-    def _alive(self) -> list[str]:
-        """Return all keys that are NOT exhausted (call with lock held)."""
-        return [k for k in self._all_keys if k not in self._dead_keys]
+    def _alive_sorted(self) -> list[str]:
+        """Return alive keys: fresh first, then rate-limited (oldest first). Lock must be held."""
+        import time
+        now = time.time()
+        alive = [k for k in self._all_keys if k not in self._dead_keys]
+        fresh = []
+        limited = []
+        for k in alive:
+            rl_time = self._rate_limited.get(k)
+            if rl_time and (now - rl_time) < self._RATE_LIMIT_COOLDOWN:
+                limited.append((k, rl_time))
+            else:
+                if k in self._rate_limited:
+                    del self._rate_limited[k]
+                fresh.append(k)
+        limited.sort(key=lambda x: x[1])  # oldest rate-limit first
+        return fresh + [k for k, _ in limited]
 
     def next_key(self) -> Optional[str]:
-        """Return the next alive Groq API key, skipping any exhausted ones."""
+        """Return the next alive Groq API key (fresh keys first, rate-limited last)."""
         with self._lock:
-            alive = self._alive()
+            alive = self._alive_sorted()
             if not alive:
                 return settings.GROQ_API_KEY  # last-resort fallback
             key = alive[self._index % len(alive)]
@@ -209,29 +216,58 @@ class _GroqKeyRotator:
             return key
 
     def active_keys(self) -> list[str]:
-        """Return a snapshot of all currently alive keys."""
+        """Return a snapshot of all currently alive keys (fresh first, rate-limited last)."""
         with self._lock:
-            return list(self._alive())
+            return list(self._alive_sorted())
 
     def mark_exhausted(self, key: str) -> None:
-        """Permanently blacklist *key* for this process lifetime."""
+        """Permanently blacklist *key* (credits gone / 402)."""
         if not key:
             return
         with self._lock:
             if key not in self._dead_keys:
                 self._dead_keys.add(key)
+                self._rate_limited.pop(key, None)
                 key_hint = f"...{key[-8:]}" if len(key) > 8 else key
-                remaining = len(self._alive())
+                remaining = len([k for k in self._all_keys if k not in self._dead_keys])
                 logger.warning(
-                    f"\u26a0\ufe0f  Groq API key [{key_hint}] exhausted/rate-limited "
-                    f"\u2014 permanently skipping this session. "
-                    f"{remaining} key(s) remaining."
+                    f"\u26a0\ufe0f  Groq API key [{key_hint}] permanently exhausted "
+                    f"\u2014 blacklisted. {remaining} key(s) remaining."
                 )
                 if remaining == 0:
                     logger.error(
                         "\U0001f534 ALL Groq API keys exhausted! "
                         "Please add/refresh keys and restart the server."
                     )
+
+    def mark_rate_limited(self, key: str) -> None:
+        """Rotate rate-limited key to end of queue (429). Recovers after cooldown."""
+        import time
+        if not key:
+            return
+        with self._lock:
+            self._rate_limited[key] = time.time()
+            key_hint = f"...{key[-8:]}" if len(key) > 8 else key
+            fresh = [k for k in self._all_keys if k not in self._dead_keys and k not in self._rate_limited]
+            logger.warning(
+                f"\u26a0\ufe0f  Groq key [{key_hint}] rate-limited \u2014 rotated to end. "
+                f"{len(fresh)} fresh key(s), "
+                f"{len(self._rate_limited)} cooling down."
+            )
+
+    def all_exhausted_or_limited(self) -> bool:
+        """True if ALL alive keys are currently dead or rate-limited (no fresh ones)."""
+        import time
+        now = time.time()
+        with self._lock:
+            alive = [k for k in self._all_keys if k not in self._dead_keys]
+            if not alive:
+                return True
+            for k in alive:
+                rl_time = self._rate_limited.get(k)
+                if not rl_time or (now - rl_time) >= self._RATE_LIMIT_COOLDOWN:
+                    return False
+            return True
 
     @property
     def key_count(self) -> int:
@@ -244,97 +280,6 @@ _groq_rotator = _GroqKeyRotator()
 def get_groq_api_key() -> Optional[str]:
     """Get the next GROQ API key (round-robin if multiple configured)."""
     return _groq_rotator.next_key()
-
-
-# ── OpenRouter API Key Rotation (circuit-breaker: permanently skip exhausted keys) ──
-class _OpenRouterKeyRotator:
-    """Thread-safe OpenRouter API key rotator with circuit-breaker for exhausted keys.
-
-    Once a key is marked as exhausted (HTTP 402, 429, or credits-gone error) it is
-    permanently skipped for the lifetime of the process.  The operator will be
-    notified via an ERROR log entry showing which key (last 8 chars) was dropped.
-    Restart the server to reset the circuit-breaker after refilling credits.
-    """
-
-    def __init__(self):
-        self._lock = threading.Lock()
-        keys: list[str] = []
-        if settings.OPENROUTER_API_KEYS:
-            keys = [
-                k.strip() for k in settings.OPENROUTER_API_KEYS.split(",") if k.strip()
-            ]
-        if not keys and settings.OPENROUTER_API_KEY:
-            keys = [settings.OPENROUTER_API_KEY]
-        self._all_keys = keys
-        self._dead_keys: set[str] = set()
-        self._index = 0
-        self._count = len(keys)
-
-    def _alive(self) -> list[str]:
-        """Return all keys that are NOT exhausted (call with lock held)."""
-        return [k for k in self._all_keys if k not in self._dead_keys]
-
-    def next_key(self) -> Optional[str]:
-        """Return the next alive OpenRouter API key, skipping exhausted ones."""
-        with self._lock:
-            alive = self._alive()
-            if not alive:
-                return settings.OPENROUTER_API_KEY  # last-resort fallback
-            key = alive[self._index % len(alive)]
-            self._index = (self._index + 1) % len(alive)
-            return key
-
-    def active_keys(self) -> list[str]:
-        """Return a snapshot of all currently alive keys."""
-        with self._lock:
-            return list(self._alive())
-
-    def mark_exhausted(self, key: str) -> None:
-        """Permanently blacklist *key* for this process lifetime and log a prominent warning."""
-        if not key:
-            return
-        with self._lock:
-            if key not in self._dead_keys:
-                self._dead_keys.add(key)
-                key_hint = f"...{key[-8:]}" if len(key) > 8 else key
-                remaining = len(self._alive())
-                logger.warning(
-                    f"\u26a0\ufe0f  OpenRouter API key [{key_hint}] exhausted/rate-limited "
-                    f"\u2014 permanently skipping this session. "
-                    f"{remaining} key(s) remaining."
-                )
-                if remaining == 0:
-                    logger.error(
-                        "\U0001f534 ALL OpenRouter API keys exhausted! "
-                        "Please add/refresh keys and restart the server."
-                    )
-
-    @property
-    def key_count(self) -> int:
-        return self._count
-
-
-_openrouter_rotator = _OpenRouterKeyRotator()
-
-
-def get_openrouter_api_key() -> Optional[str]:
-    """Get the next alive OpenRouter API key."""
-    return _openrouter_rotator.next_key()
-
-
-def get_openrouter_active_keys() -> list[str]:
-    """Return all currently alive (non-exhausted) OpenRouter API keys."""
-    return _openrouter_rotator.active_keys()
-
-
-def mark_openrouter_key_exhausted(key: str) -> None:
-    """Permanently blacklist an OpenRouter key for this process session."""
-    _openrouter_rotator.mark_exhausted(key)
-
-
-def get_openrouter_key_count() -> int:
-    """Return the total number of configured OpenRouter API keys (including exhausted)."""
-    return _openrouter_rotator.key_count
 
 
 def get_groq_key_count() -> int:
@@ -350,3 +295,8 @@ def get_groq_active_keys() -> list[str]:
 def mark_groq_key_exhausted(key: str) -> None:
     """Permanently blacklist a Groq key for this process session."""
     _groq_rotator.mark_exhausted(key)
+
+
+def mark_groq_key_rate_limited(key: str) -> None:
+    """Rotate a Groq key to end of queue (429 rate limit)."""
+    _groq_rotator.mark_rate_limited(key)

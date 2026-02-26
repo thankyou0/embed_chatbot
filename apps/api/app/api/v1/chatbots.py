@@ -336,6 +336,7 @@ async def knowledge_sources_status_stream(
                         "pages_found": s.pages_found or 0,
                         "error_message": s.error_message,
                         "updated_at": s.updated_at.isoformat() if s.updated_at else None,
+                        "crawl_progress": s.crawl_progress,
                     }
                     for s in sources
                 ]
@@ -1051,3 +1052,75 @@ async def get_knowledge_failures(
         )
 
     return {"incidents": incidents, "total": len(incidents)}
+
+
+# ============== Crawl Notifications (Persistent) ==============
+
+
+@router.get("/{chatbot_id}/notifications")
+async def get_notifications(
+    chatbot_id: UUID,
+    unread_only: bool = Query(True, description="Only return unread notifications"),
+    limit: int = Query(50, ge=1, le=200),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Get persistent crawl notifications for a chatbot.
+    Returns unread notifications by default so the frontend can display
+    them as banners/toasts even if the user was away when the event happened.
+    """
+    from app.services.notification_service import (
+        get_unread_notifications,
+        get_all_notifications,
+    )
+
+    if unread_only:
+        notifications = await get_unread_notifications(chatbot_id, db, limit)
+    else:
+        notifications = await get_all_notifications(chatbot_id, db, limit)
+
+    return {
+        "notifications": [
+            {
+                "id": str(n.id),
+                "knowledge_source_id": str(n.knowledge_source_id),
+                "notification_type": n.notification_type,
+                "message": n.message,
+                "severity": n.severity,
+                "is_read": n.is_read,
+                "created_at": n.created_at.isoformat() if n.created_at else None,
+            }
+            for n in notifications
+        ],
+        "total": len(notifications),
+    }
+
+
+@router.post("/{chatbot_id}/notifications/mark-read")
+async def mark_notifications_read(
+    chatbot_id: UUID,
+    notification_ids: List[str] = Query(
+        None, description="Specific notification IDs to mark read"
+    ),
+    mark_all: bool = Query(False, description="Mark all notifications read"),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Mark notifications as read. Either provide specific IDs or set mark_all=true.
+    """
+    from app.services.notification_service import (
+        mark_notifications_read as _mark_read,
+        mark_all_read_for_chatbot,
+    )
+
+    if mark_all:
+        count = await mark_all_read_for_chatbot(chatbot_id, db)
+    elif notification_ids:
+        count = await _mark_read(notification_ids, db)
+    else:
+        count = 0
+
+    return {"marked_read": count}
+

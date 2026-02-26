@@ -1,8 +1,9 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { motion, useInView, AnimatePresence } from "framer-motion";
-import { ChevronDown } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ChevronDown, HelpCircle } from "lucide-react";
+import { FloatingParticles } from "./floating-particles";
 
 const faqs = [
   {
@@ -41,22 +42,34 @@ const faqs = [
 
 export function FAQSection() {
   const ref = useRef(null);
-  const inView = useInView(ref, { once: true, margin: "-100px" });
   const [openIndex, setOpenIndex] = useState<number | null>(0);
 
   return (
-    <section id="faq" ref={ref} className="relative py-24 lg:py-32">
+    <section id="faq" ref={ref} className="relative py-24 lg:py-32 overflow-hidden">
+      {/* Floating particles */}
+      <FloatingParticles count={8} color="#14b8a6" color2="#10b981" sizeRange={[1, 2]} speed={0.5} />
+
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
-          animate={inView ? { opacity: 1, y: 0 } : {}}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
           transition={{ duration: 0.6 }}
           className="text-center mb-12"
         >
-          <p className="text-sm font-medium text-emerald-400 tracking-wider uppercase mb-3">
-            FAQ
-          </p>
+          <motion.div
+            initial={{ scale: 0 }}
+            whileInView={{ scale: 1 }}
+            viewport={{ once: true }}
+            transition={{ type: "spring", delay: 0.1 }}
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 mb-4"
+          >
+            <HelpCircle className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="text-sm font-medium text-emerald-400 tracking-wider uppercase">
+              FAQ
+            </span>
+          </motion.div>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-4">
             Frequently Asked{" "}
             <span className="bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
@@ -67,52 +80,65 @@ export function FAQSection() {
 
         {/* Accordion */}
         <div className="space-y-3">
-          {faqs.map((faq, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, y: 20 }}
-              animate={inView ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.5, delay: i * 0.05 }}
-              className={`rounded-xl border transition-colors ${
-                openIndex === i
-                  ? "border-emerald-500/20 bg-emerald-500/[0.04]"
-                  : "border-white/5 bg-white/[0.01] hover:bg-white/[0.03]"
-              }`}
-            >
-              <button
-                onClick={() => setOpenIndex(openIndex === i ? null : i)}
-                className="w-full text-left px-5 py-4 flex items-center justify-between gap-4"
+          {faqs.map((faq, i) => {
+            const isOpen = openIndex === i;
+            return (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: i * 0.05 }}
+                whileHover={{ scale: isOpen ? 1 : 1.005 }}
+                className={`rounded-xl border transition-all duration-300 ${
+                  isOpen
+                    ? "border-emerald-500/20 bg-emerald-500/[0.04] shadow-lg shadow-emerald-500/5"
+                    : "border-white/5 bg-white/[0.01] hover:bg-white/[0.03] hover:border-white/10"
+                }`}
               >
-                <span
-                  className={`text-sm font-medium transition-colors ${
-                    openIndex === i ? "text-white" : "text-white/60"
-                  }`}
+                <button
+                  onClick={() => setOpenIndex(isOpen ? null : i)}
+                  className="w-full text-left px-5 py-4 flex items-center justify-between gap-4"
                 >
-                  {faq.q}
-                </span>
-                <ChevronDown
-                  className={`w-4 h-4 text-white/30 flex-shrink-0 transition-transform duration-200 ${
-                    openIndex === i ? "rotate-180" : ""
-                  }`}
-                />
-              </button>
-              <AnimatePresence initial={false}>
-                {openIndex === i && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: "auto", opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.2 }}
-                    className="overflow-hidden"
+                  <span
+                    className={`text-sm font-medium transition-colors duration-200 ${
+                      isOpen ? "text-white" : "text-white/60"
+                    }`}
                   >
-                    <div className="px-5 pb-4 text-sm text-white/40 leading-relaxed">
-                      {faq.a}
-                    </div>
+                    {faq.q}
+                  </span>
+                  <motion.div
+                    animate={{ rotate: isOpen ? 180 : 0 }}
+                    transition={{ duration: 0.3, ease: "easeInOut" }}
+                  >
+                    <ChevronDown
+                      className={`w-4 h-4 flex-shrink-0 transition-colors duration-200 ${
+                        isOpen ? "text-emerald-400" : "text-white/30"
+                      }`}
+                    />
                   </motion.div>
-                )}
-              </AnimatePresence>
-            </motion.div>
-          ))}
+                </button>
+                <AnimatePresence initial={false}>
+                  {isOpen && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{
+                        height: { duration: 0.3, ease: "easeInOut" },
+                        opacity: { duration: 0.25, delay: 0.05 },
+                      }}
+                      className="overflow-hidden"
+                    >
+                      <div className="px-5 pb-4 text-sm text-white/40 leading-relaxed">
+                        {faq.a}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            );
+          })}
         </div>
       </div>
     </section>

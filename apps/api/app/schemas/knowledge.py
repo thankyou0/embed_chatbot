@@ -34,6 +34,7 @@ class KnowledgeSourceResponse(BaseModel):
     status: KnowledgeSourceStatus
     pages_found: int
     error_message: Optional[str] = None  # Error/warning message (errors when FAILED, warnings when quota reached)
+    crawl_progress: Optional[dict] = None
     created_at: datetime
     updated_at: datetime
     files: Optional[List[UploadedFileResponse]] = []
@@ -98,6 +99,7 @@ class CrawlStatusResponse(BaseModel):
     status: KnowledgeSourceStatus
     pages_found: int
     updated_at: datetime
+    crawl_progress: Optional[dict] = None
 
     class Config:
         from_attributes = True

@@ -68,10 +68,89 @@
   html {
     overscroll-behavior: none;
     background-color: hsl(var(--background));
+    scroll-behavior: smooth;
   }
   body {
     @apply bg-background text-foreground;
     overscroll-behavior: none;
+  }
+}
+
+/* ==================== Landing Page 3D & Animations ==================== */
+@layer utilities {
+  /* Perspective container for 3D transforms */
+  .perspective-1000 {
+    perspective: 1000px;
+  }
+  .perspective-1500 {
+    perspective: 1500px;
+  }
+  .preserve-3d {
+    transform-style: preserve-3d;
+  }
+
+  /* Floating animation for 3D shapes */
+  @keyframes float-slow {
+    0%, 100% { transform: translateY(0px) rotateX(0deg) rotateY(0deg); }
+    25% { transform: translateY(-20px) rotateX(5deg) rotateY(5deg); }
+    50% { transform: translateY(-10px) rotateX(0deg) rotateY(10deg); }
+    75% { transform: translateY(-25px) rotateX(-5deg) rotateY(5deg); }
+  }
+  @keyframes float-medium {
+    0%, 100% { transform: translateY(0px) rotateZ(0deg); }
+    33% { transform: translateY(-15px) rotateZ(5deg); }
+    66% { transform: translateY(-25px) rotateZ(-3deg); }
+  }
+  @keyframes float-fast {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-30px) rotate(180deg); }
+  }
+  @keyframes spin-slow {
+    from { transform: rotateY(0deg); }
+    to { transform: rotateY(360deg); }
+  }
+  @keyframes orbit {
+    from { transform: rotate(0deg) translateX(80px) rotate(0deg); }
+    to { transform: rotate(360deg) translateX(80px) rotate(-360deg); }
+  }
+  @keyframes gradient-shift {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+  }
+
+  .animate-float-slow { animation: float-slow 8s ease-in-out infinite; }
+  .animate-float-medium { animation: float-medium 6s ease-in-out infinite; }
+  .animate-float-fast { animation: float-fast 4s ease-in-out infinite; }
+  .animate-spin-slow { animation: spin-slow 20s linear infinite; }
+  .animate-orbit { animation: orbit 15s linear infinite; }
+  .animate-gradient-shift {
+    background-size: 200% 200%;
+    animation: gradient-shift 4s ease infinite;
+  }
+
+  /* Page transition loading bar */
+  @keyframes progress-indeterminate {
+    0% { transform: translateX(-100%); width: 40%; }
+    50% { transform: translateX(60%); width: 60%; }
+    100% { transform: translateX(200%); width: 40%; }
+  }
+  .page-loading-bar {
+    animation: progress-indeterminate 1.2s ease-in-out infinite;
+  }
+
+  /* Glow pulse for interactive elements */
+  @keyframes glow-pulse {
+    0%, 100% { box-shadow: 0 0 20px rgba(16, 185, 129, 0.2); }
+    50% { box-shadow: 0 0 40px rgba(16, 185, 129, 0.4), 0 0 80px rgba(16, 185, 129, 0.1); }
+  }
+  .animate-glow-pulse { animation: glow-pulse 3s ease-in-out infinite; }
+
+  /* Particle float */
+  @keyframes particle-float {
+    0%, 100% { transform: translateY(0) translateX(0) scale(1); opacity: 0.3; }
+    25% { transform: translateY(-40px) translateX(10px) scale(1.2); opacity: 0.6; }
+    50% { transform: translateY(-20px) translateX(-10px) scale(0.8); opacity: 0.4; }
+    75% { transform: translateY(-60px) translateX(5px) scale(1.1); opacity: 0.5; }
   }
 }
 

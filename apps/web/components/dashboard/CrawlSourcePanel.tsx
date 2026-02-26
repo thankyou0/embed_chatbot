@@ -34,6 +34,13 @@ interface KnowledgeSource {
   pages_found: number;
   error_message?: string | null;
   updated_at?: string;
+  crawl_progress?: {
+    pages_crawled: number;
+    urls_in_queue: number;
+    crawl_speed: number;
+    started_at: string;
+    estimated_remaining_seconds: number | null;
+  } | null;
 }
 
 interface CrawlSourcePanelProps {
@@ -234,6 +241,52 @@ export function CrawlSourcePanel({
           <div className="flex items-start gap-2 text-sm text-blue-700">
             <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
             <p className="whitespace-pre-line">{source.error_message}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Crawl progress indicator */}
+      {isCrawling && source.crawl_progress && (
+        <div className="px-4 py-2.5 bg-indigo-50/60 border-t border-indigo-100">
+          <div className="flex items-center justify-between text-xs text-indigo-700 mb-1.5">
+            <span className="font-medium">
+              {source.crawl_progress.pages_crawled} page{source.crawl_progress.pages_crawled !== 1 ? "s" : ""} processed
+              {source.crawl_progress.urls_in_queue > 0 && (
+                <span className="text-indigo-500 ml-1">
+                  · {source.crawl_progress.urls_in_queue} in queue
+                </span>
+              )}
+            </span>
+            <span className="text-indigo-500">
+              {source.crawl_progress.crawl_speed > 0 && (
+                <span>{source.crawl_progress.crawl_speed} pages/s</span>
+              )}
+              {source.crawl_progress.estimated_remaining_seconds != null &&
+                source.crawl_progress.estimated_remaining_seconds > 0 && (
+                  <span className="ml-2">
+                    ~{source.crawl_progress.estimated_remaining_seconds < 60
+                      ? `${source.crawl_progress.estimated_remaining_seconds}s`
+                      : `${Math.ceil(source.crawl_progress.estimated_remaining_seconds / 60)} min`} left
+                  </span>
+                )}
+            </span>
+          </div>
+          <div className="w-full h-1.5 bg-indigo-100 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-indigo-500 rounded-full transition-all duration-500 animate-pulse"
+              style={{
+                width: source.crawl_progress.urls_in_queue > 0
+                  ? `${Math.min(
+                      95,
+                      Math.round(
+                        (source.crawl_progress.pages_crawled /
+                          (source.crawl_progress.pages_crawled + source.crawl_progress.urls_in_queue)) *
+                          100,
+                      ),
+                    )}%`
+                  : "100%",
+              }}
+            />
           </div>
         </div>
       )}
