@@ -318,6 +318,7 @@ async def knowledge_sources_status_stream(
         from sqlalchemy import select as sqlsel
         max_ticks = 150          # 5 minutes max (2 s × 150)
         tick = 0
+        last_payload: str | None = None  # Track last sent data to avoid duplicates
 
         while tick < max_ticks:
             try:
@@ -341,7 +342,12 @@ async def knowledge_sources_status_stream(
                     for s in sources
                 ]
 
-                yield f"data: {_json.dumps(sources_data)}\n\n"
+                payload = _json.dumps(sources_data, sort_keys=True)
+
+                # Only send when data actually changed (or first message)
+                if payload != last_payload:
+                    yield f"data: {payload}\n\n"
+                    last_payload = payload
 
                 terminal = {"completed", "failed"}
                 all_done = len(sources_data) > 0 and all(

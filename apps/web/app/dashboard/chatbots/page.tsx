@@ -12,14 +12,26 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { MessageSquare, Plus, X, Bot } from "lucide-react";
-import { SectionLoader, ButtonSpinner } from "@/components/ui/loading";
+import { MessageSquare, Plus, Clock, Activity } from "lucide-react";
+import { ButtonSpinner } from "@/components/ui/loading";
+import { SkeletonChatbotList } from "@/components/ui/skeleton";
+import { useHeaderContent } from "@/contexts/HeaderContext";
+import { ErrorMessage } from "@/components/ui/error-message";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { apiRequestWithAuth } from "@/lib/api";
 import { getAccessToken } from "@/lib/auth";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 interface Chatbot {
   id: string;
@@ -39,7 +51,7 @@ export default function ChatbotsPage() {
   const [isFetchingChatbots, setIsFetchingChatbots] = useState(true);
   const [chatbots, setChatbots] = useState<Chatbot[]>([]);
   const router = useRouter();
-  const { user, isAdmin, isOrgOwner, loading: authLoading } = useAuth();
+  const { user, isAdmin, loading: authLoading } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [pendingChatbotId, setPendingChatbotId] = useState<string | null>(null);
   const [formData, setFormData] = useState<{
@@ -47,6 +59,24 @@ export default function ChatbotsPage() {
     welcome_message: string;
   }>({ name: "", welcome_message: "Hi! How can I help you today?" });
   const [error, setError] = useState<string | null>(null);
+  const { setContent } = useHeaderContent();
+
+  useEffect(() => {
+    setContent({
+      title: "Chatbots",
+      description: "Manage your AI chatbots and conversations",
+      actions: isAdmin ? (
+        <Button
+          onClick={() => setIsModalOpen(true)}
+          className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-md shadow-emerald-500/20"
+        >
+          <Plus className="mr-2 h-4 w-4" />
+          Create Chatbot
+        </Button>
+      ) : null,
+    });
+    return () => setContent(null);
+  }, [setContent, isAdmin]);
 
   const fetchChatbots = async () => {
     try {
@@ -121,29 +151,10 @@ export default function ChatbotsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 to-teal-600">
-            Chatbots
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Manage your AI chatbots and conversations
-          </p>
-        </div>
-        <Button
-          onClick={() => setIsModalOpen(true)}
-          disabled={!isAdmin}
-          title={!isAdmin ? "Only admins can create chatbots" : ""}
-          className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-md shadow-emerald-500/20"
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Create Chatbot
-        </Button>
-      </div>
 
       {/* Chatbots List */}
       {isFetchingChatbots ? (
-        <SectionLoader />
+        <SkeletonChatbotList />
       ) : chatbots.length > 0 ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {chatbots.map((chatbot) => (
@@ -154,45 +165,90 @@ export default function ChatbotsPage() {
             >
               <Card
                 className={
-                  "cursor-pointer hover:shadow-lg hover:border-emerald-200 transition-all duration-200 h-full relative overflow-hidden group"
+                  "cursor-pointer hover:shadow-lg hover:border-emerald-200 dark:hover:border-emerald-800 transition-all duration-200 h-full relative overflow-hidden group"
                 }
               >
                 {pendingChatbotId === chatbot.id && (
                   <div className="loading-shimmer" aria-hidden="true" />
                 )}
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow">
-                        <Bot className="h-5 w-5 text-white" />
+                {/* Color accent top bar based on status */}
+                <div
+                  className={cn(
+                    "h-1 w-full",
+                    chatbot.status === "active"
+                      ? "bg-gradient-to-r from-emerald-500 to-teal-500"
+                      : chatbot.status === "paused"
+                        ? "bg-gradient-to-r from-amber-400 to-orange-400"
+                        : "bg-gradient-to-r from-gray-300 to-gray-400"
+                  )}
+                />
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-3 min-w-0">
+                      {/* Avatar with initials */}
+                      <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-sm group-hover:shadow-md group-hover:scale-105 transition-all shrink-0">
+                        <span className="text-white font-bold text-sm">
+                          {chatbot.name
+                            .split(" ")
+                            .map((w) => w[0])
+                            .slice(0, 2)
+                            .join("")
+                            .toUpperCase()}
+                        </span>
                       </div>
-                      <CardTitle className="text-lg">{chatbot.name}</CardTitle>
+                      <div className="min-w-0">
+                        <CardTitle className="text-base truncate">
+                          {chatbot.name}
+                        </CardTitle>
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <Badge
+                            variant={
+                              chatbot.status === "active"
+                                ? "active"
+                                : chatbot.status === "paused"
+                                  ? "paused"
+                                  : "draft"
+                            }
+                            className="text-[10px] h-5"
+                          >
+                            <span
+                              className={cn(
+                                "inline-block w-1.5 h-1.5 rounded-full mr-1",
+                                chatbot.status === "active"
+                                  ? "bg-emerald-400"
+                                  : chatbot.status === "paused"
+                                    ? "bg-amber-400"
+                                    : "bg-gray-400"
+                              )}
+                            />
+                            {chatbot.status}
+                          </Badge>
+                        </div>
+                      </div>
                     </div>
-                    <Badge
-                      variant={
-                        chatbot.status === "active"
-                          ? "active"
-                          : chatbot.status === "paused"
-                            ? "paused"
-                            : "draft"
-                      }
-                    >
-                      {chatbot.status}
-                    </Badge>
                   </div>
-                  <CardDescription className="mt-2">
-                    {chatbot.welcome_message || "No welcome message"}
-                  </CardDescription>
+                  {chatbot.welcome_message && (
+                    <CardDescription className="mt-2 line-clamp-2 text-xs">
+                      {chatbot.welcome_message}
+                    </CardDescription>
+                  )}
                 </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between text-sm text-muted-foreground">
-                    <span className="flex items-center gap-1.5">
-                      <span className="inline-block w-2 h-2 rounded-full bg-emerald-400"></span>
-                      {isOrgOwner ? "Org Owner" : isAdmin ? "Admin" : "Member"}
-                    </span>
-                    <span className="text-xs">
-                      {new Date(chatbot.created_at).toLocaleDateString()}
-                    </span>
+                <CardContent className="pt-0">
+                  {/* Mini stats row */}
+                  <div className="flex items-center gap-4 py-2 px-3 rounded-lg bg-muted/40 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-1.5" title="Role">
+                      <Activity className="h-3.5 w-3.5" />
+                      <span>{(chatbot.permission_level || "member").charAt(0).toUpperCase() + (chatbot.permission_level || "member").slice(1)}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5" title="Created">
+                      <Clock className="h-3.5 w-3.5" />
+                      <span>
+                        {new Date(chatbot.created_at).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                        })}
+                      </span>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -239,106 +295,92 @@ export default function ChatbotsPage() {
 
       {/* Create Chatbot Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <Card className="w-full max-w-md">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Create New Chatbot</CardTitle>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => {
-                    setIsModalOpen(false);
-                    setError(null);
-                    setFormData({
-                      name: "",
-                      welcome_message: "Hi! How can I help you today?",
-                    });
-                  }}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-              <CardDescription>
-                Give your chatbot a name and welcome message
-              </CardDescription>
-            </CardHeader>
-            <form onSubmit={handleCreateChatbot}>
-              <CardContent className="space-y-4">
-                {error && (
-                  <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
-                    {error}
-                  </div>
-                )}
+      <Dialog open={isModalOpen} onOpenChange={(open) => {
+        if (!open) {
+          setIsModalOpen(false);
+          setError(null);
+          setFormData({ name: "", welcome_message: "Hi! How can I help you today?" });
+        }
+      }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Create New Chatbot</DialogTitle>
+            <DialogDescription>
+              Give your chatbot a name and welcome message
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleCreateChatbot}>
+            <div className="space-y-4 py-2">
+              <ErrorMessage message={error} />
 
-                <div className="space-y-2">
-                  <Label htmlFor="name">Chatbot Name</Label>
-                  <Input
-                    id="name"
-                    placeholder="My Awesome Chatbot"
-                    value={formData.name}
-                    onChange={(e) =>
-                      setFormData({ ...formData, name: e.target.value })
-                    }
-                    required
-                    disabled={isLoading}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="welcome_message">Welcome Message</Label>
-                  <Textarea
-                    id="welcome_message"
-                    placeholder="Hi! How can I help you today?"
-                    value={formData.welcome_message}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        welcome_message: e.target.value,
-                      })
-                    }
-                    rows={3}
-                    disabled={isLoading}
-                  />
-                </div>
-              </CardContent>
-              <CardContent className="flex justify-end gap-2 pt-0">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setIsModalOpen(false);
-                    setError(null);
-                    setFormData({
-                      name: "",
-                      welcome_message: "Hi! How can I help you today?",
-                    });
-                  }}
+              <div className="space-y-2">
+                <Label htmlFor="name">Chatbot Name</Label>
+                <Input
+                  id="name"
+                  placeholder="My Awesome Chatbot"
+                  value={formData.name}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
+                  required
                   disabled={isLoading}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={isLoading || !formData.name.trim()}
-                  className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white"
-                >
-                  {isLoading ? (
-                    <>
-                      <ButtonSpinner />
-                      Creating...
-                    </>
-                  ) : (
-                    <>
-                      <Plus className="mr-2 h-4 w-4" />
-                      Create Chatbot
-                    </>
-                  )}
-                </Button>
-              </CardContent>
-            </form>
-          </Card>
-        </div>
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="welcome_message">Welcome Message</Label>
+                <Textarea
+                  id="welcome_message"
+                  placeholder="Hi! How can I help you today?"
+                  value={formData.welcome_message}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      welcome_message: e.target.value,
+                    })
+                  }
+                  rows={3}
+                  disabled={isLoading}
+                />
+              </div>
+            </div>
+            <DialogFooter className="mt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setIsModalOpen(false);
+                  setError(null);
+                  setFormData({
+                    name: "",
+                    welcome_message: "Hi! How can I help you today?",
+                  });
+                }}
+                disabled={isLoading}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={isLoading || !formData.name.trim()}
+                className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white"
+              >
+                {isLoading ? (
+                  <>
+                    <ButtonSpinner />
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Create Chatbot
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
       )}
     </div>
   );

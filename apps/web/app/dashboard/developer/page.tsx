@@ -7,6 +7,8 @@ import { apiRequestWithAuth } from "@/lib/api";
 import { getAccessToken } from "@/lib/auth";
 import { AlertCircle, RefreshCcw, ShieldAlert, Wrench } from "lucide-react";
 import { SectionLoader, ButtonSpinner } from "@/components/ui/loading";
+import { useHeaderContent } from "@/contexts/HeaderContext";
+import { ErrorMessage } from "@/components/ui/error-message";
 import {
   Card,
   CardContent,
@@ -17,6 +19,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -77,6 +80,34 @@ export default function DeveloperLogsPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
+  const { setContent } = useHeaderContent();
+
+  useEffect(() => {
+    setContent({
+      title: "Developer Logs",
+      description: "Failures and warnings for knowledge sources.",
+      actions: !isLoading ? (
+        <div className="flex items-center gap-3">
+          {lastUpdatedAt && (
+            <p className="text-xs text-muted-foreground">
+              Updated {lastUpdatedAt.toLocaleTimeString()}
+            </p>
+          )}
+          <Button
+            variant="outline"
+            onClick={() => void fetchIncidents(false)}
+            disabled={isRefreshing}
+          >
+            {isRefreshing && <ButtonSpinner className="mr-0" />}
+            <RefreshCcw className="h-4 w-4 mr-2" />
+            {isRefreshing ? "Refreshing..." : "Refresh"}
+          </Button>
+        </div>
+      ) : undefined,
+    });
+    return () => setContent(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [setContent, lastUpdatedAt, isRefreshing, isLoading]);
 
   const accessibleChatbots = useMemo(() => {
     if (isAdmin) {
@@ -209,33 +240,6 @@ export default function DeveloperLogsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2">
-            <Wrench className="h-5 w-5 text-emerald-600" />
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 to-teal-600">Developer Logs</span>
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Failures and warnings for knowledge sources with tenant/chatbot context.
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          {lastUpdatedAt && (
-            <p className="text-xs text-muted-foreground">
-              Updated {lastUpdatedAt.toLocaleTimeString()}
-            </p>
-          )}
-          <Button
-            variant="outline"
-            onClick={() => void fetchIncidents(false)}
-            disabled={isRefreshing}
-          >
-            {isRefreshing && <ButtonSpinner className="mr-0" />}
-            <RefreshCcw className="h-4 w-4 mr-2" />
-            {isRefreshing ? "Refreshing..." : "Refresh"}
-          </Button>
-        </div>
-      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
         <Card className="border-l-4 border-l-emerald-500">
@@ -274,40 +278,43 @@ export default function DeveloperLogsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-4 gap-3">
-          <select
-            value={selectedChatbot}
-            onChange={(e) => setSelectedChatbot(e.target.value)}
-            className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-          >
-            <option value="all">All chatbots</option>
-            {accessibleChatbots.map((bot) => (
-              <option key={bot.id} value={bot.id}>
-                {bot.name}
-              </option>
-            ))}
-          </select>
+          <Select value={selectedChatbot} onValueChange={setSelectedChatbot}>
+            <SelectTrigger>
+              <SelectValue placeholder="All chatbots" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All chatbots</SelectItem>
+              {accessibleChatbots.map((bot) => (
+                <SelectItem key={bot.id} value={bot.id}>
+                  {bot.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-          <select
-            value={severity}
-            onChange={(e) => setSeverity(e.target.value as SeverityFilter)}
-            className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-          >
-            <option value="all">All severities</option>
-            <option value="error">Errors only</option>
-            <option value="warning">Warnings only</option>
-          </select>
+          <Select value={severity} onValueChange={(val) => setSeverity(val as SeverityFilter)}>
+            <SelectTrigger>
+              <SelectValue placeholder="All severities" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All severities</SelectItem>
+              <SelectItem value="error">Errors only</SelectItem>
+              <SelectItem value="warning">Warnings only</SelectItem>
+            </SelectContent>
+          </Select>
 
-          <select
-            value={days}
-            onChange={(e) => setDays(e.target.value)}
-            className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-          >
-            <option value="1">Last 24 hours</option>
-            <option value="7">Last 7 days</option>
-            <option value="14">Last 14 days</option>
-            <option value="30">Last 30 days</option>
-            <option value="90">Last 90 days</option>
-          </select>
+          <Select value={days} onValueChange={setDays}>
+            <SelectTrigger>
+              <SelectValue placeholder="Last 14 days" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="1">Last 24 hours</SelectItem>
+              <SelectItem value="7">Last 7 days</SelectItem>
+              <SelectItem value="14">Last 14 days</SelectItem>
+              <SelectItem value="30">Last 30 days</SelectItem>
+              <SelectItem value="90">Last 90 days</SelectItem>
+            </SelectContent>
+          </Select>
 
           <Input
             placeholder="Search URL, message, chatbot..."
@@ -317,17 +324,7 @@ export default function DeveloperLogsPage() {
         </CardContent>
       </Card>
 
-      {error && (
-        <Card className="border-red-200 bg-red-50">
-          <CardContent className="pt-6 flex items-start gap-3 text-red-700">
-            <AlertCircle className="h-5 w-5 mt-0.5 shrink-0" />
-            <div>
-              <p className="font-medium">Could not load developer logs</p>
-              <p className="text-sm">{error}</p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      <ErrorMessage message={error} />
 
       <Card>
         <CardHeader>

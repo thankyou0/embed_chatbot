@@ -1,232 +1,78 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { toast } from "@/lib/notify-toast";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { useForm, Controller, useWatch } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
 import {
   ChevronRight,
+  ChevronDown,
   Settings,
-  Eye,
   Database,
   Palette,
-  MessageSquare,
   Code,
   BarChart3,
-  Plus,
-  Sparkles,
-  Globe,
   Check,
-  X as CloseIcon,
-  Search,
-  RefreshCcw,
-  RefreshCw,
-  ExternalLink,
-  Upload,
   FileText,
-  Trash2,
-  AlertCircle,
-  HelpCircle,
-  Edit2,
-  CheckSquare,
-  Square,
-  Save,
-  Users,
-  CheckCircle2,
-  X,
-  TrendingUp,
   Download,
-  ChevronLeft,
 } from "lucide-react";
-import {
-  PageLoader,
-  SectionLoader,
-  ButtonSpinner,
-  InlineSpinner,
-  OverlayLoader,
-} from "@/components/ui/loading";
+import { PageLoader } from "@/components/ui/loading";
+import { SkeletonChatbotPage } from "@/components/ui/skeleton";
+import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { Button } from "@/components/ui/button";
-import { CrawlScheduleModal } from "@/components/dashboard/CrawlScheduleModal";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Checkbox } from "@/components/ui/checkbox";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { apiRequestWithAuth } from "@/lib/api";
 import { getAccessToken } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
+import { useHeaderContent } from "@/contexts/HeaderContext";
 import { ChatbotWidgetPreview } from "@/components/chatbot/WidgetPreview";
-import { ChatbotTeamSettings } from "@/components/dashboard/ChatbotTeamSettings";
-import { CrawlSourcePanel } from "@/components/dashboard/CrawlSourcePanel";
-import { QABundlePanel } from "@/components/dashboard/QABundlePanel";
-import { ChevronDown, ChevronUp, MoreHorizontal } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
 
-interface ChatbotDetail {
-  id: string;
-  tenant_id: number;
-  name: string;
-  description: string | null;
-  status: "draft" | "active" | "paused";
-  created_by: number;
-  created_at: string;
-  updated_at: string;
-  permission_level: "owner" | "admin" | "editor" | "viewer";
-  // Granular permissions
-  can_manage_knowledge: boolean;
-  can_manage_appearance: boolean;
-  can_resolve_queries: boolean;
-  can_view_analytics_billing: boolean;
-}
+import {
+  OverviewTab,
+  KnowledgeTab,
+  AppearanceTab,
+  InstallTab,
+  SettingsTab,
+} from "./tabs";
 
-interface KnowledgeSource {
-  id: string;
-  chatbot_id: string;
-  source_type: "crawled_url" | "uploaded_file" | "qa_pair";
-  source_url: string | null;
-  status: "pending" | "processing" | "crawling" | "completed" | "failed";
-  pages_found: number;
-  error_message: string | null; // Error messages or warnings (e.g., quota reached)
-  created_at: string;
-  updated_at: string;
-  crawl_progress?: {
-    pages_crawled: number;
-    urls_in_queue: number;
-    crawl_speed: number;
-    started_at: string;
-    estimated_remaining_seconds: number | null;
-  } | null;
-  files?: {
-    id: string;
-    filename: string;
-    file_size: number;
-    mime_type: string;
-  }[];
-  qa_pairs?: QAPair[];
-  pages?: CrawledPage[];
-}
+import {
+  type ChatbotDetail,
+  type KnowledgeSource,
+  type QAPair,
+  type ChatbotStats,
+  type RecentActivity,
+  type RecentActivityListResponse,
+  type AppearanceData,
+  type AppearanceFormData,
+  appearanceSchema,
+} from "./types";
 
-interface CrawledPage {
-  id: string;
-  knowledge_source_id: string;
-  url: string;
-  title: string | null;
-  is_product?: boolean;
-  created_at: string;
-}
-
-interface QAPair {
-  id: string;
-  question: string;
-  answer: string;
-  created_at: string;
-  updated_at: string;
-}
-
-interface RecentActivity {
-  id: string;
-  type:
-    | "knowledge_source"
-    | "conversation"
-    | "status_change"
-    | "team_member_added"
-    | "team_member_updated"
-    | "team_member_removed"
-    | "team_permissions_updated"
-    | "crawl_failed"
-    | "embedding_failed";
-  description: string;
-  created_at: string;
-}
-
-interface KnowledgeSourceBreakdown {
-  total_crawled_urls: number;
-  total_uploaded_files: number;
-  total_qa_pairs: number;
-  total_crawled_pages: number;
-  total_file_size: number;
-  total_qa_count: number;
-}
-
-interface ChatbotStats {
-  total_conversations: number;
-  total_knowledge_sources: number;
-  active_knowledge_sources: number;
-  total_kb_size: number;
-  knowledge_breakdown: KnowledgeSourceBreakdown;
-}
-
-interface RecentActivityListResponse {
-  activities: RecentActivity[];
-  total: number;
-  page: number;
-  page_size: number;
-  total_pages: number;
-}
-
-const appearanceSchema = z.object({
-  primary_color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Invalid hex color"),
-  header_text: z.string().min(1, "Header text is required").max(255),
-  avatar_url: z.string().nullable(),
-  position: z.enum(["bottom-right", "bottom-left"]),
-  offset_x: z.number().int().optional().default(0),
-  offset_y: z.number().int().optional().default(0),
-  welcome_message: z.string().nullable(),
-  initial_suggestions: z.array(z.string()),
-  show_branding: z.boolean(),
-  // Personality customization
-  personality_tone: z
-    .enum(["formal", "casual", "friendly", "professional"])
-    .default("friendly"),
-  response_length: z
-    .enum(["concise", "balanced", "detailed"])
-    .default("balanced"),
-  temperature: z.number().min(0).max(1).default(0.7),
-  custom_instructions: z.string().nullable().optional(),
-  // Language settings — multi-select
-  languages: z
-    .array(z.enum(["en", "hi", "gu"]))
-    .min(1, "At least one language must be selected")
-    .default(["en"]),
-});
-
-type AppearanceFormData = z.infer<typeof appearanceSchema>;
-
-interface AppearanceData extends AppearanceFormData {
-  id: string;
-  chatbot_id: string;
-  welcome_message_translations?: Record<string, string> | null;
-  created_at: string;
-  updated_at: string;
-}
-
+// ─── Component ─────────────────────────────────────────────
 export default function ChatbotDetailPage() {
   const params = useParams();
   const router = useRouter();
   const chatbotId = params.chatbotId as string;
   const { isAdmin, isOrgOwner } = useAuth();
+  const { setContent } = useHeaderContent();
 
-  // Chatbot switcher state
+  // ── Chatbot Switcher ──
   const [allChatbots, setAllChatbots] = useState<
     { id: string; name: string; status: string }[]
   >([]);
@@ -235,6 +81,7 @@ export default function ChatbotDetailPage() {
   const switcherRef = useRef<HTMLDivElement>(null);
   const prevChatbotIdRef = useRef<string>(chatbotId);
 
+  // ── Core State ──
   const [chatbot, setChatbot] = useState<ChatbotDetail | null>(null);
   const [knowledgeSources, setKnowledgeSources] = useState<KnowledgeSource[]>(
     [],
@@ -259,7 +106,7 @@ export default function ChatbotDetailPage() {
     "analytics" | "usage" | null
   >(null);
 
-  // Knowledge base state
+  // ── Knowledge Base State ──
   const [isAddKnowledgeOpen, setIsAddKnowledgeOpen] = useState(false);
   const [knowledgeType, setKnowledgeType] = useState<"url" | "file" | "qa">(
     "url",
@@ -269,32 +116,32 @@ export default function ChatbotDetailPage() {
   const [uploadFiles, setUploadFiles] = useState<FileList | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
-  // Selection state
+  // ── Selection State ──
   const [selectedPages, setSelectedPages] = useState<string[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
   const [selectedQAs, setSelectedQAs] = useState<string[]>([]);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [deletingFileId, setDeletingFileId] = useState<string | null>(null);
 
-  // File preview state
+  // ── File Preview State ──
   const [previewFile, setPreviewFile] = useState<{
     filename: string;
     content: string;
     type: string;
-    url?: string; // For iframe/external viewer preview
-    mode?: "text" | "iframe" | "download"; // How to display the preview
+    url?: string;
+    mode?: "text" | "iframe" | "download";
   } | null>(null);
   const [loadingPreviewFileId, setLoadingPreviewFileId] = useState<
     string | null
   >(null);
 
-  // QA state
+  // ── QA State ──
   const [newQA, setNewQA] = useState({ question: "", answer: "" });
   const [editingQA, setEditingQA] = useState<QAPair | null>(null);
   const [isQAOpen, setIsQAOpen] = useState(false);
   const [qaXlsx, setQaXlsx] = useState<File | null>(null);
 
-  // Appearance state
+  // ── Appearance State ──
   const [appearance, setAppearance] = useState<AppearanceData | null>(null);
   const [isLoadingAppearance, setIsLoadingAppearance] = useState(false);
   const [isSavingAppearance, setIsSavingAppearance] = useState(false);
@@ -306,37 +153,32 @@ export default function ChatbotDetailPage() {
   const [embedCopyStatus, setEmbedCopyStatus] = useState<string | null>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
-  // Settings state
+  // ── Settings State ──
   const [settingsSubTab, setSettingsSubTab] = useState("general");
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [settingsSuccess, setSettingsSuccess] = useState<string | null>(null);
   const [settingsError, setSettingsError] = useState<string | null>(null);
 
-  // Crawl scheduling state
+  // ── Crawl Scheduling State ──
   const [isCrawlScheduleOpen, setIsCrawlScheduleOpen] = useState(false);
   const [selectedCrawlSource, setSelectedCrawlSource] = useState<any | null>(
     null,
   );
 
-  // Polling state - only poll when we explicitly start a crawl
+  // ── Polling State ──
   const [isPolling, setIsPolling] = useState(false);
   const [pollingStartTime, setPollingStartTime] = useState<number | null>(null);
-  const MAX_POLLING_DURATION = 5 * 60 * 1000; // 5 minutes max polling
+  const MAX_POLLING_DURATION = 5 * 60 * 1000;
   const [manuallyStartedCrawl, setManuallyStartedCrawl] = useState(false);
   const [pollingTimedOut, setPollingTimedOut] = useState(false);
 
-  // Toast notification state for crawl status changes
-  const [toastMessage, setToastMessage] = useState<{
-    type: "success" | "error" | "info";
-    message: string;
-  } | null>(null);
+  // ── Crawl Notification Refs ──
   const previousKnowledgeSourcesRef = useRef<KnowledgeSource[]>([]);
   const lastFetchTimeRef = useRef<number>(0);
   const autoDeletedSourcesRef = useRef<Set<string>>(new Set());
-  // SSE connection for the 'processing' phase (embedding in progress)
   const eventSourceRef = useRef<EventSource | null>(null);
 
-  // Persistent crawl notifications
+  // ── Persistent Crawl Notifications ──
   const [crawlNotifications, setCrawlNotifications] = useState<
     {
       id: string;
@@ -348,17 +190,10 @@ export default function ChatbotDetailPage() {
     }[]
   >([]);
 
-  // Appearance form setup
-  const {
-    register,
-    handleSubmit,
-    watch,
-    setValue,
-    control,
-    formState: { errors, isDirty },
-  } = useForm<AppearanceFormData>({
+  // ── Appearance Form ──
+  const form = useForm<AppearanceFormData>({
     resolver: zodResolver(appearanceSchema),
-    mode: "onChange", // Enable real-time validation and updates
+    mode: "onChange",
     defaultValues: {
       primary_color: "#3B82F6",
       header_text: "Chat Support",
@@ -369,84 +204,30 @@ export default function ChatbotDetailPage() {
       welcome_message: "Hi! How can I help you today?",
       initial_suggestions: [],
       show_branding: true,
-      // Personality customization
       personality_tone: "friendly",
       response_length: "balanced",
       temperature: 0.7,
       custom_instructions: null,
-      // Language settings
       languages: ["en"],
     },
   });
 
-  // Use useWatch for real-time updates - this triggers re-renders when values change
-  const watchedPrimaryColor = useWatch({
-    control,
-    name: "primary_color",
-    defaultValue: "#3B82F6",
-  });
-  const watchedHeaderText = useWatch({
-    control,
-    name: "header_text",
-    defaultValue: "Chat Support",
-  });
-  const watchedWelcomeMessage = useWatch({
-    control,
-    name: "welcome_message",
-    defaultValue: null,
-  });
-  const watchedAvatarUrl = useWatch({
-    control,
-    name: "avatar_url",
-    defaultValue: null,
-  });
-  const watchedPosition = useWatch({
-    control,
-    name: "position",
-    defaultValue: "bottom-right",
-  });
-  const watchedOffsetX = useWatch({
-    control,
-    name: "offset_x",
-    defaultValue: 0,
-  });
-  const watchedOffsetY = useWatch({
-    control,
-    name: "offset_y",
-    defaultValue: 0,
-  });
-  const watchedInitialSuggestions = useWatch({
-    control,
-    name: "initial_suggestions",
-    defaultValue: [],
-  });
-  const watchedShowBranding = useWatch({
-    control,
-    name: "show_branding",
-    defaultValue: true,
-  });
-  const watchedPersonalityTone = useWatch({
-    control,
-    name: "personality_tone",
-    defaultValue: "friendly",
-  });
-  const watchedResponseLength = useWatch({
-    control,
-    name: "response_length",
-    defaultValue: "balanced",
-  });
-  const watchedTemperature = useWatch({
-    control,
-    name: "temperature",
-    defaultValue: 0.7,
-  });
-  const watchedLanguages = useWatch({
-    control,
-    name: "languages",
-    defaultValue: ["en"],
-  });
+  const { watch, setValue, control, formState: { isDirty: isAppearanceDirty } } = form;
 
-  // Create watched values object for widget preview
+  const watchedPrimaryColor = useWatch({ control, name: "primary_color", defaultValue: "#3B82F6" });
+  const watchedHeaderText = useWatch({ control, name: "header_text", defaultValue: "Chat Support" });
+  const watchedWelcomeMessage = useWatch({ control, name: "welcome_message", defaultValue: null });
+  const watchedAvatarUrl = useWatch({ control, name: "avatar_url", defaultValue: null });
+  const watchedPosition = useWatch({ control, name: "position", defaultValue: "bottom-right" });
+  const watchedOffsetX = useWatch({ control, name: "offset_x", defaultValue: 0 });
+  const watchedOffsetY = useWatch({ control, name: "offset_y", defaultValue: 0 });
+  const watchedInitialSuggestions = useWatch({ control, name: "initial_suggestions", defaultValue: [] });
+  const watchedShowBranding = useWatch({ control, name: "show_branding", defaultValue: true });
+  const watchedPersonalityTone = useWatch({ control, name: "personality_tone", defaultValue: "friendly" });
+  const watchedResponseLength = useWatch({ control, name: "response_length", defaultValue: "balanced" });
+  const watchedTemperature = useWatch({ control, name: "temperature", defaultValue: 0.7 });
+  const watchedLanguages = useWatch({ control, name: "languages", defaultValue: ["en"] });
+
   const watchedAppearanceValues = {
     primary_color: watchedPrimaryColor ?? "#3B82F6",
     header_text: watchedHeaderText ?? "Chat Support",
@@ -456,8 +237,7 @@ export default function ChatbotDetailPage() {
     offset_x: watchedOffsetX ?? 0,
     offset_y: watchedOffsetY ?? 0,
     initial_suggestions: watchedInitialSuggestions ?? [],
-    show_branding:
-      watchedShowBranding !== undefined ? watchedShowBranding : true,
+    show_branding: watchedShowBranding !== undefined ? watchedShowBranding : true,
     personality_tone: watchedPersonalityTone ?? "friendly",
     response_length: watchedResponseLength ?? "balanced",
     temperature: watchedTemperature ?? 0.7,
@@ -465,45 +245,75 @@ export default function ChatbotDetailPage() {
   };
 
   const formData = watch();
-  // Keep primaryColor for backward compatibility
-  const primaryColor = watchedPrimaryColor ?? watch("primary_color");
 
-  // Smooth data swap when switching chatbots (no loader, just fade)
+  // ── Unsaved changes guard (browser beforeunload) ──
+  useEffect(() => {
+    if (!isAppearanceDirty) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      // Modern browsers show a generic message; returnValue is required for legacy
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [isAppearanceDirty]);
+
+  // ── Tab-switch guard when appearance form is dirty ──
+  const [pendingTab, setPendingTab] = useState<string | null>(null);
+  const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
+
+  const handleTabChange = useCallback(
+    (value: string) => {
+      // If leaving appearance tab with unsaved changes, confirm first
+      if (activeTab === "appearance" && isAppearanceDirty && value !== "appearance") {
+        setPendingTab(value);
+        setShowUnsavedDialog(true);
+        return;
+      }
+      setActiveTab(value);
+      if (value === "knowledge" && !hasLoadedKnowledge) fetchKnowledgeSources();
+      if (value === "appearance" && !hasLoadedAppearance) fetchAppearance();
+      if (value === "overview") {
+        fetchChatbotStats();
+        fetchRecentActivity(recentActivityPage);
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [activeTab, isAppearanceDirty, hasLoadedKnowledge, hasLoadedAppearance, recentActivityPage],
+  );
+
+  // ═══════════════════════════════════════════════════════════
+  // Effects
+  // ═══════════════════════════════════════════════════════════
+
+  // Smooth data swap when switching chatbots
   useEffect(() => {
     if (prevChatbotIdRef.current !== chatbotId) {
       prevChatbotIdRef.current = chatbotId;
-      // Mark as transitioning — content stays but is hidden (opacity 0)
       setIsTransitioning(true);
-      // Reset load flags so data re-fetches
       setHasLoadedKnowledge(false);
       setHasLoadedAppearance(false);
       setCrawlNotifications([]);
     }
   }, [chatbotId]);
 
+  // Main initializer
   useEffect(() => {
     const isSwitching = isTransitioning;
     const initializePage = async () => {
-      // 1. High Priority: Get basic info, stats, and appearance (for widget preview)
-      // Skip loading spinner when switching chatbots (keeps page visible)
       await fetchChatbotDetails(!isSwitching);
-      // End transition once primary data is loaded — content fades in
       setIsTransitioning(false);
       fetchChatbotStats();
       fetchRecentActivity(1);
       fetchAppearance();
-
-      // 2. Medium Priority: Prefetch knowledge base in background
-      // This is usually the largest payload, so we delay it slightly
       setTimeout(() => {
         if (!hasLoadedKnowledge) fetchKnowledgeSources();
       }, 1000);
     };
-
     initializePage();
   }, [chatbotId]);
 
-  // Fetch all chatbots for the switcher dropdown (once)
+  // Fetch all chatbots for the switcher (once)
   useEffect(() => {
     const fetchAllChatbots = async () => {
       try {
@@ -537,7 +347,240 @@ export default function ChatbotDetailPage() {
     }
   }, [isSwitcherOpen]);
 
-  // Handle chatbot switch with smooth transition
+  // Fetch persistent crawl notifications
+  useEffect(() => {
+    fetchCrawlNotifications();
+  }, [chatbotId]);
+
+  // Polling controller — detect status changes, show toasts, auto-delete failed empty sources
+  useEffect(() => {
+    const hasCrawlingSources = knowledgeSources.some((s) => {
+      const status = s.status?.toLowerCase();
+      return status === "crawling" || status === "pending";
+    });
+
+    if (previousKnowledgeSourcesRef.current.length > 0) {
+      knowledgeSources.forEach((current) => {
+        const previous = previousKnowledgeSourcesRef.current.find(
+          (p) => p.id === current.id,
+        );
+        if (previous && previous.status !== current.status) {
+          const getSourceDisplayName = (source: KnowledgeSource) => {
+            if (source.source_type === "crawled_url") return source.source_url;
+            if (
+              source.source_type === "uploaded_file" &&
+              source.files &&
+              source.files.length > 0
+            )
+              return source.files[0].filename;
+            if (source.source_type === "qa_pair") return "Q&A pairs";
+            return "Knowledge source";
+          };
+
+          const getActionVerb = (source: KnowledgeSource) => {
+            if (source.source_type === "crawled_url") return "Crawl";
+            if (source.source_type === "uploaded_file") return "Processing";
+            if (source.source_type === "qa_pair") return "Q&A processing";
+            return "Processing";
+          };
+
+          const displayName = getSourceDisplayName(current);
+          const verb = getActionVerb(current);
+
+          if (current.status === "completed") {
+            if (
+              current.error_message &&
+              current.error_message.toLowerCase().includes("quota")
+            ) {
+              toast.info(current.error_message);
+            } else {
+              toast.success(`${verb} completed for ${displayName}`);
+            }
+            fetchCrawlNotifications();
+          } else if (current.status === "failed") {
+            toast.error(
+              current.error_message || `${verb} failed for ${displayName}`,
+            );
+            fetchCrawlNotifications();
+          }
+          fetchChatbotStats();
+        }
+      });
+
+      // Auto-cleanup failed empty crawl sources
+      knowledgeSources.forEach((s) => {
+        if (
+          s.source_type === "crawled_url" &&
+          s.status === "failed" &&
+          (s.pages_found === 0 || !s.pages || s.pages.length === 0) &&
+          !autoDeletedSourcesRef.current.has(s.id)
+        ) {
+          autoDeletedSourcesRef.current.add(s.id);
+          toast.error(s.error_message || `Crawl failed for ${s.source_url}`);
+          handleDeleteSource(s.id, undefined, true);
+        }
+      });
+    }
+    previousKnowledgeSourcesRef.current = knowledgeSources;
+
+    if (!hasCrawlingSources && isPolling) {
+      setIsPolling(false);
+      setPollingStartTime(null);
+      setManuallyStartedCrawl(false);
+      fetchKnowledgeSources(false);
+      fetchChatbotStats();
+      return;
+    }
+
+    if (!isPolling && hasCrawlingSources && !pollingTimedOut) {
+      setIsPolling(true);
+      setPollingStartTime(Date.now());
+    }
+  }, [knowledgeSources, manuallyStartedCrawl, isPolling, pollingTimedOut]);
+
+  // Adaptive polling timer
+  useEffect(() => {
+    if (!isPolling) return;
+
+    let timeoutId: ReturnType<typeof setTimeout>;
+    let stopped = false;
+
+    const getPollingInterval = () => {
+      if (!pollingStartTime) return 2000;
+      const elapsed = Date.now() - pollingStartTime;
+      if (elapsed < 15000) return 2000;
+      if (elapsed < 60000) return 5000;
+      return 10000;
+    };
+
+    const poll = async () => {
+      if (stopped) return;
+      await fetchKnowledgeSources(false);
+      await fetchChatbotStats();
+
+      if (
+        pollingStartTime &&
+        Date.now() - pollingStartTime > MAX_POLLING_DURATION
+      ) {
+        setIsPolling(false);
+        setPollingStartTime(null);
+        setPollingTimedOut(true);
+        toast.info(
+          "Your content is still being processed. Auto-refresh has been paused — click the refresh button to check for updates.",
+        );
+        return;
+      }
+
+      if (!stopped) {
+        timeoutId = setTimeout(poll, getPollingInterval());
+      }
+    };
+
+    timeoutId = setTimeout(poll, getPollingInterval());
+
+    return () => {
+      stopped = true;
+      clearTimeout(timeoutId);
+    };
+  }, [isPolling, pollingStartTime]);
+
+  // SSE subscription for processing phase
+  useEffect(() => {
+    const hasProcessingSources = knowledgeSources.some(
+      (s) => s.status?.toLowerCase() === "processing",
+    );
+    const hasCrawlingOrPending = knowledgeSources.some((s) => {
+      const st = s.status?.toLowerCase();
+      return st === "crawling" || st === "pending";
+    });
+
+    if (
+      hasProcessingSources &&
+      !hasCrawlingOrPending &&
+      !eventSourceRef.current
+    ) {
+      const token = getAccessToken();
+      if (!token) return;
+
+      const API_URL =
+        process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const url = `${API_URL}/api/v1/chatbots/${chatbotId}/knowledge-sources/status-stream?token=${encodeURIComponent(token)}`;
+
+      const es = new EventSource(url);
+      let doneHandled = false;
+
+      es.onmessage = (e) => {
+        try {
+          const sources = JSON.parse(e.data);
+          if (Array.isArray(sources)) {
+            setKnowledgeSources((prev) =>
+              prev.map((p) => {
+                const updated = sources.find((s: any) => s.id === p.id);
+                if (!updated) return p;
+                return {
+                  ...p,
+                  status: updated.status,
+                  pages_found: updated.pages_found ?? p.pages_found,
+                  error_message: updated.error_message ?? p.error_message,
+                  updated_at: updated.updated_at ?? p.updated_at,
+                  crawl_progress: updated.crawl_progress ?? p.crawl_progress,
+                };
+              }),
+            );
+          }
+        } catch {
+          // ignore parse errors
+        }
+      };
+
+      es.addEventListener("done", () => {
+        doneHandled = true;
+        es.close();
+        eventSourceRef.current = null;
+        fetchKnowledgeSources(false);
+        fetchChatbotStats();
+      });
+
+      es.addEventListener("timeout", () => {
+        doneHandled = true;
+        es.close();
+        eventSourceRef.current = null;
+        fetchKnowledgeSources(false);
+        fetchChatbotStats();
+      });
+
+      es.onerror = () => {
+        if (!doneHandled) {
+          console.error(
+            "Processing SSE closed unexpectedly — fallback fetch",
+          );
+          es.close();
+          eventSourceRef.current = null;
+          fetchKnowledgeSources(false);
+          fetchChatbotStats();
+        }
+      };
+
+      eventSourceRef.current = es;
+    }
+
+    if (!hasProcessingSources && eventSourceRef.current) {
+      eventSourceRef.current.close();
+      eventSourceRef.current = null;
+    }
+
+    return () => {
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
+      }
+    };
+  }, [knowledgeSources, chatbotId]);
+
+  // ═══════════════════════════════════════════════════════════
+  // Handlers & Fetchers
+  // ═══════════════════════════════════════════════════════════
+
   const handleSwitchChatbot = (targetId: string) => {
     if (targetId === chatbotId) {
       setIsSwitcherOpen(false);
@@ -545,13 +588,11 @@ export default function ChatbotDetailPage() {
     }
     setIsSwitcherOpen(false);
     setIsTransitioning(true);
-    // Navigate after a brief fade-out (200ms matches half the CSS duration)
     setTimeout(() => {
       router.push(`/dashboard/chatbots/${targetId}`);
     }, 200);
   };
 
-  // Fetch persistent crawl notifications
   const fetchCrawlNotifications = async () => {
     try {
       const token = getAccessToken();
@@ -571,10 +612,6 @@ export default function ChatbotDetailPage() {
       // non-fatal
     }
   };
-
-  useEffect(() => {
-    fetchCrawlNotifications();
-  }, [chatbotId]);
 
   const dismissNotification = async (notificationId: string) => {
     try {
@@ -627,10 +664,7 @@ export default function ChatbotDetailPage() {
       const response = await apiRequestWithAuth<RecentActivityListResponse>(
         `/api/v1/chatbots/${chatbotId}/activities?page=${page}&page_size=${RECENT_ACTIVITY_PAGE_SIZE}&t=${timestamp}`,
         token,
-        {
-          method: "GET",
-          cache: "no-store" as RequestCache,
-        },
+        { method: "GET", cache: "no-store" as RequestCache },
       );
 
       setRecentActivity(response.activities || []);
@@ -648,15 +682,11 @@ export default function ChatbotDetailPage() {
     try {
       const token = getAccessToken();
       if (!token) return;
-
       const timestamp = new Date().getTime();
       const response = await apiRequestWithAuth<ChatbotStats>(
         `/api/v1/chatbots/${chatbotId}/stats?t=${timestamp}`,
         token,
-        {
-          method: "GET",
-          cache: "no-store" as RequestCache,
-        },
+        { method: "GET", cache: "no-store" as RequestCache },
       );
       setStats(response);
       fetchRecentActivity(recentActivityPage, false);
@@ -664,294 +694,6 @@ export default function ChatbotDetailPage() {
       console.error("Failed to fetch stats:", err);
     }
   };
-
-  // Polling for crawling sources - only runs while status is 'crawling' or 'pending'
-  // Once status transitions to 'processing', polling stops and the SSE stream
-  // (opened by the effect below) takes over to push the final completion event.
-  useEffect(() => {
-    // Only keep polling while crawling/pending; stop when processing begins
-    const hasCrawlingSources = knowledgeSources.some((s) => {
-      const status = s.status?.toLowerCase();
-      return status === "crawling" || status === "pending";
-    });
-
-    // Detect status changes and show toast notifications
-    if (previousKnowledgeSourcesRef.current.length > 0) {
-      knowledgeSources.forEach((current) => {
-        const previous = previousKnowledgeSourcesRef.current.find(
-          (p) => p.id === current.id,
-        );
-        if (previous && previous.status !== current.status) {
-          // Status changed!
-          console.log(
-            `✅ Status changed for ${current.source_url}: ${previous.status} → ${current.status}`,
-          );
-
-          const getSourceDisplayName = (source: KnowledgeSource) => {
-            if (source.source_type === "crawled_url") return source.source_url;
-            if (
-              source.source_type === "uploaded_file" &&
-              source.files &&
-              source.files.length > 0
-            ) {
-              return source.files[0].filename;
-            }
-            if (source.source_type === "qa_pair") return "Q&A pairs";
-            return "Knowledge source";
-          };
-
-          const getActionVerb = (source: KnowledgeSource) => {
-            if (source.source_type === "crawled_url") return "Crawl";
-            if (source.source_type === "uploaded_file") return "Processing";
-            if (source.source_type === "qa_pair") return "Q&A processing";
-            return "Processing";
-          };
-
-          const displayName = getSourceDisplayName(current);
-          const verb = getActionVerb(current);
-
-          if (current.status === "completed") {
-            // Check if there's a warning message (like quota reached)
-            if (
-              current.error_message &&
-              current.error_message.toLowerCase().includes("quota")
-            ) {
-              setToastMessage({
-                type: "info", // Use "info" for warnings (yellow/blue)
-                message: current.error_message, // Show the quota warning
-              });
-            } else {
-              setToastMessage({
-                type: "success",
-                message: `${verb} completed for ${displayName}`,
-              });
-            }
-            // Refresh persistent notifications on completion
-            fetchCrawlNotifications();
-          } else if (current.status === "failed") {
-            setToastMessage({
-              type: "error",
-              message:
-                current.error_message || `${verb} failed for ${displayName}`,
-            });
-            // Refresh persistent notifications on failure
-            fetchCrawlNotifications();
-          }
-          // Refresh stats when any status changes
-          fetchChatbotStats();
-        }
-      });
-      // 2. Handle auto-cleanup for failed empty crawl sources
-      knowledgeSources.forEach((s) => {
-        if (
-          s.source_type === "crawled_url" &&
-          s.status === "failed" &&
-          (s.pages_found === 0 || !s.pages || s.pages.length === 0) &&
-          !autoDeletedSourcesRef.current.has(s.id)
-        ) {
-          console.log(`🧹 Auto-cleaning failed empty source: ${s.id}`);
-          autoDeletedSourcesRef.current.add(s.id);
-
-          setToastMessage({
-            type: "error",
-            message: s.error_message || `Crawl failed for ${s.source_url}`,
-          });
-
-          // Trigger silent deletion
-          handleDeleteSource(s.id, undefined, true);
-        }
-      });
-    }
-    previousKnowledgeSourcesRef.current = knowledgeSources;
-
-    // Stop polling if all crawls/processing are complete
-    if (!hasCrawlingSources && isPolling) {
-      console.log(
-        "✅ All process items complete, stopping polling and performing final sync",
-      );
-      setIsPolling(false);
-      setPollingStartTime(null);
-      setManuallyStartedCrawl(false);
-
-      // Perform one final sync to ensure everything is up to date
-      fetchKnowledgeSources(false);
-      fetchChatbotStats();
-      return;
-    }
-
-    // Start polling if we have active crawls and aren't polling yet
-    if (!isPolling && hasCrawlingSources && !pollingTimedOut) {
-      console.log("🚀 Starting polling - active crawls detected");
-      setIsPolling(true);
-      setPollingStartTime(Date.now());
-    } else if (!isPolling && hasCrawlingSources && pollingTimedOut) {
-      console.log(
-        "⏱️ Polling disabled after timeout; waiting for manual refresh",
-      );
-    }
-  }, [knowledgeSources, manuallyStartedCrawl, isPolling, pollingTimedOut]);
-
-  // Adaptive polling: starts fast (2s), slows down over time (5s → 10s)
-  useEffect(() => {
-    if (!isPolling) return;
-
-    let timeoutId: ReturnType<typeof setTimeout>;
-    let stopped = false;
-
-    const getPollingInterval = () => {
-      if (!pollingStartTime) return 2000;
-      const elapsed = Date.now() - pollingStartTime;
-      if (elapsed < 15000) return 2000; // First 15s: fast (2s)
-      if (elapsed < 60000) return 5000; // 15s-60s: medium (5s)
-      return 10000; // After 60s: slow (10s)
-    };
-
-    const poll = async () => {
-      if (stopped) return;
-
-      console.log(
-        `📡 Polling tick (interval: ${getPollingInterval()}ms) - fetching latest sources and stats...`,
-      );
-
-      // Update both sources and stats for immediate feedback
-      await fetchKnowledgeSources(false);
-      await fetchChatbotStats();
-
-      // Check if we've exceeded max polling duration
-      if (
-        pollingStartTime &&
-        Date.now() - pollingStartTime > MAX_POLLING_DURATION
-      ) {
-        console.log("Polling timeout reached, stopping automatic refresh");
-        setIsPolling(false);
-        setPollingStartTime(null);
-        setPollingTimedOut(true);
-        setToastMessage({
-          type: "info",
-          message:
-            "Your content is still being processed. Auto-refresh has been paused — click the refresh button to check for updates.",
-        });
-        return;
-      }
-
-      if (!stopped) {
-        timeoutId = setTimeout(poll, getPollingInterval());
-      }
-    };
-
-    console.log("🔄 Adaptive polling started");
-    timeoutId = setTimeout(poll, getPollingInterval());
-
-    return () => {
-      console.log("🛑 Polling stopped - cleaning up");
-      stopped = true;
-      clearTimeout(timeoutId);
-    };
-  }, [isPolling, pollingStartTime]);
-
-  // SSE subscription: connect to the backend stream while any source is in 'processing'.
-  // The stream pushes status updates every 2 s and fires a 'done' event when
-  // embedding finishes — so we don't need to keep polling during that phase.
-  useEffect(() => {
-    const hasProcessingSources = knowledgeSources.some(
-      (s) => s.status?.toLowerCase() === "processing",
-    );
-    // Also bail out if crawling is still happening (SSE not needed yet)
-    const hasCrawlingOrPending = knowledgeSources.some((s) => {
-      const st = s.status?.toLowerCase();
-      return st === "crawling" || st === "pending";
-    });
-
-    if (hasProcessingSources && !hasCrawlingOrPending && !eventSourceRef.current) {
-      const token = getAccessToken();
-      if (!token) return;
-
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-      const url = `${API_URL}/api/v1/chatbots/${chatbotId}/knowledge-sources/status-stream?token=${encodeURIComponent(token)}`;
-      console.log("📡 Opening processing SSE stream...");
-
-      const es = new EventSource(url);
-      let doneHandled = false;
-
-      es.onmessage = (e) => {
-        try {
-          const sources = JSON.parse(e.data);
-          if (Array.isArray(sources)) {
-            // Merge partial data (SSE only returns lightweight fields)
-            setKnowledgeSources((prev) =>
-              prev.map((p) => {
-                const updated = sources.find((s: any) => s.id === p.id);
-                if (!updated) return p;
-                return {
-                  ...p,
-                  status: updated.status,
-                  pages_found: updated.pages_found ?? p.pages_found,
-                  error_message: updated.error_message ?? p.error_message,
-                  updated_at: updated.updated_at ?? p.updated_at,
-                  crawl_progress: updated.crawl_progress ?? p.crawl_progress,
-                };
-              }),
-            );
-          }
-        } catch {
-          // ignore parse errors
-        }
-      };
-
-      es.addEventListener("done", () => {
-        console.log("✅ Processing SSE: embedding complete — final sync");
-        doneHandled = true;
-        es.close();
-        eventSourceRef.current = null;
-        fetchKnowledgeSources(false);
-        fetchChatbotStats();
-      });
-
-      es.addEventListener("timeout", () => {
-        console.log("⏱️ Processing SSE: timed out — final sync");
-        doneHandled = true;
-        es.close();
-        eventSourceRef.current = null;
-        fetchKnowledgeSources(false);
-        fetchChatbotStats();
-      });
-
-      es.onerror = () => {
-        if (!doneHandled) {
-          console.error("❌ Processing SSE closed unexpectedly — fallback fetch");
-          es.close();
-          eventSourceRef.current = null;
-          fetchKnowledgeSources(false);
-          fetchChatbotStats();
-        }
-      };
-
-      eventSourceRef.current = es;
-    }
-
-    // Close SSE if there are no more processing sources
-    if (!hasProcessingSources && eventSourceRef.current) {
-      console.log("🛑 No processing sources — closing SSE stream");
-      eventSourceRef.current.close();
-      eventSourceRef.current = null;
-    }
-
-    return () => {
-      // Cleanup on component unmount
-      if (eventSourceRef.current) {
-        eventSourceRef.current.close();
-        eventSourceRef.current = null;
-      }
-    };
-  }, [knowledgeSources, chatbotId]);
-
-  // Auto-hide toast after 5 seconds
-  useEffect(() => {
-    if (toastMessage) {
-      const timer = setTimeout(() => setToastMessage(null), 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [toastMessage]);
 
   const fetchChatbotDetails = async (showLoading = true) => {
     try {
@@ -973,7 +715,6 @@ export default function ChatbotDetailPage() {
     } catch (err: any) {
       console.error("Failed to fetch chatbot:", err);
       setError(err.message || "Failed to load chatbot");
-      // Redirect to chatbots list if not found or no permission
       if (err.message?.includes("404") || err.message?.includes("403")) {
         setTimeout(() => router.push("/dashboard/chatbots"), 2000);
       }
@@ -990,10 +731,7 @@ export default function ChatbotDetailPage() {
       const token = getAccessToken();
       if (!token) return null;
 
-      // Add a timestamp to bust any potential caches during polling
       const timestamp = new Date().getTime();
-
-      // Update last fetch time reference to prevent race conditions from slow responses
       const requestTimestamp = timestamp;
       lastFetchTimeRef.current = Math.max(
         lastFetchTimeRef.current,
@@ -1003,25 +741,10 @@ export default function ChatbotDetailPage() {
       const response = await apiRequestWithAuth<KnowledgeSource[]>(
         `/api/v1/chatbots/${chatbotId}/knowledge-sources?t=${timestamp}`,
         token,
-        {
-          method: "GET",
-          cache: "no-store" as RequestCache,
-        },
+        { method: "GET", cache: "no-store" as RequestCache },
       );
 
-      // Only process if this is the newest request
-      if (requestTimestamp < lastFetchTimeRef.current) {
-        console.log("⏭ Skipping stale knowledge source response");
-        return null;
-      }
-
-      console.log(
-        "📦 Fetched knowledge sources:",
-        response.map((ks) => ({
-          url: ks.source_url,
-          status: ks.status,
-        })),
-      );
+      if (requestTimestamp < lastFetchTimeRef.current) return null;
 
       setKnowledgeSources(response);
       setHasLoadedKnowledge(true);
@@ -1040,7 +763,6 @@ export default function ChatbotDetailPage() {
       const token = getAccessToken();
       if (!token) return;
 
-      // Cache-bust to avoid stale translations
       const cacheBust = `_t=${Date.now()}`;
       const response = await apiRequestWithAuth<AppearanceData>(
         `/api/v1/chatbots/${chatbotId}/appearance?${cacheBust}`,
@@ -1050,7 +772,7 @@ export default function ChatbotDetailPage() {
 
       setAppearance(response);
       setHasLoadedAppearance(true);
-      // Set form values
+
       Object.keys(response).forEach((key) => {
         if (
           key !== "id" &&
@@ -1078,50 +800,34 @@ export default function ChatbotDetailPage() {
   const handleCrawl = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newUrl.trim()) return;
-
     try {
       setIsCrawling(true);
       const token = getAccessToken();
-      1;
       if (!token) return;
 
-      // Get the response which includes the new knowledge source
       const newSource = await apiRequestWithAuth<KnowledgeSource>(
         `/api/v1/chatbots/${chatbotId}/crawl`,
         token,
-        {
-          method: "POST",
-          body: JSON.stringify({ base_url: newUrl }),
-        },
+        { method: "POST", body: JSON.stringify({ base_url: newUrl }) },
       );
 
-      // Optimistically add the new source to the state immediately
       setKnowledgeSources((prev) => {
-        // Check if it already exists (avoid duplicates)
         const exists = prev.some((s) => s.id === newSource.id);
-        if (exists) {
-          // Update existing source
-          return prev.map((s) => (s.id === newSource.id ? newSource : s));
-        }
-        // Add new source
+        if (exists) return prev.map((s) => (s.id === newSource.id ? newSource : s));
         return [...prev, newSource];
       });
 
       setNewUrl("");
       setIsAddKnowledgeOpen(false);
-
-      // Refresh to get the latest data (including pages as they're crawled)
       await fetchKnowledgeSources();
-      // Refresh stats after adding knowledge source
       await fetchChatbotStats();
 
-      // Enable polling BEFORE fetching to ensure the polling effect recognizes active sources
       setPollingTimedOut(false);
       setManuallyStartedCrawl(true);
       setIsPolling(true);
       setPollingStartTime(Date.now());
     } catch (err: any) {
-      alert(err.message || "Failed to start crawl");
+      toast.error(err.message || "Failed to start crawl");
     } finally {
       setIsCrawling(false);
     }
@@ -1130,7 +836,6 @@ export default function ChatbotDetailPage() {
   const handleFileUpload = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!uploadFiles || uploadFiles.length === 0) return;
-
     try {
       setIsUploading(true);
       const token = getAccessToken();
@@ -1139,44 +844,39 @@ export default function ChatbotDetailPage() {
       const API_URL =
         process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-      // Upload files sequentially
       for (let i = 0; i < uploadFiles.length; i++) {
         const file = uploadFiles[i];
-        const formData = new FormData();
-        formData.append("file", file);
+        const fd = new FormData();
+        fd.append("file", file);
 
         const response = await fetch(
           `${API_URL}/api/v1/chatbots/${chatbotId}/upload`,
           {
             method: "POST",
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-            body: formData,
+            headers: { Authorization: `Bearer ${token}` },
+            body: fd,
           },
         );
 
         if (!response.ok) {
           const errData = await response.json();
-          const errorMessage = errData.detail || "Unknown error";
-          throw new Error(`Failed to upload ${file.name}: ${errorMessage}`);
+          throw new Error(
+            `Failed to upload ${file.name}: ${errData.detail || "Unknown error"}`,
+          );
         }
       }
 
       setUploadFiles(null);
       setIsAddKnowledgeOpen(false);
-
-      // Update both sources and stats for immediate feedback
       await fetchKnowledgeSources(false);
       await fetchChatbotStats();
 
-      // Enable polling BEFORE fetching to ensure the polling effect recognizes active sources
       setPollingTimedOut(false);
       setManuallyStartedCrawl(true);
       setIsPolling(true);
       setPollingStartTime(Date.now());
     } catch (err: any) {
-      alert(err.message || "Failed to upload files");
+      toast.error(err.message || "Failed to upload files");
     } finally {
       setIsUploading(false);
     }
@@ -1203,31 +903,24 @@ export default function ChatbotDetailPage() {
       setNewQA({ question: "", answer: "" });
       setEditingQA(null);
       await fetchKnowledgeSources();
-      // Refresh stats after adding QA
       fetchChatbotStats();
-
-      setToastMessage({
-        type: "success",
-        message: editingQA ? "QA pair updated" : "QA pair added successfully",
-      });
+      toast.success(
+        editingQA ? "QA pair updated" : "QA pair added successfully",
+      );
     } catch (err: any) {
-      setToastMessage({
-        type: "error",
-        message: err.message || "Failed to save QA pair",
-      });
+      toast.error(err.message || "Failed to save QA pair");
     }
   };
 
   const handleQAXlsxUpload = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!qaXlsx) return;
-
     try {
       const token = getAccessToken();
       if (!token) return;
 
-      const formData = new FormData();
-      formData.append("file", qaXlsx);
+      const fd = new FormData();
+      fd.append("file", qaXlsx);
 
       const API_URL =
         process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -1235,10 +928,8 @@ export default function ChatbotDetailPage() {
         `${API_URL}/api/v1/chatbots/${chatbotId}/qa/upload`,
         {
           method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          body: formData,
+          headers: { Authorization: `Bearer ${token}` },
+          body: fd,
         },
       );
 
@@ -1248,17 +939,15 @@ export default function ChatbotDetailPage() {
       }
 
       setQaXlsx(null);
-
       await fetchKnowledgeSources();
       await fetchChatbotStats();
 
-      // Enable polling for QA upload processing
       setPollingTimedOut(false);
       setManuallyStartedCrawl(true);
       setIsPolling(true);
       setPollingStartTime(Date.now());
     } catch (err: any) {
-      alert(err.message || "Failed to upload XLSX");
+      toast.error(err.message || "Failed to upload XLSX");
     }
   };
 
@@ -1271,10 +960,9 @@ export default function ChatbotDetailPage() {
         method: "DELETE",
       });
       await fetchKnowledgeSources();
-      // Refresh stats after deleting QA
       fetchChatbotStats();
     } catch (err: any) {
-      alert(err.message || "Failed to delete QA");
+      toast.error(err.message || "Failed to delete QA");
     }
   };
 
@@ -1287,12 +975,9 @@ export default function ChatbotDetailPage() {
       customMessage ||
       "Are you sure you want to delete this knowledge source and all its data?";
     if (!silent && !confirm(message)) return;
-
     try {
       const token = getAccessToken();
       if (!token) return;
-
-      // Set deleting state for this file
       setDeletingFileId(sourceId);
 
       await apiRequestWithAuth(
@@ -1302,10 +987,9 @@ export default function ChatbotDetailPage() {
       );
 
       await fetchKnowledgeSources();
-      // Refresh stats after deleting source
       fetchChatbotStats();
     } catch (err: any) {
-      alert(err.message || "Failed to delete source");
+      toast.error(err.message || "Failed to delete source");
     } finally {
       setDeletingFileId(null);
     }
@@ -1322,31 +1006,21 @@ export default function ChatbotDetailPage() {
         { method: "POST" },
       );
 
-      // Optimistically update source status to "processing" (embeddings are being created)
       setKnowledgeSources((prev) =>
         prev.map((s) =>
           s.id === sourceId ? { ...s, status: "processing" as const } : s,
         ),
       );
 
-      setToastMessage({
-        type: "success",
-        message: "Crawl stopped. Processing crawled pages...",
-      });
-
-      // Refresh after a short delay to get updated status
+      toast.success("Crawl stopped. Processing crawled pages...");
       setTimeout(() => fetchKnowledgeSources(false), 2000);
     } catch (err: any) {
-      setToastMessage({
-        type: "error",
-        message: err.message || "Failed to stop crawl",
-      });
+      toast.error(err.message || "Failed to stop crawl");
     }
   };
 
   const handlePreviewFile = async (file: any) => {
     if (!file?.files?.[0]) return;
-
     const uploadedFile = file.files[0];
     const filename = uploadedFile.filename;
     const fileExtension = filename.split(".").pop()?.toLowerCase();
@@ -1359,29 +1033,10 @@ export default function ChatbotDetailPage() {
         process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
       const fileUrl = `${API_URL}/api/v1/chatbots/files/${uploadedFile.id}/preview?token=${token}`;
 
-      // Text-based files: fetch content and show in modal
       const textFormats = [
-        "txt",
-        "md",
-        "csv",
-        "json",
-        "xml",
-        "html",
-        "htm",
-        "yaml",
-        "yml",
-        "log",
-        "ini",
-        "cfg",
-        "conf",
-        "env",
-        "sh",
-        "bat",
-        "py",
-        "js",
-        "ts",
-        "css",
-        "sql",
+        "txt", "md", "csv", "json", "xml", "html", "htm", "yaml", "yml",
+        "log", "ini", "cfg", "conf", "env", "sh", "bat", "py", "js", "ts",
+        "css", "sql",
       ];
       if (fileExtension && textFormats.includes(fileExtension)) {
         setLoadingPreviewFileId(uploadedFile.id);
@@ -1389,25 +1044,18 @@ export default function ChatbotDetailPage() {
           const response = await fetch(fileUrl);
           if (!response.ok) throw new Error("Failed to fetch file");
           const text = await response.text();
-          setPreviewFile({
-            filename,
-            content: text,
-            type: fileExtension,
-            mode: "text",
-          });
+          setPreviewFile({ filename, content: text, type: fileExtension, mode: "text" });
         } finally {
           setLoadingPreviewFileId(null);
         }
         return;
       }
 
-      // PDF: open in new tab (browsers render natively)
       if (fileExtension === "pdf") {
         window.open(fileUrl, "_blank");
         return;
       }
 
-      // DOCX/PPTX/XLSX: download instead of iframe (Google Docs Viewer can't access local/private URLs)
       const officeFormats = ["docx", "doc", "pptx", "ppt", "xlsx", "xls"];
       if (fileExtension && officeFormats.includes(fileExtension)) {
         setPreviewFile({
@@ -1420,20 +1068,14 @@ export default function ChatbotDetailPage() {
         return;
       }
 
-      // Image files: show in modal as image
       const imageFormats = ["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp"];
       if (fileExtension && imageFormats.includes(fileExtension)) {
         setPreviewFile({
-          filename,
-          content: "",
-          type: fileExtension,
-          url: fileUrl,
-          mode: "iframe",
+          filename, content: "", type: fileExtension, url: fileUrl, mode: "iframe",
         });
         return;
       }
 
-      // All other file types: offer download link (don't auto-download)
       setPreviewFile({
         filename,
         content: `This file type (.${fileExtension}) cannot be previewed in the browser.`,
@@ -1442,7 +1084,7 @@ export default function ChatbotDetailPage() {
         mode: "download",
       });
     } catch (err: any) {
-      alert(err.message || "Failed to open file preview");
+      toast.error(err.message || "Failed to open file preview");
     }
   };
 
@@ -1455,17 +1097,12 @@ export default function ChatbotDetailPage() {
         method: "DELETE",
       });
 
-      // Refresh knowledge sources and check for empty crawl sources
       const updatedSources = await fetchKnowledgeSources();
       if (updatedSources) {
-        const crawlSources = updatedSources.filter(
-          (s) => s.source_type === "crawled_url",
-        );
-        const emptyCrawlSources = crawlSources.filter((source) => {
-          return !source.pages || source.pages.length === 0;
-        });
+        const emptyCrawlSources = updatedSources
+          .filter((s) => s.source_type === "crawled_url")
+          .filter((source) => !source.pages || source.pages.length === 0);
 
-        // Delete empty crawl sources
         if (emptyCrawlSources.length > 0) {
           for (const source of emptyCrawlSources) {
             try {
@@ -1481,14 +1118,12 @@ export default function ChatbotDetailPage() {
               );
             }
           }
-          // Refresh again after deleting empty sources
           await fetchKnowledgeSources();
         }
       }
-      // Refresh stats after deleting page
       fetchChatbotStats();
     } catch (err: any) {
-      alert(err.message || "Failed to delete page");
+      toast.error(err.message || "Failed to delete page");
     }
   };
 
@@ -1521,26 +1156,17 @@ export default function ChatbotDetailPage() {
         body: JSON.stringify({ ids }),
       });
 
-      // Reset selection
       if (type === "pages") setSelectedPages([]);
       else if (type === "files") setSelectedFiles([]);
       else if (type === "qa") setSelectedQAs([]);
 
-      // Refresh knowledge sources to get updated state
       const updatedSources = await fetchKnowledgeSources();
 
-      // If pages were deleted, check for empty crawl sources and delete them
       if (type === "pages" && updatedSources) {
-        // Find crawl sources with no pages
-        const crawlSources = updatedSources.filter(
-          (s) => s.source_type === "crawled_url",
-        );
-        const emptyCrawlSources = crawlSources.filter((source) => {
-          // Check if source has any pages
-          return !source.pages || source.pages.length === 0;
-        });
+        const emptyCrawlSources = updatedSources
+          .filter((s) => s.source_type === "crawled_url")
+          .filter((source) => !source.pages || source.pages.length === 0);
 
-        // Delete empty crawl sources
         if (emptyCrawlSources.length > 0) {
           for (const source of emptyCrawlSources) {
             try {
@@ -1556,24 +1182,12 @@ export default function ChatbotDetailPage() {
               );
             }
           }
-          // Refresh again after deleting empty sources
           await fetchKnowledgeSources();
         }
-        // Refresh stats after deleting pages
-        fetchChatbotStats();
       }
-
-      if (type === "qa") {
-        // Refresh stats after deleting QA
-        fetchChatbotStats();
-      }
-
-      if (type === "files") {
-        // Refresh stats after deleting files
-        fetchChatbotStats();
-      }
+      fetchChatbotStats();
     } catch (err: any) {
-      alert(err.message || "Bulk delete failed");
+      toast.error(err.message || "Bulk delete failed");
     } finally {
       setIsBulkDeleting(false);
     }
@@ -1581,19 +1195,14 @@ export default function ChatbotDetailPage() {
 
   const handleToggleStatus = async () => {
     if (!chatbot) return;
-
     try {
       const token = getAccessToken();
       if (!token) return;
-
       const newStatus = chatbot.status === "active" ? "paused" : "active";
-
       await apiRequestWithAuth(`/api/v1/chatbots/${chatbotId}`, token, {
         method: "PATCH",
         body: JSON.stringify({ status: newStatus }),
       });
-
-      // Refresh chatbot data and stats to update overview and recent activity
       fetchChatbotDetails();
       fetchChatbotStats();
     } catch (err) {
@@ -1608,18 +1217,15 @@ export default function ChatbotDetailPage() {
       )
     )
       return;
-
     try {
       const token = getAccessToken();
       if (!token) return;
-
       await apiRequestWithAuth(`/api/v1/chatbots/${chatbotId}`, token, {
         method: "DELETE",
       });
-
       router.push("/dashboard/chatbots");
     } catch (err: any) {
-      alert(err.message || "Failed to delete chatbot");
+      toast.error(err.message || "Failed to delete chatbot");
     }
   };
 
@@ -1635,9 +1241,7 @@ export default function ChatbotDetailPage() {
         `${API_URL}/api/v1/chatbots/${chatbotId}/activities/export`,
         {
           method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         },
       );
 
@@ -1648,7 +1252,6 @@ export default function ChatbotDetailPage() {
 
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
-
       const contentDisposition = response.headers.get("Content-Disposition");
       const filenameMatch = contentDisposition?.match(/filename=\"?([^"]+)\"?/);
       const filename =
@@ -1662,10 +1265,7 @@ export default function ChatbotDetailPage() {
       anchor.remove();
       window.URL.revokeObjectURL(url);
     } catch (err: any) {
-      setToastMessage({
-        type: "error",
-        message: err.message || "Failed to export activity",
-      });
+      toast.error(err.message || "Failed to export activity");
     } finally {
       setIsExportingRecentActivity(false);
     }
@@ -1687,9 +1287,7 @@ export default function ChatbotDetailPage() {
     const end = Math.min(recentActivityTotalPages - 1, recentActivityPage + 1);
 
     if (start > 2) items.push("ellipsis-left");
-    for (let page = start; page <= end; page += 1) {
-      items.push(page);
-    }
+    for (let page = start; page <= end; page += 1) items.push(page);
     if (end < recentActivityTotalPages - 1) items.push("ellipsis-right");
 
     items.push(recentActivityTotalPages);
@@ -1699,16 +1297,15 @@ export default function ChatbotDetailPage() {
   const handleSettingsSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!chatbot) return;
-
     try {
       setIsSavingSettings(true);
       setSettingsError(null);
       const token = getAccessToken();
       if (!token) return;
 
-      const formData = new FormData(e.currentTarget);
-      const name = formData.get("name") as string;
-      const status = formData.get("status") as "draft" | "active" | "paused";
+      const fd = new FormData(e.currentTarget);
+      const name = fd.get("name") as string;
+      const status = fd.get("status") as "draft" | "active" | "paused";
 
       await apiRequestWithAuth(`/api/v1/chatbots/${chatbotId}`, token, {
         method: "PATCH",
@@ -1732,26 +1329,21 @@ export default function ChatbotDetailPage() {
       const token = getAccessToken();
       if (!token) return;
 
-      // PATCH returns the updated appearance (including fresh translations)
       const updated = await apiRequestWithAuth<AppearanceData>(
         `/api/v1/chatbots/${chatbotId}/appearance`,
         token,
-        {
-          method: "PATCH",
-          body: JSON.stringify(data),
-        },
+        { method: "PATCH", body: JSON.stringify(data) },
       );
 
-      // Use the PATCH response directly so translations are immediately visible
-      if (updated && updated.id) {
-        setAppearance(updated);
-      }
+      if (updated && updated.id) setAppearance(updated);
 
       setAppearanceSuccessMessage("Appearance settings saved successfully!");
       setTimeout(() => setAppearanceSuccessMessage(null), 3000);
 
-      // Also refresh from GET to reset isDirty and ensure full sync
       await fetchAppearance();
+
+      // Reset form dirty state so isDirty becomes false after successful save
+      form.reset(form.getValues());
     } catch (err: any) {
       console.error("Failed to save appearance:", err);
       setAppearanceError(err.message || "Failed to save appearance settings");
@@ -1781,8 +1373,80 @@ export default function ChatbotDetailPage() {
     );
   };
 
+  // ── Set header bar content ──
+  useEffect(() => {
+    if (chatbot) {
+      const roleLabel =
+        chatbot.permission_level.charAt(0).toUpperCase() +
+        chatbot.permission_level.slice(1);
+      setContent({
+        title: (
+          <>
+            <Link
+              href="/dashboard/chatbots"
+              className="text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Chatbots
+            </Link>
+            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="inline-flex items-center gap-1 bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 to-teal-600 hover:opacity-80 transition-opacity focus:outline-none">
+                  {chatbot.name}
+                  <ChevronDown className="h-3 w-3 text-emerald-600 opacity-60" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-56 max-h-64 overflow-y-auto">
+                {allChatbots.map((bot) => (
+                  <DropdownMenuItem
+                    key={bot.id}
+                    onClick={() => {
+                      if (bot.id !== chatbotId) router.push(`/dashboard/chatbots/${bot.id}`);
+                    }}
+                    className={cn(
+                      "cursor-pointer",
+                      bot.id === chatbotId && "bg-accent font-medium"
+                    )}
+                  >
+                    <span className="truncate">{bot.name}</span>
+                    {bot.id === chatbotId && (
+                      <Check className="h-3.5 w-3.5 ml-auto shrink-0 text-emerald-600" />
+                    )}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Badge
+              variant={
+                chatbot.status === "active"
+                  ? "active"
+                  : chatbot.status === "paused"
+                    ? "paused"
+                    : "draft"
+              }
+              className="text-[10px] ml-1"
+            >
+              {chatbot.status.charAt(0).toUpperCase() + chatbot.status.slice(1)}
+            </Badge>
+            <Badge variant="outline" className="text-[10px]">
+              {roleLabel}
+            </Badge>
+          </>
+        ),
+      });
+    } else {
+      setContent({ title: "Chatbots" });
+    }
+    return () => setContent(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chatbot, allChatbots, chatbotId, router, setContent]);
+
+  // ═══════════════════════════════════════════════════════════
+  // Early Returns
+  // ═══════════════════════════════════════════════════════════
+
   if (isLoading && !chatbot) {
-    return <PageLoader />;
+    return <SkeletonChatbotPage />;
   }
 
   if (error || !chatbot) {
@@ -1803,16 +1467,11 @@ export default function ChatbotDetailPage() {
     );
   }
 
+  // ── Derived Values ──
   const canEdit = ["owner", "admin", "editor"].includes(
     chatbot.permission_level,
   );
-  const accountTypeLabel = isOrgOwner
-    ? "Org Owner"
-    : isAdmin
-      ? "Admin"
-      : "Member";
 
-  // Permission-based visibility
   const canViewKnowledge =
     chatbot.can_manage_knowledge ||
     chatbot.permission_level === "owner" ||
@@ -1824,34 +1483,17 @@ export default function ChatbotDetailPage() {
   const canViewSettings =
     chatbot.permission_level === "owner" ||
     chatbot.permission_level === "admin";
-  const canResolveQueries =
-    chatbot.can_resolve_queries ||
-    chatbot.permission_level === "owner" ||
-    chatbot.permission_level === "admin";
-  const canViewAnalyticsBilling =
-    chatbot.can_view_analytics_billing ||
-    chatbot.permission_level === "owner" ||
-    chatbot.permission_level === "admin";
 
-  // Helper function to extract QA pairs from knowledge sources
-  const getQAPairs = (): QAPair[] => {
-    return knowledgeSources
-      .filter((s) => s.source_type === "qa_pair" && s.qa_pairs)
-      .flatMap((s) => s.qa_pairs || []);
-  };
+  const qaPairs: QAPair[] = knowledgeSources
+    .filter((s) => s.source_type === "qa_pair" && s.qa_pairs)
+    .flatMap((s) => s.qa_pairs || []);
 
-  const qaPairs = getQAPairs();
-
-  // Knowledge base filtering
   const crawlSources = knowledgeSources.filter(
     (s) => s.source_type === "crawled_url",
   );
   const fileSources = knowledgeSources.filter(
     (s) => s.source_type === "uploaded_file",
   );
-  const qaSources = knowledgeSources.filter((s) => s.source_type === "qa_pair");
-
-  // Flattened pages for crawl tab
   const allCrawledPages = crawlSources.flatMap((s) =>
     (s.pages || []).map((p) => ({
       ...p,
@@ -1859,11 +1501,14 @@ export default function ChatbotDetailPage() {
       source_url: s.source_url,
     })),
   );
-
-  // Show all crawl sources for total visibility (even failed or newly added)
   const crawlSourcesWithPages = crawlSources;
 
+  // ═══════════════════════════════════════════════════════════
+  // Render
+  // ═══════════════════════════════════════════════════════════
+
   return (
+    <>
     <div
       className={cn(
         "space-y-6 transition-all duration-300 ease-in-out",
@@ -1872,161 +1517,25 @@ export default function ChatbotDetailPage() {
           : "opacity-100 translate-y-0",
       )}
     >
-      {/* Toast Notification */}
-      {toastMessage && (
-        <div
-          className={`fixed top-4 right-4 z-50 max-w-md px-4 py-3 rounded-lg shadow-lg border flex items-center gap-3 animate-in slide-in-from-top-2 ${
-            toastMessage.type === "error"
-              ? "bg-red-50 border-red-200 text-red-800"
-              : toastMessage.type === "success"
-                ? "bg-emerald-50 border-emerald-200 text-emerald-800"
-                : "bg-blue-50 border-blue-200 text-blue-800"
-          }`}
-        >
-          {toastMessage.type === "error" && (
-            <AlertCircle className="h-5 w-5 flex-shrink-0" />
-          )}
-          {toastMessage.type === "success" && (
-            <CheckCircle2 className="h-5 w-5 flex-shrink-0" />
-          )}
-          {toastMessage.type === "info" && (
-            <RefreshCw className="h-5 w-5 flex-shrink-0" />
-          )}
-          <p className="text-sm font-medium">{toastMessage.message}</p>
-          <button
-            onClick={() => setToastMessage(null)}
-            className="ml-auto p-1 hover:bg-black/10 rounded"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-      )}
 
-      {/* Header - Reduced Width */}
-      <div className="flex items-center justify-between max-w-4xl">
-        <div className="space-y-1">
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold flex items-center">
-              <Link
-                href="/dashboard/chatbots"
-                className="text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Chatbots
-              </Link>
-              {/* Chatbot switcher dropdown trigger */}
-              <div className="relative inline-flex items-center" ref={switcherRef}>
-                <button
-                  onClick={() => setIsSwitcherOpen(!isSwitcherOpen)}
-                  className="mx-1.5 p-0.5 rounded hover:bg-muted/60 transition-colors group"
-                  title="Switch chatbot"
-                >
-                  <ChevronRight
-                    className={cn(
-                      "h-4 w-4 text-muted-foreground group-hover:text-foreground transition-transform duration-200",
-                      isSwitcherOpen && "rotate-90",
-                    )}
-                  />
-                </button>
-                {isSwitcherOpen && (
-                  <div className="absolute left-0 top-full mt-1 w-64 bg-popover border rounded-lg shadow-lg z-50 py-1 animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-150">
-                    <div className="px-3 py-1.5 text-xs font-medium text-muted-foreground border-b mb-1">
-                      Switch chatbot
-                    </div>
-                    <div className="max-h-64 overflow-y-auto">
-                      {allChatbots.map((bot) => (
-                        <button
-                          key={bot.id}
-                          onClick={() => handleSwitchChatbot(bot.id)}
-                          className={cn(
-                            "w-full text-left px-3 py-2 text-sm hover:bg-muted/60 transition-colors flex items-center justify-between gap-2",
-                            bot.id === chatbotId && "bg-muted/40 font-medium",
-                          )}
-                        >
-                          <span className="truncate">{bot.name}</span>
-                          <div className="flex items-center gap-1.5 shrink-0">
-                            <Badge
-                              variant={
-                                bot.status === "active"
-                                  ? "active"
-                                  : bot.status === "paused"
-                                    ? "paused"
-                                    : "draft"
-                              }
-                              className="text-[10px] px-1.5 py-0"
-                            >
-                              {bot.status}
-                            </Badge>
-                            {bot.id === chatbotId && (
-                              <Check className="h-3.5 w-3.5 text-emerald-600" />
-                            )}
-                          </div>
-                        </button>
-                      ))}
-                      {allChatbots.length === 0 && (
-                        <div className="px-3 py-4 text-sm text-muted-foreground text-center">
-                          No chatbots found
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 to-teal-600">
-                {chatbot.name}
-              </span>
-            </h1>
-            <Badge
-              variant={
-                chatbot.status === "active"
-                  ? "active"
-                  : chatbot.status === "paused"
-                    ? "paused"
-                    : "draft"
-              }
-            >
-              {chatbot.status.charAt(0).toUpperCase() + chatbot.status.slice(1)}
-            </Badge>
-            <Badge variant="outline" className="text-xs">
-              {accountTypeLabel}
-            </Badge>
-          </div>
-          {chatbot.description && (
-            <p className="text-muted-foreground text-sm">
-              {chatbot.description}
-            </p>
-          )}
-        </div>
-      </div>
-
-      {/* Tab Navigation - Full Width Content */}
+      {/* Tabs */}
       <Tabs
         value={activeTab}
-        onValueChange={(value) => {
-          setActiveTab(value);
-          // Handle on-demand loading if background prefetch hasn't finished
-          if (value === "knowledge" && !hasLoadedKnowledge)
-            fetchKnowledgeSources();
-          if (value === "appearance" && !hasLoadedAppearance) fetchAppearance();
-          if (value === "overview") {
-            fetchChatbotStats();
-            fetchRecentActivity(recentActivityPage);
-          }
-        }}
+        onValueChange={handleTabChange}
         className="w-full"
       >
-        {/* Calculate visible tabs for grid columns */}
         {(() => {
           const visibleTabs = [
-            true, // Overview always visible
-            canViewKnowledge, // Knowledge
-            canViewAppearance, // Appearance
-            true, // Install always visible
-            canViewSettings, // Settings
+            true,
+            canViewKnowledge,
+            canViewAppearance,
+            true,
+            canViewSettings,
           ].filter(Boolean).length;
 
           return (
             <TabsList
-              className={`grid w-full lg:w-auto`}
+              className="grid w-full lg:w-auto"
               style={{
                 gridTemplateColumns: `repeat(${visibleTabs}, minmax(0, 1fr))`,
               }}
@@ -2072,2734 +1581,291 @@ export default function ChatbotDetailPage() {
           );
         })()}
 
-        {/* Overview Tab */}
+        {/* ── Overview Tab ── */}
         <TabsContent value="overview" className="space-y-6">
-          {/* Quick Stats */}
-          <div className="grid gap-4 md:grid-cols-3">
-            <Card className="border-l-4 border-l-emerald-500">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Total Conversations
-                </CardTitle>
-                <div className="p-2 rounded-lg bg-emerald-50">
-                  <MessageSquare className="h-4 w-4 text-emerald-600" />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-emerald-600">
-                  {stats?.total_conversations || 0}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {stats?.total_conversations === 0
-                    ? "New chatbot"
-                    : "Active conversations"}
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card
-              className="cursor-pointer hover:bg-muted/50 transition-colors border-l-4 border-l-emerald-500"
-              onClick={() => setActiveTab("knowledge")}
-            >
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Knowledge Sources
-                </CardTitle>
-                <div className="p-2 rounded-lg bg-emerald-50">
-                  <Database className="h-4 w-4 text-emerald-600" />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-emerald-600">
-                  {stats?.total_knowledge_sources || 0}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {stats?.knowledge_breakdown?.total_crawled_urls || 0} crawl
-                  sites •{" "}
-                  {stats?.knowledge_breakdown?.total_uploaded_files || 0} files
-                  • {stats?.knowledge_breakdown?.total_qa_pairs || 0} Q&A
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-l-4 border-l-teal-500">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Knowledge Base Size
-                </CardTitle>
-                <div className="p-2 rounded-lg bg-teal-50">
-                  <Database className="h-4 w-4 text-teal-600" />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-teal-600">
-                  {stats?.total_kb_size
-                    ? stats.total_kb_size >= 1024 * 1024
-                      ? `${(stats.total_kb_size / (1024 * 1024)).toFixed(2)} MB`
-                      : `${(stats.total_kb_size / 1024).toFixed(1)} KB`
-                    : "0.0 KB"}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Total indexed content
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Quick Actions */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Quick Actions</CardTitle>
-              <CardDescription>
-                Common tasks to manage your chatbot
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 md:grid-cols-2">
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "h-auto flex-col items-start p-4 relative overflow-hidden",
-                    navigationTarget === "analytics" &&
-                      "bg-accent/40 ring-1 ring-primary/30",
-                  )}
-                  disabled={navigationTarget !== null}
-                  onClick={() => {
-                    setNavigationTarget("analytics");
-                    router.push(`/dashboard/analytics?chatbot_id=${chatbotId}`);
-                  }}
-                >
-                  {navigationTarget === "analytics" && (
-                    <div className="loading-shimmer" aria-hidden="true" />
-                  )}
-                  <BarChart3 className="h-5 w-5 mb-2" />
-                  <div className="text-left">
-                    <div className="font-semibold">View Analytics</div>
-                    <div className="text-xs text-muted-foreground mt-1">
-                      See usage and performance
-                    </div>
-                  </div>
-                </Button>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "h-auto flex-col items-start p-4 relative overflow-hidden",
-                    navigationTarget === "usage" &&
-                      "bg-accent/40 ring-1 ring-primary/30",
-                  )}
-                  disabled={navigationTarget !== null}
-                  onClick={() => {
-                    setNavigationTarget("usage");
-                    router.push(`/dashboard/usage?chatbot_id=${chatbotId}`);
-                  }}
-                >
-                  {navigationTarget === "usage" && (
-                    <div className="loading-shimmer" aria-hidden="true" />
-                  )}
-                  <TrendingUp className="h-5 w-5 mb-2" />
-                  <div className="text-left">
-                    <div className="font-semibold">Show Usage</div>
-                    <div className="text-xs text-muted-foreground mt-1">
-                      Message counts and billing
-                    </div>
-                  </div>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Recent Activity */}
-          <Card>
-            <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <CardTitle>Recent Activity</CardTitle>
-                <CardDescription>
-                  Latest updates and changes to this chatbot
-                </CardDescription>
-              </div>
-              <div className="flex items-center gap-2">
-                <Badge variant="outline">{recentActivityTotal} total</Badge>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleExportRecentActivity}
-                  disabled={isExportingRecentActivity}
-                >
-                  {isExportingRecentActivity ? (
-                    <InlineSpinner size="sm" className="mr-2" />
-                  ) : (
-                    <Download className="h-4 w-4 mr-2" />
-                  )}
-                  Export All
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="relative">
-                {recentActivity.length > 0 ? (
-                  <div
-                    className={cn(
-                      "space-y-4 transition-opacity",
-                      isLoadingRecentActivity ? "opacity-60" : "opacity-100",
-                    )}
-                  >
-                    {recentActivity.map((item) => {
-                      const isTeamActivity =
-                        item.type === "team_member_added" ||
-                        item.type === "team_member_updated" ||
-                        item.type === "team_member_removed" ||
-                        item.type === "team_permissions_updated";
-
-                      return (
-                        <div
-                          key={item.id}
-                          className="flex items-start gap-4 text-sm"
-                        >
-                          <div
-                            className={cn(
-                              "mt-1 p-1.5 rounded-full",
-                              item.type === "knowledge_source"
-                                ? "bg-emerald-50 text-emerald-600"
-                                : item.type === "conversation"
-                                  ? "bg-emerald-50 text-emerald-600"
-                                  : isTeamActivity
-                                    ? "bg-teal-50 text-teal-600"
-                                    : "bg-slate-100 text-slate-600",
-                            )}
-                          >
-                            {item.type === "knowledge_source" ? (
-                              <Database className="h-3.5 w-3.5" />
-                            ) : item.type === "conversation" ? (
-                              <MessageSquare className="h-3.5 w-3.5" />
-                            ) : isTeamActivity ? (
-                              <Users className="h-3.5 w-3.5" />
-                            ) : (
-                              <Settings className="h-3.5 w-3.5" />
-                            )}
-                          </div>
-                          <div className="flex-1 space-y-0.5">
-                            <p className="font-medium text-foreground">
-                              {item.description}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {new Date(item.created_at).toLocaleString()}
-                            </p>
-                          </div>
-                        </div>
-                      );
-                    })}
-                    <div className="flex items-center justify-between border-t pt-3">
-                      <p className="text-xs text-muted-foreground">
-                        Page{" "}
-                        {recentActivityTotalPages > 0 ? recentActivityPage : 0}{" "}
-                        of {recentActivityTotalPages}
-                      </p>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="icon"
-                          className="h-8 w-8"
-                          disabled={
-                            recentActivityPage <= 1 || isLoadingRecentActivity
-                          }
-                          onClick={() =>
-                            fetchRecentActivity(recentActivityPage - 1)
-                          }
-                        >
-                          <ChevronLeft className="h-4 w-4" />
-                        </Button>
-                        {getActivityPaginationItems().map((pageItem, index) =>
-                          typeof pageItem === "number" ? (
-                            <Button
-                              type="button"
-                              key={pageItem}
-                              variant={
-                                pageItem === recentActivityPage
-                                  ? "default"
-                                  : "outline"
-                              }
-                              size="icon"
-                              className="h-8 w-8"
-                              disabled={isLoadingRecentActivity}
-                              onClick={() => fetchRecentActivity(pageItem)}
-                            >
-                              {pageItem}
-                            </Button>
-                          ) : (
-                            <span
-                              key={`${pageItem}-${index}`}
-                              className="px-2 text-sm text-muted-foreground"
-                            >
-                              ...
-                            </span>
-                          ),
-                        )}
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="icon"
-                          className="h-8 w-8"
-                          disabled={
-                            recentActivityTotalPages === 0 ||
-                            recentActivityPage >= recentActivityTotalPages ||
-                            isLoadingRecentActivity
-                          }
-                          onClick={() =>
-                            fetchRecentActivity(recentActivityPage + 1)
-                          }
-                        >
-                          <ChevronRight className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="min-h-[72px] flex items-center text-sm text-muted-foreground">
-                    {isLoadingRecentActivity
-                      ? "Loading recent activity..."
-                      : "No recent activity to display."}
-                  </div>
-                )}
-                {isLoadingRecentActivity && recentActivity.length > 0 && (
-                  <OverlayLoader />
-                )}
-              </div>
-            </CardContent>
-          </Card>
+          <ErrorBoundary compact>
+          <OverviewTab
+            chatbotId={chatbotId}
+            stats={stats}
+            recentActivity={recentActivity}
+            recentActivityPage={recentActivityPage}
+            recentActivityTotal={recentActivityTotal}
+            recentActivityTotalPages={recentActivityTotalPages}
+            isLoadingRecentActivity={isLoadingRecentActivity}
+            isExportingRecentActivity={isExportingRecentActivity}
+            navigationTarget={navigationTarget}
+            setNavigationTarget={setNavigationTarget}
+            setActiveTab={setActiveTab}
+            fetchRecentActivity={fetchRecentActivity}
+            handleExportRecentActivity={handleExportRecentActivity}
+            getActivityPaginationItems={getActivityPaginationItems}
+          />
+          </ErrorBoundary>
         </TabsContent>
 
-        {/* Knowledge Base Tab */}
-        <TabsContent value="knowledge" className="space-y-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle>Add Knowledge</CardTitle>
-                <CardDescription>
-                  Manage the data sources your chatbot learns from
-                </CardDescription>
-              </div>
-              {canEdit && (
-                <Button onClick={() => setIsAddKnowledgeOpen(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Source
-                </Button>
-              )}
-            </CardHeader>
-            <CardContent>
-              {isAddKnowledgeOpen && (
-                <div className="mb-6 p-4 border rounded-lg bg-muted/30">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex bg-muted p-1 rounded-md">
-                      <Button
-                        variant={
-                          knowledgeType === "url" ? "secondary" : "ghost"
-                        }
-                        size="sm"
-                        onClick={() => setKnowledgeType("url")}
-                        className="text-xs"
-                      >
-                        <Globe className="h-3 w-3 mr-1" /> Website
-                      </Button>
-                      <Button
-                        variant={
-                          knowledgeType === "file" ? "secondary" : "ghost"
-                        }
-                        size="sm"
-                        onClick={() => setKnowledgeType("file")}
-                        className="text-xs"
-                      >
-                        <Upload className="h-3 w-3 mr-1" /> File
-                      </Button>
-                      <Button
-                        variant={knowledgeType === "qa" ? "secondary" : "ghost"}
-                        size="sm"
-                        onClick={() => setKnowledgeType("qa")}
-                        className="text-xs"
-                      >
-                        <HelpCircle className="h-3 w-3 mr-1" /> Q&A
-                      </Button>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setIsAddKnowledgeOpen(false)}
-                      type="button"
-                    >
-                      <CloseIcon className="h-4 w-4" />
-                    </Button>
-                  </div>
-
-                  {knowledgeType === "url" ? (
-                    <form onSubmit={handleCrawl} className="space-y-4">
-                      <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                        <p className="text-sm text-blue-800">
-                          <strong>💡 Tip:</strong> Add your website URL that
-                          contains information you want your bot to learn from.
-                          The bot will crawl and index the content from the
-                          pages it finds.
-                        </p>
-                      </div>
-                      <div className="flex gap-2">
-                        <div className="flex-1 space-y-1">
-                          <Label htmlFor="url">Website URL</Label>
-                          <Input
-                            id="url"
-                            placeholder="https://example.com/docs"
-                            value={newUrl}
-                            onChange={(e) => setNewUrl(e.target.value)}
-                            required
-                          />
-                        </div>
-                        <div className="self-end">
-                          <Button
-                            type="submit"
-                            disabled={isCrawling || !newUrl.trim()}
-                          >
-                            {isCrawling ? (
-                              <>
-                                <ButtonSpinner />
-                                Starting...
-                              </>
-                            ) : (
-                              <>
-                                <Search className="h-4 w-4 mr-2" />
-                                Crawl URL
-                              </>
-                            )}
-                          </Button>
-                        </div>
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        We&apos;ll crawl the website and process its content for
-                        your chatbot.
-                      </p>
-                    </form>
-                  ) : knowledgeType === "file" ? (
-                    <form onSubmit={handleFileUpload} className="space-y-4">
-                      <div className="mb-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-                        <p className="text-sm text-green-800">
-                          <strong>💡 Tip:</strong> Upload policy documents,
-                          product guides, presentations (PPT), PDFs, or any
-                          files related to your product, firm, or website that
-                          you want the bot to reference.
-                        </p>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="file">
-                          Upload Files (PDF, DOCX, TXT, MD)
-                        </Label>
-                        <div className="flex gap-2">
-                          <Input
-                            id="file"
-                            type="file"
-                            multiple
-                            accept=".pdf,.docx,.txt,.md"
-                            onChange={(e) => setUploadFiles(e.target.files)}
-                            className="flex-1"
-                            required
-                          />
-                          <Button
-                            type="submit"
-                            disabled={
-                              isUploading ||
-                              !uploadFiles ||
-                              uploadFiles.length === 0
-                            }
-                          >
-                            {isUploading ? (
-                              <>
-                                <ButtonSpinner />
-                                Uploading...
-                              </>
-                            ) : (
-                              <>
-                                <Upload className="h-4 w-4 mr-2" />
-                                Upload
-                              </>
-                            )}
-                          </Button>
-                        </div>
-                        <p className="text-xs text-muted-foreground flex items-center gap-1">
-                          <AlertCircle className="h-3 w-3" /> Max file size 10MB
-                        </p>
-                      </div>
-                    </form>
-                  ) : (
-                    <div className="space-y-6">
-                      <div className="mb-3 p-3 bg-teal-50 border border-teal-200 rounded-lg">
-                        <p className="text-sm text-teal-800">
-                          <strong>💡 Tip:</strong> Add frequently asked
-                          questions (FAQs) from your site or any specific
-                          questions you want your bot to answer consistently.
-                          This ensures accurate responses for common queries.
-                        </p>
-                      </div>
-                      <form onSubmit={handleQASubmit} className="space-y-4">
-                        <div className="grid gap-4">
-                          <div className="space-y-1">
-                            <Label htmlFor="q">Question</Label>
-                            <Input
-                              id="q"
-                              value={newQA.question}
-                              onChange={(e) =>
-                                setNewQA({ ...newQA, question: e.target.value })
-                              }
-                              placeholder="e.g. What are your opening hours?"
-                              required
-                            />
-                          </div>
-                          <div className="space-y-1">
-                            <Label htmlFor="a">Answer</Label>
-                            <Input
-                              id="a"
-                              value={newQA.answer}
-                              onChange={(e) =>
-                                setNewQA({ ...newQA, answer: e.target.value })
-                              }
-                              placeholder="e.g. We are open from 9 AM to 6 PM."
-                              required
-                            />
-                          </div>
-                        </div>
-                        <Button type="submit">
-                          {editingQA ? "Update QA Pair" : "Add QA Pair"}
-                        </Button>
-                        {editingQA && (
-                          <Button
-                            variant="ghost"
-                            className="ml-2"
-                            onClick={() => {
-                              setEditingQA(null);
-                              setNewQA({ question: "", answer: "" });
-                            }}
-                          >
-                            Cancel
-                          </Button>
-                        )}
-                      </form>
-
-                      <div className="pt-4 border-t">
-                        <Label className="text-xs font-semibold uppercase text-muted-foreground">
-                          Or Bulk Upload (XLSX)
-                        </Label>
-                        <div className="mt-2 mb-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                          <p className="text-sm text-amber-800 mb-2">
-                            <strong>📊 Excel Format:</strong> Your XLSX file
-                            should contain two columns:
-                          </p>
-                          <ul className="text-xs text-amber-700 ml-4 space-y-1 list-disc">
-                            <li>
-                              <strong>Column A:</strong> &quot;question&quot; -
-                              The question text
-                            </li>
-                            <li>
-                              <strong>Column B:</strong> &quot;answer&quot; -
-                              The corresponding answer
-                            </li>
-                            <li>
-                              First row should be the header row with column
-                              names
-                            </li>
-                            <li>Each subsequent row represents one Q&A pair</li>
-                          </ul>
-                        </div>
-                        <form
-                          onSubmit={handleQAXlsxUpload}
-                          className="mt-2 flex gap-2"
-                        >
-                          <Input
-                            type="file"
-                            accept=".xlsx,.xls"
-                            onChange={(e) =>
-                              setQaXlsx(e.target.files?.[0] || null)
-                            }
-                            className="flex-1"
-                          />
-                          <Button
-                            type="submit"
-                            variant="outline"
-                            disabled={!qaXlsx}
-                          >
-                            <Upload className="h-4 w-4 mr-2" /> Upload XLSX
-                          </Button>
-                        </form>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <Tabs
-                value={knowledgeTab}
-                onValueChange={setKnowledgeTab}
-                className="w-full"
-              >
-                <TabsList className="mb-4">
-                  <TabsTrigger value="crawl" className="gap-2">
-                    <Globe className="h-4 w-4" /> Crawl{" "}
-                    {allCrawledPages.length > 0 && (
-                      <Badge variant="secondary" className="ml-1 h-5 px-1">
-                        {allCrawledPages.length}
-                      </Badge>
-                    )}
-                  </TabsTrigger>
-                  <TabsTrigger value="files" className="gap-2">
-                    <FileText className="h-4 w-4" /> Files{" "}
-                    {fileSources.length > 0 && (
-                      <Badge variant="secondary" className="ml-1 h-5 px-1">
-                        {fileSources.length}
-                      </Badge>
-                    )}
-                  </TabsTrigger>
-                  <TabsTrigger value="qa" className="gap-2">
-                    <MessageSquare className="h-4 w-4" /> Q&A{" "}
-                    {qaPairs.length > 0 && (
-                      <Badge variant="secondary" className="ml-1 h-5 px-1">
-                        {qaPairs.length}
-                      </Badge>
-                    )}
-                  </TabsTrigger>
-                </TabsList>
-
-                {isLoadingKnowledge ? (
-                  <SectionLoader minHeight="min-h-[200px]" />
-                ) : (
-                  <>
-                    {/* Crawl Tab Content */}
-                    <TabsContent value="crawl" className="space-y-4">
-                      {isCrawlScheduleOpen && selectedCrawlSource && (
-                        <CrawlScheduleModal
-                          knowledgeSourceId={selectedCrawlSource.id}
-                          sourceUrl={selectedCrawlSource.source_url || ""}
-                          pagesCount={selectedCrawlSource.pages_found || 0}
-                          lastSynced={selectedCrawlSource.updated_at ?? null}
-                          onClose={() => {
-                            setIsCrawlScheduleOpen(false);
-                            setSelectedCrawlSource(null);
-                          }}
-                          onSync={async () => {
-                            // Show toast that sync has started
-                            setToastMessage({
-                              type: "info",
-                              message:
-                                "Crawl started. This may take a few minutes...",
-                            });
-                            // Enable polling to track crawl progress
-                            setManuallyStartedCrawl(true);
-                            // Fetch immediately to get updated status (crawling)
-                            await fetchKnowledgeSources();
-                            // Also refresh stats
-                            fetchChatbotStats();
-                          }}
-                        />
-                      )}
-                      {crawlSourcesWithPages.length > 0 ? (
-                        <div className="space-y-4">
-                          {/* Persistent crawl notifications */}
-                          {crawlNotifications.length > 0 && (
-                            <div className="space-y-2">
-                              <div className="flex items-center justify-between">
-                                <span className="text-xs font-medium text-muted-foreground">
-                                  Recent Notifications
-                                </span>
-                                {crawlNotifications.length > 1 && (
-                                  <button
-                                    onClick={dismissAllNotifications}
-                                    className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                                  >
-                                    Dismiss all
-                                  </button>
-                                )}
-                              </div>
-                              {crawlNotifications.map((notif) => (
-                                <div
-                                  key={notif.id}
-                                  className={cn(
-                                    "px-3 py-2 rounded-lg border text-sm flex items-start gap-2",
-                                    notif.severity === "error"
-                                      ? "bg-red-50 border-red-200 text-red-800"
-                                      : notif.severity === "warning"
-                                        ? "bg-amber-50 border-amber-200 text-amber-800"
-                                        : "bg-blue-50 border-blue-200 text-blue-800",
-                                  )}
-                                >
-                                  {notif.severity === "error" ? (
-                                    <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
-                                  ) : notif.severity === "warning" ? (
-                                    <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
-                                  ) : (
-                                    <RefreshCw className="h-4 w-4 mt-0.5 shrink-0" />
-                                  )}
-                                  <p className="flex-1">{notif.message}</p>
-                                  <button
-                                    onClick={() => dismissNotification(notif.id)}
-                                    className="p-0.5 hover:bg-black/10 rounded shrink-0"
-                                  >
-                                    <X className="h-3.5 w-3.5" />
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                          {Array.from(
-                            new Map(
-                              crawlSourcesWithPages.map((ks) => [
-                                ks.source_url,
-                                ks,
-                              ]),
-                            ).values(),
-                          ).map((ks) => (
-                            <CrawlSourcePanel
-                              key={ks.id}
-                              source={ks}
-                              pages={allCrawledPages.filter(
-                                (p) => p.source_url === ks.source_url,
-                              )}
-                              selectedPages={selectedPages}
-                              onSelectionChange={setSelectedPages}
-                              onSchedule={() => {
-                                setSelectedCrawlSource(ks);
-                                setIsCrawlScheduleOpen(true);
-                              }}
-                              onDeleteSelected={() => handleBulkDelete("pages")}
-                              isBulkDeleting={isBulkDeleting}
-                              onStopCrawl={handleStopCrawl}
-                            />
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="text-center py-12 border-2 border-dashed rounded-xl">
-                          <Globe className="h-12 w-12 mx-auto text-gray-300 mb-3" />
-                          <p className="text-gray-500">
-                            No crawled pages found
-                          </p>
-                          <Button
-                            variant="link"
-                            onClick={() => {
-                              setKnowledgeType("url");
-                              setIsAddKnowledgeOpen(true);
-                            }}
-                          >
-                            Add website URL
-                          </Button>
-                        </div>
-                      )}
-                    </TabsContent>
-
-                    {/* Files Tab Content */}
-                    <TabsContent value="files" className="space-y-4">
-                      {fileSources.length > 0 && (
-                        <div className="flex items-center justify-between bg-muted/20 p-2 rounded-md mb-2">
-                          <div className="flex items-center gap-2">
-                            <Checkbox
-                              checked={
-                                selectedFiles.length === fileSources.length &&
-                                fileSources.length > 0
-                              }
-                              onCheckedChange={(checked: boolean) => {
-                                if (checked)
-                                  setSelectedFiles(
-                                    fileSources.map((s) => s.id),
-                                  );
-                                else setSelectedFiles([]);
-                              }}
-                            />
-                            <span className="text-sm font-medium">
-                              Select All
-                            </span>
-                          </div>
-                          {selectedFiles.length > 0 && (
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => handleBulkDelete("files")}
-                              disabled={isBulkDeleting}
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Delete {selectedFiles.length}
-                            </Button>
-                          )}
-                        </div>
-                      )}
-
-                      {fileSources.length > 0 ? (
-                        <div className="space-y-2">
-                          {fileSources.map((source) => (
-                            <div
-                              key={source.id}
-                              className={`flex items-center justify-between p-3 border rounded-lg hover:bg-muted/5 transition-colors ${
-                                selectedFiles.includes(source.id)
-                                  ? "bg-blue-50/30 border-blue-200"
-                                  : ""
-                              }`}
-                            >
-                              <div className="flex items-center gap-3">
-                                <Checkbox
-                                  checked={selectedFiles.includes(source.id)}
-                                  onCheckedChange={(checked: boolean) => {
-                                    if (checked)
-                                      setSelectedFiles([
-                                        ...selectedFiles,
-                                        source.id,
-                                      ]);
-                                    else
-                                      setSelectedFiles(
-                                        selectedFiles.filter(
-                                          (id) => id !== source.id,
-                                        ),
-                                      );
-                                  }}
-                                />
-                                <div className="h-8 w-8 rounded bg-blue-50 flex items-center justify-center text-blue-600">
-                                  <FileText className="h-4 w-4" />
-                                </div>
-                                <div>
-                                  <div className="font-medium text-sm">
-                                    {source.files && source.files.length > 0
-                                      ? source.files[0].filename
-                                      : "Uploaded File"}
-                                  </div>
-                                  <div className="text-xs text-muted-foreground">
-                                    {source.files && source.files.length > 0
-                                      ? `${(
-                                          source.files[0].file_size / 1024
-                                        ).toFixed(1)} KB`
-                                      : ""}{" "}
-                                    •{" "}
-                                    {new Date(
-                                      source.created_at,
-                                    ).toLocaleDateString()}
-                                  </div>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <Badge
-                                  variant={
-                                    source.status === "completed"
-                                      ? "success"
-                                      : "secondary"
-                                  }
-                                  className="text-[10px] px-1 h-4"
-                                >
-                                  {source.status}
-                                </Badge>
-                                {source.status === "completed" && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-8 px-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                    onClick={() => handlePreviewFile(source)}
-                                    disabled={loadingPreviewFileId !== null}
-                                    title="Preview file content"
-                                  >
-                                    {loadingPreviewFileId ===
-                                    source.files?.[0]?.id ? (
-                                      <InlineSpinner size="sm" />
-                                    ) : (
-                                      <>
-                                        <Eye className="h-4 w-4 mr-1" />
-                                        <span className="text-xs">Show</span>
-                                      </>
-                                    )}
-                                  </Button>
-                                )}
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                  onClick={() => handleDeleteSource(source.id)}
-                                  disabled={deletingFileId === source.id}
-                                  title="Delete file"
-                                >
-                                  {deletingFileId === source.id ? (
-                                    <InlineSpinner size="sm" />
-                                  ) : (
-                                    <Trash2 className="h-4 w-4" />
-                                  )}
-                                </Button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="text-center py-12 border-2 border-dashed rounded-xl">
-                          <FileText className="h-12 w-12 mx-auto text-gray-300 mb-3" />
-                          <p className="text-muted-foreground">
-                            No files uploaded yet
-                          </p>
-                          <Button
-                            variant="link"
-                            onClick={() => {
-                              setKnowledgeType("file");
-                              setIsAddKnowledgeOpen(true);
-                            }}
-                          >
-                            Upload your first file
-                          </Button>
-                        </div>
-                      )}
-                    </TabsContent>
-
-                    {/* Q&A Tab Content */}
-                    {/* Q&A Tab Content */}
-                    <TabsContent value="qa" className="space-y-4">
-                      {(() => {
-                        const qaSources = knowledgeSources.filter(
-                          (s) =>
-                            s.source_type === "qa_pair" &&
-                            s.source_url !== "manual" &&
-                            s.files?.length === 0, // Ensure it's not just a file upload but a logical bundle
-                        );
-
-                        // Standalone QAs (manual source) + unassigned ones?
-                        // Actually, list_qa_pairs returns ALL pairs.
-                        // We need to filter pairs that belong to "manual" source for the standalone list
-                        // But wait, the previous code showed ALL pairs.
-                        // If we show bundles, we should NOT show their pairs in the main list.
-                        // So we need to separate them.
-
-                        const bundleIds = qaSources.map((s) => s.id);
-                        const standaloneQAs = qaPairs.filter(
-                          (qa) =>
-                            !knowledgeSources.some(
-                              (ks) =>
-                                ks.id === (qa as any).knowledge_source_id && // Assuming we can get KS ID from QA pair
-                                bundleIds.includes(ks.id),
-                            ),
-                        );
-
-                        // The current QA query doesn't return knowledge_source_id on the QA object in the interface
-                        // We might need to rely on the knowledgeSources structure if it includes qa_pairs
-                        // Let's check the interface... KnowledgeSource has qa_pairs? Yes: qa_pairs?: QAPair[];
-
-                        // Better approach:
-                        // Iterate through knowledgeSources to render bundles.
-                        // Also show a section for "Manual Q&A" if the "manual" source exists.
-
-                        const manualSource = knowledgeSources.find(
-                          (s) =>
-                            s.source_type === "qa_pair" &&
-                            s.source_url === "manual",
-                        );
-
-                        // Fallback: if we can't find manual source but we have pairs that don't belong to known bundles
-                        // For now, let's treat `qaPairs` as the source of truth for ALL, but we want to visually group.
-                        // If `qaPairs` contains everything, we need to filter out those we display in panels.
-
-                        // Actually, usage of KnowledgeSourceResponse in backend for upload_qa_xlsx returns a KS with pre-loaded qa_pairs.
-                        // But `fetchKnowledgeSources` might not load all qa_pairs for every source to avoid payload size?
-                        // Let's assume for now we use the `knowledgeSources` array which hopefully includes `qa_pairs` if updated properly.
-                        // The `upload_qa_xlsx` returns the KS with pairs. `list_knowledge_sources` normally doesn't include potentially huge lists of pairs?
-                        // Wait, `ChatbotService.list_knowledge_sources` just returns KnowledgeSource objects.
-                        // The frontend 'qaPairs' state comes from `fetchQAPairs`.
-
-                        // We need to match pairs to sources.
-                        // The QAPair interface in frontend doesn't have knowledge_source_id.
-                        // Let's assume we render:
-                        // 1. QA Bundles (from knowledgeSources) -> BUT we need the pairs for them.
-                        // If the QA pair list API doesn't return source_id, we can't separate them easily on frontend without changing API.
-                        // Looking at backend `list_qa_pairs`: it returns `QAPairResponse` which DOES have `knowledge_source_id`.
-                        // The frontend `QAPair` interface just missed it. Let's update the interface first.
-
-                        return (
-                          <>
-                            {/* Render Bundles */}
-                            {qaSources.map((source) => {
-                              // Find pairs for this source
-                              const sourcePairs = qaPairs
-                                .filter(
-                                  (qa: any) =>
-                                    qa.knowledge_source_id === source.id,
-                                )
-                                .sort((a, b) => {
-                                  const timeA = new Date(
-                                    a.created_at || 0,
-                                  ).getTime();
-                                  const timeB = new Date(
-                                    b.created_at || 0,
-                                  ).getTime();
-                                  if (timeA !== timeB) return timeA - timeB;
-                                  return a.id.localeCompare(b.id);
-                                });
-
-                              return (
-                                <QABundlePanel
-                                  key={source.id}
-                                  source={source as any}
-                                  qaPairs={sourcePairs}
-                                  selectedPairs={selectedQAs}
-                                  onSelectionChange={setSelectedQAs}
-                                  onDeleteSource={() =>
-                                    handleDeleteSource(
-                                      source.id,
-                                      `Are you sure you want to delete this bundle? It contains ${sourcePairs.length} Q&A pairs. Bundle: ${source.source_url}`,
-                                    )
-                                  }
-                                  onDeleteSelectedPairs={() =>
-                                    handleBulkDelete("qa")
-                                  }
-                                  isDeleting={isBulkDeleting}
-                                  onEditPair={(qa) => {
-                                    setEditingQA(qa as any);
-                                    setNewQA({
-                                      question: qa.question,
-                                      answer: qa.answer,
-                                    });
-                                    setKnowledgeType("qa");
-                                    setIsAddKnowledgeOpen(true);
-                                    window.scrollTo({
-                                      top: 0,
-                                      behavior: "smooth",
-                                    });
-                                  }}
-                                  onDeletePair={handleDeleteQA}
-                                />
-                              );
-                            })}
-
-                            <div className="my-4 border-t" />
-
-                            <div className="space-y-4">
-                              <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-                                Manual Q&A Pairs
-                              </h3>
-
-                              {/* Filter standalone pairs */}
-                              {(() => {
-                                const standalone = qaPairs
-                                  .filter((qa: any) => {
-                                    // Include if it belongs to "manual" source OR if we can't find its source in the bundles list
-                                    return !bundleIds.includes(
-                                      qa.knowledge_source_id,
-                                    );
-                                  })
-                                  .sort((a, b) => {
-                                    const timeA = new Date(
-                                      a.created_at || 0,
-                                    ).getTime();
-                                    const timeB = new Date(
-                                      b.created_at || 0,
-                                    ).getTime();
-                                    if (timeA !== timeB) return timeA - timeB;
-                                    return a.id.localeCompare(b.id);
-                                  });
-
-                                if (
-                                  standalone.length === 0 &&
-                                  qaSources.length === 0
-                                ) {
-                                  return (
-                                    <div className="text-center py-12 border-2 border-dashed rounded-xl">
-                                      <MessageSquare className="h-12 w-12 mx-auto text-muted-foreground/40 mb-3" />
-                                      <p className="text-muted-foreground">
-                                        No Q&A pairs added
-                                      </p>
-                                      <Button
-                                        variant="link"
-                                        onClick={() => {
-                                          setKnowledgeType("qa");
-                                          setIsAddKnowledgeOpen(true);
-                                        }}
-                                      >
-                                        Add Q&A manually
-                                      </Button>
-                                    </div>
-                                  );
-                                }
-
-                                if (standalone.length === 0)
-                                  return (
-                                    <p className="text-sm text-muted-foreground italic">
-                                      No manual Q&A pairs.
-                                    </p>
-                                  );
-
-                                return (
-                                  <>
-                                    {standalone.length > 0 && (
-                                      <div className="flex items-center justify-between bg-muted/20 p-2 rounded-md mb-2">
-                                        <div className="flex items-center gap-2">
-                                          <Checkbox
-                                            checked={
-                                              standalone.length > 0 &&
-                                              standalone.every((q) =>
-                                                selectedQAs.includes(q.id),
-                                              )
-                                            }
-                                            onCheckedChange={(
-                                              checked: boolean,
-                                            ) => {
-                                              if (checked) {
-                                                // Add all standalone IDs
-                                                const newSelected = [
-                                                  ...selectedQAs,
-                                                  ...standalone
-                                                    .map((q) => q.id)
-                                                    .filter(
-                                                      (id) =>
-                                                        !selectedQAs.includes(
-                                                          id,
-                                                        ),
-                                                    ),
-                                                ];
-                                                setSelectedQAs(newSelected);
-                                              } else {
-                                                // Remove all standalone IDs
-                                                const standaloneIds =
-                                                  standalone.map((q) => q.id);
-                                                setSelectedQAs(
-                                                  selectedQAs.filter(
-                                                    (id) =>
-                                                      !standaloneIds.includes(
-                                                        id,
-                                                      ),
-                                                  ),
-                                                );
-                                              }
-                                            }}
-                                          />
-                                          <span className="text-sm font-medium">
-                                            Select All ({standalone.length})
-                                          </span>
-                                        </div>
-                                        {selectedQAs.filter((id) =>
-                                          standalone.find((q) => q.id === id),
-                                        ).length > 0 && (
-                                          <Button
-                                            variant="destructive"
-                                            size="sm"
-                                            onClick={() =>
-                                              handleBulkDelete("qa")
-                                            }
-                                            disabled={isBulkDeleting}
-                                          >
-                                            <Trash2 className="h-4 w-4 mr-2" />
-                                            Delete Selected
-                                          </Button>
-                                        )}
-                                      </div>
-                                    )}
-
-                                    <div className="space-y-3">
-                                      {standalone.map((qa) => (
-                                        <div
-                                          key={qa.id}
-                                          className={`p-4 border rounded-lg bg-card shadow-sm hover:shadow-md transition-all ${
-                                            selectedQAs.includes(qa.id)
-                                              ? "bg-blue-50/30 border-blue-200"
-                                              : ""
-                                          }`}
-                                        >
-                                          <div className="flex justify-between items-start gap-4">
-                                            <div className="flex items-start gap-3 flex-1">
-                                              <Checkbox
-                                                className="mt-1"
-                                                checked={selectedQAs.includes(
-                                                  qa.id,
-                                                )}
-                                                onCheckedChange={(
-                                                  checked: boolean,
-                                                ) => {
-                                                  if (checked)
-                                                    setSelectedQAs([
-                                                      ...selectedQAs,
-                                                      qa.id,
-                                                    ]);
-                                                  else
-                                                    setSelectedQAs(
-                                                      selectedQAs.filter(
-                                                        (id) => id !== qa.id,
-                                                      ),
-                                                    );
-                                                }}
-                                              />
-                                              <div className="flex-1 min-w-0">
-                                                <div className="font-semibold text-sm mb-1">
-                                                  Q: {qa.question}
-                                                </div>
-                                                <div className="text-sm text-muted-foreground bg-muted/30 p-2 rounded border-l-2 border-blue-500 line-clamp-2">
-                                                  A: {qa.answer}
-                                                </div>
-                                              </div>
-                                            </div>
-                                            <div className="flex gap-1 shrink-0">
-                                              <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="h-8 w-8"
-                                                onClick={() => {
-                                                  setEditingQA(qa);
-                                                  setNewQA({
-                                                    question: qa.question,
-                                                    answer: qa.answer,
-                                                  });
-                                                  setKnowledgeType("qa");
-                                                  setIsAddKnowledgeOpen(true);
-                                                  window.scrollTo({
-                                                    top: 0,
-                                                    behavior: "smooth",
-                                                  });
-                                                }}
-                                                title="Edit QA pair"
-                                              >
-                                                <Edit2 className="h-4 w-4" />
-                                              </Button>
-                                              <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                                onClick={() =>
-                                                  handleDeleteQA(qa.id)
-                                                }
-                                                title="Delete QA pair"
-                                              >
-                                                <Trash2 className="h-4 w-4" />
-                                              </Button>
-                                            </div>
-                                          </div>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </>
-                                );
-                              })()}
-                            </div>
-                          </>
-                        );
-                      })()}
-                    </TabsContent>
-                  </>
-                )}
-              </Tabs>
-            </CardContent>
-          </Card>
+        {/* ── Knowledge Tab ── */}
+        <TabsContent value="knowledge" className="space-y-6">
+          <ErrorBoundary compact>
+          <KnowledgeTab
+            chatbotId={chatbotId}
+            canEdit={canEdit}
+            knowledgeSources={knowledgeSources}
+            isLoadingKnowledge={isLoadingKnowledge}
+            isAddKnowledgeOpen={isAddKnowledgeOpen}
+            setIsAddKnowledgeOpen={setIsAddKnowledgeOpen}
+            knowledgeType={knowledgeType}
+            setKnowledgeType={setKnowledgeType}
+            newUrl={newUrl}
+            setNewUrl={setNewUrl}
+            isCrawling={isCrawling}
+            handleCrawl={handleCrawl}
+            uploadFiles={uploadFiles}
+            setUploadFiles={setUploadFiles}
+            isUploading={isUploading}
+            handleFileUpload={handleFileUpload}
+            newQA={newQA}
+            setNewQA={setNewQA}
+            editingQA={editingQA}
+            setEditingQA={setEditingQA}
+            handleQASubmit={handleQASubmit}
+            qaXlsx={qaXlsx}
+            setQaXlsx={setQaXlsx}
+            handleQAXlsxUpload={handleQAXlsxUpload}
+            handleDeleteQA={handleDeleteQA}
+            handleDeleteSource={handleDeleteSource}
+            handleStopCrawl={handleStopCrawl}
+            handlePreviewFile={handlePreviewFile}
+            selectedPages={selectedPages}
+            setSelectedPages={setSelectedPages}
+            selectedFiles={selectedFiles}
+            setSelectedFiles={setSelectedFiles}
+            selectedQAs={selectedQAs}
+            setSelectedQAs={setSelectedQAs}
+            isBulkDeleting={isBulkDeleting}
+            handleBulkDelete={handleBulkDelete}
+            deletingFileId={deletingFileId}
+            loadingPreviewFileId={loadingPreviewFileId}
+            knowledgeTab={knowledgeTab}
+            setKnowledgeTab={setKnowledgeTab}
+            crawlSources={crawlSources}
+            fileSources={fileSources}
+            qaPairs={qaPairs}
+            allCrawledPages={allCrawledPages}
+            crawlSourcesWithPages={crawlSourcesWithPages}
+            crawlNotifications={crawlNotifications}
+            dismissNotification={dismissNotification}
+            dismissAllNotifications={dismissAllNotifications}
+            isCrawlScheduleOpen={isCrawlScheduleOpen}
+            setIsCrawlScheduleOpen={setIsCrawlScheduleOpen}
+            selectedCrawlSource={selectedCrawlSource}
+            setSelectedCrawlSource={setSelectedCrawlSource}
+            onSyncTriggered={() => {
+              fetchKnowledgeSources(false);
+              fetchChatbotStats();
+            }}
+          />
+          </ErrorBoundary>
         </TabsContent>
 
-        {/* Appearance Tab */}
-        <TabsContent value="appearance" className="space-y-4">
-          {appearanceError && (
-            <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
-              {appearanceError}
-            </div>
-          )}
-
-          {appearanceSuccessMessage && (
-            <div className="p-4 bg-green-50 border border-green-200 text-green-700 rounded-lg">
-              {appearanceSuccessMessage}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit(handleAppearanceSubmit)}>
-            <div className="max-w-4xl">
-              {/* Settings Form */}
-              <div className="space-y-6">
-                {/* General Settings */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>General</CardTitle>
-                    <CardDescription>
-                      Basic chatbot appearance settings
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div>
-                      <Label htmlFor="header_text">Header Text</Label>
-                      <Controller
-                        name="header_text"
-                        control={control}
-                        render={({ field }) => (
-                          <Input
-                            {...field}
-                            id="header_text"
-                            placeholder="Chat Support"
-                            onChange={(e) => {
-                              console.log(
-                                "✏️ Header Text onChange:",
-                                e.target.value,
-                              );
-                              field.onChange(e.target.value);
-                            }}
-                          />
-                        )}
-                      />
-                      {errors.header_text && (
-                        <p className="text-sm text-red-600 mt-1">
-                          {errors.header_text.message}
-                        </p>
-                      )}
-                    </div>
-
-                    <div>
-                      <Label htmlFor="primary_color">Primary Color</Label>
-                      <div className="flex gap-2">
-                        <input
-                          id="primary_color"
-                          type="color"
-                          value={watchedPrimaryColor || "#3B82F6"}
-                          onChange={(e) => {
-                            console.log(
-                              "🎨 Color picker onChange:",
-                              e.target.value,
-                            );
-                            setValue("primary_color", e.target.value, {
-                              shouldDirty: true,
-                            });
-                          }}
-                          className="w-16 h-10 p-1 border rounded cursor-pointer"
-                        />
-                        <Input
-                          value={watchedPrimaryColor || ""}
-                          onChange={(e) => {
-                            console.log(
-                              "🎨 Color input onChange:",
-                              e.target.value,
-                            );
-                            setValue("primary_color", e.target.value, {
-                              shouldDirty: true,
-                            });
-                          }}
-                          placeholder="#3B82F6"
-                          className="flex-1"
-                        />
-                      </div>
-                      {errors.primary_color && (
-                        <p className="text-sm text-red-600 mt-1">
-                          {errors.primary_color.message}
-                        </p>
-                      )}
-                    </div>
-
-                    <div>
-                      <Label htmlFor="welcome_message">Welcome Message</Label>
-                      <Textarea
-                        id="welcome_message"
-                        {...register("welcome_message")}
-                        placeholder="Hi! How can I help you today?"
-                        rows={3}
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor="avatar_url">Avatar URL</Label>
-                      <div className="space-y-2">
-                        <Input
-                          id="avatar_url"
-                          {...register("avatar_url")}
-                          placeholder="https://example.com/avatar.png"
-                        />
-                        <input
-                          ref={avatarInputRef}
-                          type="file"
-                          accept="image/*"
-                          style={{ display: "none" }}
-                          onChange={async (e) => {
-                            const file = e.target.files?.[0];
-                            if (!file) return;
-                            try {
-                              const token = getAccessToken();
-                              if (!token) return;
-                              const API_URL =
-                                process.env.NEXT_PUBLIC_API_URL ||
-                                "http://localhost:8000";
-                              const formData = new FormData();
-                              formData.append("avatar", file);
-                              const res = await fetch(
-                                `${API_URL}/api/v1/chatbots/${chatbotId}/avatar`,
-                                {
-                                  method: "POST",
-                                  headers: {
-                                    Authorization: `Bearer ${token}`,
-                                  },
-                                  body: formData,
-                                },
-                              );
-                              if (res.ok) {
-                                fetchAppearance();
-                                setAppearanceSuccessMessage(
-                                  "Avatar uploaded successfully!",
-                                );
-                                setTimeout(
-                                  () => setAppearanceSuccessMessage(null),
-                                  3000,
-                                );
-                              } else {
-                                const err = await res
-                                  .json()
-                                  .catch(() => ({ detail: "Upload failed" }));
-                                setAppearanceError(
-                                  err.detail || "Avatar upload failed",
-                                );
-                              }
-                            } catch (err) {
-                              setAppearanceError("Avatar upload error");
-                            } finally {
-                              if (avatarInputRef.current)
-                                avatarInputRef.current.value = "";
-                            }
-                          }}
-                        />
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="w-full"
-                          onClick={() => avatarInputRef.current?.click()}
-                        >
-                          <Upload className="h-4 w-4 mr-2" />
-                          Upload Custom Avatar
-                        </Button>
-                      </div>
-                    </div>
-
-                    <div>
-                      <Label htmlFor="position">Position</Label>
-                      <RadioGroup
-                        value={formData.position}
-                        onValueChange={(value) =>
-                          setValue(
-                            "position",
-                            value as "bottom-right" | "bottom-left",
-                            { shouldDirty: true },
-                          )
-                        }
-                        className="flex gap-6 mt-2"
-                      >
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem
-                            value="bottom-left"
-                            id="bottom-left"
-                          />
-                          <Label htmlFor="bottom-left">Bottom Left</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem
-                            value="bottom-right"
-                            id="bottom-right"
-                          />
-                          <Label htmlFor="bottom-right">Bottom Right</Label>
-                        </div>
-                      </RadioGroup>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="offset_x">Offset X (px)</Label>
-                        <Controller
-                          name="offset_x"
-                          control={control}
-                          render={({ field }) => (
-                            <Input
-                              {...field}
-                              id="offset_x"
-                              type="number"
-                              placeholder="0"
-                              value={field.value ?? 0}
-                              onChange={(e) => {
-                                const value =
-                                  e.target.value === ""
-                                    ? 0
-                                    : parseInt(e.target.value, 10) || 0;
-                                field.onChange(value);
-                              }}
-                            />
-                          )}
-                        />
-                        {errors.offset_x && (
-                          <p className="text-sm text-red-600 mt-1">
-                            {errors.offset_x.message}
-                          </p>
-                        )}
-                      </div>
-                      <div>
-                        <Label htmlFor="offset_y">Offset Y (px)</Label>
-                        <Controller
-                          name="offset_y"
-                          control={control}
-                          render={({ field }) => (
-                            <Input
-                              {...field}
-                              id="offset_y"
-                              type="number"
-                              placeholder="0"
-                              value={field.value ?? 0}
-                              onChange={(e) => {
-                                const value =
-                                  e.target.value === ""
-                                    ? 0
-                                    : parseInt(e.target.value, 10) || 0;
-                                field.onChange(value);
-                              }}
-                            />
-                          )}
-                        />
-                        {errors.offset_y && (
-                          <p className="text-sm text-red-600 mt-1">
-                            {errors.offset_y.message}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Initial Suggestions - merged into general settings */}
-                    <div className="pt-4 border-t">
-                      <Label className="text-sm font-medium">
-                        Initial Suggestions
-                      </Label>
-                      <p className="text-xs text-muted-foreground mt-0.5 mb-2">
-                        Suggested questions shown when users open the chat.
-                        {watchedLanguages &&
-                          watchedLanguages.some((l: string) => l !== "en") && (
-                            <span className="block mt-1 text-amber-600 dark:text-amber-400 font-medium">
-                              Tip: Write suggestions in{" "}
-                              {watchedLanguages
-                                .filter((l: string) => l !== "en")
-                                .map((l: string) =>
-                                  l === "hi" ? "Hindi" : "Gujarati",
-                                )
-                                .join(" and ")}{" "}
-                              to match your selected languages.
-                            </span>
-                          )}
-                      </p>
-                      <div className="flex gap-2">
-                        <Input
-                          placeholder="Add a suggestion..."
-                          value={newSuggestion}
-                          onChange={(e) => setNewSuggestion(e.target.value)}
-                          onKeyPress={(e) =>
-                            e.key === "Enter" &&
-                            (e.preventDefault(), handleAddSuggestion())
-                          }
-                        />
-                        <Button
-                          type="button"
-                          onClick={handleAddSuggestion}
-                          size="sm"
-                        >
-                          Add
-                        </Button>
-                      </div>
-                      {(formData.initial_suggestions || []).length > 0 && (
-                        <div className="space-y-2 mt-2">
-                          {(formData.initial_suggestions || []).map(
-                            (suggestion, index) => (
-                              <div
-                                key={index}
-                                className="flex items-center justify-between p-2 bg-muted rounded"
-                              >
-                                <span className="text-sm">{suggestion}</span>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleRemoveSuggestion(index)}
-                                  className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
-                                >
-                                  ×
-                                </Button>
-                              </div>
-                            ),
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Personality & Behavior */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Personality & Behavior</CardTitle>
-                    <CardDescription>
-                      Customize how your chatbot responds
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div>
-                      <Label htmlFor="personality_tone">
-                        Conversation Tone
-                      </Label>
-                      <Controller
-                        name="personality_tone"
-                        control={control}
-                        render={({ field }) => (
-                          <RadioGroup
-                            value={field.value}
-                            onValueChange={(value) => {
-                              field.onChange(value);
-                              setValue(
-                                "personality_tone",
-                                value as
-                                  | "formal"
-                                  | "casual"
-                                  | "friendly"
-                                  | "professional",
-                                { shouldDirty: true },
-                              );
-                            }}
-                            className="grid grid-cols-2 gap-4 mt-2"
-                          >
-                            <div className="flex items-center space-x-2">
-                              <RadioGroupItem
-                                value="friendly"
-                                id="tone-friendly"
-                              />
-                              <Label
-                                htmlFor="tone-friendly"
-                                className="cursor-pointer"
-                              >
-                                Friendly & Warm
-                              </Label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <RadioGroupItem
-                                value="professional"
-                                id="tone-professional"
-                              />
-                              <Label
-                                htmlFor="tone-professional"
-                                className="cursor-pointer"
-                              >
-                                Professional
-                              </Label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <RadioGroupItem value="casual" id="tone-casual" />
-                              <Label
-                                htmlFor="tone-casual"
-                                className="cursor-pointer"
-                              >
-                                Casual & Relaxed
-                              </Label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <RadioGroupItem value="formal" id="tone-formal" />
-                              <Label
-                                htmlFor="tone-formal"
-                                className="cursor-pointer"
-                              >
-                                Formal
-                              </Label>
-                            </div>
-                          </RadioGroup>
-                        )}
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor="response_length">Response Length</Label>
-                      <Controller
-                        name="response_length"
-                        control={control}
-                        render={({ field }) => (
-                          <RadioGroup
-                            value={field.value}
-                            onValueChange={(value) => {
-                              field.onChange(value);
-                              setValue(
-                                "response_length",
-                                value as "concise" | "balanced" | "detailed",
-                                { shouldDirty: true },
-                              );
-                            }}
-                            className="flex gap-4 mt-2"
-                          >
-                            <div className="flex items-center space-x-2">
-                              <RadioGroupItem
-                                value="concise"
-                                id="length-concise"
-                              />
-                              <Label
-                                htmlFor="length-concise"
-                                className="cursor-pointer"
-                              >
-                                Concise
-                              </Label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <RadioGroupItem
-                                value="balanced"
-                                id="length-balanced"
-                              />
-                              <Label
-                                htmlFor="length-balanced"
-                                className="cursor-pointer"
-                              >
-                                Balanced
-                              </Label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <RadioGroupItem
-                                value="detailed"
-                                id="length-detailed"
-                              />
-                              <Label
-                                htmlFor="length-detailed"
-                                className="cursor-pointer"
-                              >
-                                Detailed
-                              </Label>
-                            </div>
-                          </RadioGroup>
-                        )}
-                      />
-                    </div>
-
-                    <div>
-                      <Label>Supported Languages</Label>
-                      <p className="text-xs text-muted-foreground mt-0.5 mb-2">
-                        Select which languages your chatbot should respond in.
-                        Users can chat in any selected language. At least one
-                        must be selected.
-                      </p>
-                      <Controller
-                        name="languages"
-                        control={control}
-                        render={({ field }) => {
-                          const currentLangs: string[] = field.value || ["en"];
-                          const toggleLanguage = (lang: string) => {
-                            let newLangs: string[];
-                            if (currentLangs.includes(lang)) {
-                              // Prevent unchecking the last language
-                              if (currentLangs.length <= 1) return;
-                              newLangs = currentLangs.filter((l) => l !== lang);
-                            } else {
-                              newLangs = [...currentLangs, lang];
-                            }
-                            field.onChange(newLangs);
-                            setValue(
-                              "languages",
-                              newLangs as ("en" | "hi" | "gu")[],
-                              {
-                                shouldDirty: true,
-                              },
-                            );
-                          };
-                          return (
-                            <div className="flex flex-col gap-3 mt-2">
-                              {[
-                                {
-                                  code: "en",
-                                  label: "English",
-                                  desc: "Respond in English",
-                                },
-                                {
-                                  code: "hi",
-                                  label: "हिंदी (Hindi)",
-                                  desc: "Respond in Hindi + romanized Hindi",
-                                },
-                                {
-                                  code: "gu",
-                                  label: "ગુજરાતી (Gujarati)",
-                                  desc: "Respond in Gujarati + romanized Gujarati",
-                                },
-                              ].map((lang) => (
-                                <label
-                                  key={lang.code}
-                                  className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                                    currentLangs.includes(lang.code)
-                                      ? "border-emerald-500 bg-emerald-50/50 dark:bg-emerald-900/20"
-                                      : "border-border hover:border-muted-foreground/30"
-                                  }`}
-                                >
-                                  <input
-                                    type="checkbox"
-                                    checked={currentLangs.includes(lang.code)}
-                                    onChange={() => toggleLanguage(lang.code)}
-                                    className="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
-                                  />
-                                  <div>
-                                    <span className="text-sm font-medium">
-                                      {lang.label}
-                                    </span>
-                                    <span className="block text-xs text-muted-foreground">
-                                      {lang.desc}
-                                    </span>
-                                  </div>
-                                </label>
-                              ))}
-                              {currentLangs.length > 1 && (
-                                <p className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
-                                  💡 Your bot will auto-detect the user&apos;s
-                                  language and respond accordingly. It also
-                                  supports &quot;WhatsApp-style&quot; messages
-                                  (e.g., &quot;mane products batav&quot; in
-                                  romanized Gujarati). Languages not selected
-                                  will be politely declined.
-                                </p>
-                              )}
-                            </div>
-                          );
-                        }}
-                      />
-                    </div>
-
-                    <div>
-                      <div className="flex items-center justify-between">
-                        <Label htmlFor="temperature">
-                          Creativity Level (Temperature)
-                        </Label>
-                        <span className="text-sm text-muted-foreground">
-                          {formData.temperature?.toFixed(1) || "0.7"}
-                        </span>
-                      </div>
-                      <Controller
-                        name="temperature"
-                        control={control}
-                        render={({ field }) => (
-                          <div className="mt-2">
-                            <input
-                              type="range"
-                              id="temperature"
-                              min="0"
-                              max="1"
-                              step="0.1"
-                              value={field.value ?? 0.7}
-                              onChange={(e) => {
-                                const value = parseFloat(e.target.value);
-                                field.onChange(value);
-                                setValue("temperature", value, {
-                                  shouldDirty: true,
-                                });
-                              }}
-                              className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-emerald-600"
-                            />
-                            <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                              <span>Precise (0.0)</span>
-                              <span>Balanced (0.5)</span>
-                              <span>Creative (1.0)</span>
-                            </div>
-                          </div>
-                        )}
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor="custom_instructions">
-                        Custom Instructions (Optional)
-                      </Label>
-                      <Textarea
-                        id="custom_instructions"
-                        {...register("custom_instructions")}
-                        placeholder="Add any additional instructions for how the chatbot should behave..."
-                        rows={3}
-                        className="mt-2"
-                      />
-                      <p className="text-xs text-muted-foreground mt-1">
-                        These instructions will be added to the chatbot&apos;s
-                        system prompt.
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Save Button */}
-                <div className="flex justify-end">
-                  <Button
-                    type="submit"
-                    disabled={isSavingAppearance || !isDirty}
-                  >
-                    {isSavingAppearance ? (
-                      <>
-                        <ButtonSpinner />
-                        Saving...
-                      </>
-                    ) : (
-                      <>
-                        <Save className="h-4 w-4 mr-2" />
-                        Save Changes
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </form>
+        {/* ── Appearance Tab ── */}
+        <TabsContent value="appearance" className="space-y-6">
+          <ErrorBoundary compact>
+          <AppearanceTab
+            chatbotId={chatbotId}
+            appearanceError={appearanceError}
+            appearanceSuccessMessage={appearanceSuccessMessage}
+            isSavingAppearance={isSavingAppearance}
+            newSuggestion={newSuggestion}
+            setNewSuggestion={setNewSuggestion}
+            handleAddSuggestion={handleAddSuggestion}
+            handleRemoveSuggestion={handleRemoveSuggestion}
+            handleAppearanceSubmit={handleAppearanceSubmit}
+            fetchAppearance={fetchAppearance}
+            setAppearanceSuccessMessage={setAppearanceSuccessMessage}
+            setAppearanceError={setAppearanceError}
+            avatarInputRef={avatarInputRef}
+            form={form}
+            watchedPrimaryColor={watchedPrimaryColor ?? "#3B82F6"}
+            watchedLanguages={(watchedLanguages || ["en"]) as string[]}
+          />
+          </ErrorBoundary>
         </TabsContent>
 
-        {/* Install Tab */}
+        {/* ── Install Tab ── */}
         <TabsContent value="install" className="space-y-6">
-          {/* Quick Start Guide */}
-          <Card className="border-emerald-200 bg-gradient-to-r from-emerald-50/50 to-teal-50/50">
-            <CardHeader>
-              <div className="flex items-start gap-3">
-                <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-emerald-600 to-teal-600 flex items-center justify-center flex-shrink-0 shadow-sm">
-                  <Sparkles className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <CardTitle>Quick Start Guide</CardTitle>
-                  <CardDescription className="mt-1">
-                    Get your chatbot live on your website in 3 simple steps
-                  </CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex gap-3">
-                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-emerald-600 to-teal-600 text-white flex items-center justify-center font-semibold text-sm shadow-sm">
-                    1
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="font-semibold text-sm mb-1">
-                      Choose Your Integration Method
-                    </h4>
-                    <p className="text-sm text-muted-foreground">
-                      Select between JavaScript Widget (recommended) or iframe
-                      embed below based on your platform.
-                    </p>
-                  </div>
-                </div>
-                <div className="flex gap-3">
-                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-emerald-600 to-teal-600 text-white flex items-center justify-center font-semibold text-sm shadow-sm">
-                    2
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="font-semibold text-sm mb-1">
-                      Copy and Paste the Code
-                    </h4>
-                    <p className="text-sm text-muted-foreground">
-                      Copy the code snippet and paste it into your website's
-                      HTML, just before the closing{" "}
-                      <code className="bg-emerald-100 px-1.5 py-0.5 rounded text-xs text-emerald-700">
-                        &lt;/body&gt;
-                      </code>{" "}
-                      tag.
-                    </p>
-                  </div>
-                </div>
-                <div className="flex gap-3">
-                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-emerald-600 to-teal-600 text-white flex items-center justify-center font-semibold text-sm shadow-sm">
-                    3
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="font-semibold text-sm mb-1">
-                      Test Your Chatbot
-                    </h4>
-                    <p className="text-sm text-muted-foreground">
-                      Refresh your website and look for the chat widget in the
-                      bottom corner. Click it to start chatting!
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* JavaScript Widget (Recommended) */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    JavaScript Widget
-                    <Badge
-                      variant="secondary"
-                      className="bg-emerald-50 text-emerald-700 border-emerald-200"
-                    >
-                      Recommended
-                    </Badge>
-                  </CardTitle>
-                  <CardDescription className="mt-1">
-                    Best for most websites. Lightweight, fully customizable, and
-                    works with any platform.
-                  </CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-3">
-                <div className="flex items-start gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-emerald-500 mt-0.5 flex-shrink-0" />
-                  <p className="text-sm">
-                    <strong>Automatic updates:</strong> Changes to appearance
-                    and settings sync instantly
-                  </p>
-                </div>
-                <div className="flex items-start gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-emerald-500 mt-0.5 flex-shrink-0" />
-                  <p className="text-sm">
-                    <strong>Lightweight:</strong> Only ~15KB gzipped, won't slow
-                    down your site
-                  </p>
-                </div>
-                <div className="flex items-start gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-emerald-500 mt-0.5 flex-shrink-0" />
-                  <p className="text-sm">
-                    <strong>Mobile responsive:</strong> Optimized for all
-                    devices and screen sizes
-                  </p>
-                </div>
-              </div>
-
-              <div className="border-t pt-4">
-                <h4 className="text-sm font-semibold mb-3">
-                  Installation Code
-                </h4>
-                <div className="bg-slate-950 text-slate-50 p-4 rounded-md font-mono text-sm overflow-x-auto">
-                  <pre id="embed-script">{`<script src="${
-                    process.env.NEXT_PUBLIC_WIDGET_URL ||
-                    process.env.NEXT_PUBLIC_APP_URL ||
-                    "http://localhost:3001"
-                  }/widget.umd.js"></script>
-<script>
-  ChatbotWidget.init({
-    chatbotId: "${chatbotId}"${
-      process.env.NEXT_PUBLIC_API_URL
-        ? `,\n    apiUrl: "${process.env.NEXT_PUBLIC_API_URL}"`
-        : ""
-    }
-  });
-</script>`}</pre>
-                </div>
-                <Button
-                  variant="default"
-                  className="mt-3"
-                  onClick={async () => {
-                    const el = document.getElementById("embed-script");
-                    if (!el) return;
-                    const text = el.textContent || "";
-                    try {
-                      await navigator.clipboard.writeText(text);
-                      setEmbedCopyStatus("embed-script");
-                      setTimeout(() => setEmbedCopyStatus(null), 2000);
-                    } catch {
-                      const ta = document.createElement("textarea");
-                      ta.value = text;
-                      document.body.appendChild(ta);
-                      ta.select();
-                      document.execCommand("copy");
-                      setEmbedCopyStatus("embed-script");
-                      setTimeout(() => setEmbedCopyStatus(null), 2000);
-                      document.body.removeChild(ta);
-                    }
-                  }}
-                >
-                  <Code className="h-4 w-4 mr-2" />
-                  {embedCopyStatus === "embed-script" ? "Copied!" : "Copy Code"}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Platform-Specific Instructions */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Platform-Specific Instructions</CardTitle>
-              <CardDescription>
-                Step-by-step guides for popular platforms
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                {/* HTML/Static Websites */}
-                <div className="border rounded-lg p-4 space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Globe className="h-5 w-5 text-emerald-600" />
-                    <h4 className="font-semibold">HTML / Static Websites</h4>
-                  </div>
-                  <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground ml-7">
-                    <li>Open your HTML file in a text editor</li>
-                    <li>
-                      Find the closing{" "}
-                      <code className="bg-muted px-1.5 py-0.5 rounded text-xs">
-                        &lt;/body&gt;
-                      </code>{" "}
-                      tag
-                    </li>
-                    <li>Paste the JavaScript Widget code just before it</li>
-                    <li>Save the file and refresh your browser</li>
-                  </ol>
-                </div>
-
-                {/* React */}
-                <div className="border rounded-lg p-4 space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Code className="h-5 w-5 text-blue-600" />
-                    <h4 className="font-semibold">React / Next.js</h4>
-                  </div>
-                  <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground ml-7">
-                    <li>
-                      Add the script to your{" "}
-                      <code className="bg-muted px-1.5 py-0.5 rounded text-xs">
-                        public/index.html
-                      </code>{" "}
-                      (React) or{" "}
-                      <code className="bg-muted px-1.5 py-0.5 rounded text-xs">
-                        _document.tsx
-                      </code>{" "}
-                      (Next.js)
-                    </li>
-                    <li>
-                      Place it in the{" "}
-                      <code className="bg-muted px-1.5 py-0.5 rounded text-xs">
-                        &lt;body&gt;
-                      </code>{" "}
-                      section or use{" "}
-                      <code className="bg-muted px-1.5 py-0.5 rounded text-xs">
-                        useEffect()
-                      </code>{" "}
-                      to load it dynamically
-                    </li>
-                    <li>
-                      Alternatively, use the iframe method for easier
-                      integration
-                    </li>
-                  </ol>
-                </div>
-
-                {/* WordPress */}
-                <div className="border rounded-lg p-4 space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Globe className="h-5 w-5 text-blue-500" />
-                    <h4 className="font-semibold">WordPress</h4>
-                  </div>
-                  <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground ml-7">
-                    <li>
-                      Go to <strong>Appearance → Theme File Editor</strong>
-                    </li>
-                    <li>
-                      Select{" "}
-                      <code className="bg-muted px-1.5 py-0.5 rounded text-xs">
-                        footer.php
-                      </code>{" "}
-                      from the right sidebar
-                    </li>
-                    <li>
-                      Paste the code before the{" "}
-                      <code className="bg-muted px-1.5 py-0.5 rounded text-xs">
-                        &lt;/body&gt;
-                      </code>{" "}
-                      tag
-                    </li>
-                    <li>
-                      Click <strong>Update File</strong>
-                    </li>
-                    <li>
-                      <em>
-                        Or use a plugin like "Insert Headers and Footers" for
-                        easier management
-                      </em>
-                    </li>
-                  </ol>
-                </div>
-
-                {/* Shopify */}
-                <div className="border rounded-lg p-4 space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Globe className="h-5 w-5 text-green-600" />
-                    <h4 className="font-semibold">Shopify</h4>
-                  </div>
-                  <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground ml-7">
-                    <li>
-                      Go to <strong>Online Store → Themes</strong>
-                    </li>
-                    <li>
-                      Click <strong>Actions → Edit code</strong>
-                    </li>
-                    <li>
-                      Find{" "}
-                      <code className="bg-muted px-1.5 py-0.5 rounded text-xs">
-                        theme.liquid
-                      </code>{" "}
-                      under Layout
-                    </li>
-                    <li>
-                      Paste the code before{" "}
-                      <code className="bg-muted px-1.5 py-0.5 rounded text-xs">
-                        &lt;/body&gt;
-                      </code>
-                    </li>
-                    <li>Save and preview your store</li>
-                  </ol>
-                </div>
-
-                {/* Wix / Squarespace */}
-                <div className="border rounded-lg p-4 space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Globe className="h-5 w-5 text-orange-600" />
-                    <h4 className="font-semibold">
-                      Wix / Squarespace / Webflow
-                    </h4>
-                  </div>
-                  <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground ml-7">
-                    <li>
-                      Look for "Custom Code" or "Code Injection" in your site
-                      settings
-                    </li>
-                    <li>
-                      Add the script to the <strong>Footer</strong> or{" "}
-                      <strong>Body End</strong> section
-                    </li>
-                    <li>Save and publish your changes</li>
-                    <li>
-                      <em>
-                        Note: Exact steps vary by platform version - check their
-                        documentation
-                      </em>
-                    </li>
-                  </ol>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* iframe Alternative */}
-          <Card>
-            <CardHeader>
-              <CardTitle>iframe Embed (Alternative)</CardTitle>
-              <CardDescription>
-                Use this if you prefer iframe embedding or need to restrict
-                JavaScript execution
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="bg-slate-950 text-slate-50 p-4 rounded-md font-mono text-sm overflow-x-auto">
-                <pre id="embed-iframe">{`<iframe
-  src="${
-    process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
-  }/embed/${chatbotId}"
-  width="400"
-  height="600"
-  style="border:0; width:100%; min-width:320px; min-height:420px;"
-  title="Chatbot"
-></iframe>`}</pre>
-              </div>
-              <div className="flex gap-3">
-                <Button
-                  variant="outline"
-                  onClick={async () => {
-                    const el = document.getElementById("embed-iframe");
-                    if (!el) return;
-                    const text = el.textContent || "";
-                    try {
-                      await navigator.clipboard.writeText(text);
-                      setEmbedCopyStatus("embed-iframe");
-                      setTimeout(() => setEmbedCopyStatus(null), 2000);
-                    } catch {
-                      const ta = document.createElement("textarea");
-                      ta.value = text;
-                      document.body.appendChild(ta);
-                      ta.select();
-                      document.execCommand("copy");
-                      setEmbedCopyStatus("embed-iframe");
-                      setTimeout(() => setEmbedCopyStatus(null), 2000);
-                      document.body.removeChild(ta);
-                    }
-                  }}
-                >
-                  <Code className="h-4 w-4 mr-2" />
-                  {embedCopyStatus === "embed-iframe"
-                    ? "Copied!"
-                    : "Copy iframe Code"}
-                </Button>
-              </div>
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <div className="flex gap-2">
-                  <HelpCircle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                  <div className="text-sm text-blue-900">
-                    <strong>Note:</strong> The iframe method displays the
-                    chatbot inline on your page, not as a floating widget.
-                    Adjust the width and height attributes to fit your layout.
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Testing and Troubleshooting */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Testing & Troubleshooting</CardTitle>
-              <CardDescription>
-                Verify your installation and fix common issues
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                {/* Testing Checklist */}
-                <div>
-                  <h4 className="font-semibold mb-3 flex items-center gap-2">
-                    <CheckSquare className="h-4 w-4 text-teal-600" />
-                    Testing Checklist
-                  </h4>
-                  <div className="space-y-2 ml-6">
-                    <div className="flex items-start gap-2">
-                      <div className="h-5 w-5 rounded border-2 border-muted-foreground flex-shrink-0 mt-0.5" />
-                      <p className="text-sm">
-                        Widget appears in the bottom corner of your page
-                      </p>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <div className="h-5 w-5 rounded border-2 border-muted-foreground flex-shrink-0 mt-0.5" />
-                      <p className="text-sm">
-                        Clicking the widget opens the chat interface
-                      </p>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <div className="h-5 w-5 rounded border-2 border-muted-foreground flex-shrink-0 mt-0.5" />
-                      <p className="text-sm">
-                        Your welcome message displays correctly
-                      </p>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <div className="h-5 w-5 rounded border-2 border-muted-foreground flex-shrink-0 mt-0.5" />
-                      <p className="text-sm">Bot responds to test messages</p>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <div className="h-5 w-5 rounded border-2 border-muted-foreground flex-shrink-0 mt-0.5" />
-                      <p className="text-sm">Widget works on mobile devices</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Common Issues */}
-                <div className="border-t pt-6">
-                  <h4 className="font-semibold mb-3 flex items-center gap-2">
-                    <AlertCircle className="h-4 w-4 text-amber-600" />
-                    Common Issues & Solutions
-                  </h4>
-                  <div className="space-y-4">
-                    <div className="bg-muted/50 rounded-lg p-4">
-                      <p className="font-medium text-sm mb-1">
-                        Widget doesn't appear
-                      </p>
-                      <ul className="text-sm text-muted-foreground space-y-1 ml-4 list-disc">
-                        <li>Check browser console for errors (F12)</li>
-                        <li>
-                          Verify the code is placed before the{" "}
-                          <code className="bg-background px-1 rounded">
-                            &lt;/body&gt;
-                          </code>{" "}
-                          tag
-                        </li>
-                        <li>Clear browser cache and hard refresh (Ctrl+F5)</li>
-                        <li>
-                          Ensure your chatbot status is set to "Active" in
-                          Settings
-                        </li>
-                      </ul>
-                    </div>
-
-                    <div className="bg-muted/50 rounded-lg p-4">
-                      <p className="font-medium text-sm mb-1">
-                        Widget appears but doesn't respond
-                      </p>
-                      <ul className="text-sm text-muted-foreground space-y-1 ml-4 list-disc">
-                        <li>
-                          Verify you've added knowledge sources in the Knowledge
-                          tab
-                        </li>
-                        <li>Check that your knowledge sources are indexed</li>
-                        <li>Look for API errors in the browser console</li>
-                      </ul>
-                    </div>
-
-                    <div className="bg-muted/50 rounded-lg p-4">
-                      <p className="font-medium text-sm mb-1">
-                        Widget conflicts with other elements
-                      </p>
-                      <ul className="text-sm text-muted-foreground space-y-1 ml-4 list-disc">
-                        <li>Adjust widget position in the Appearance tab</li>
-                        <li>Use offset settings to fine-tune placement</li>
-                        <li>Check for CSS conflicts with z-index</li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Need Help */}
-                <div className="border-t pt-6">
-                  <div className="bg-teal-50 border border-teal-200 rounded-lg p-4">
-                    <div className="flex gap-3">
-                      <HelpCircle className="h-5 w-5 text-teal-600 flex-shrink-0 mt-0.5" />
-                      <div className="flex-1">
-                        <h4 className="font-semibold text-sm text-teal-900 mb-1">
-                          Still need help?
-                        </h4>
-                        <p className="text-sm text-teal-800">
-                          If you're experiencing issues not covered here, please
-                          contact our support team or check our documentation
-                          for more detailed guides and API references.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <ErrorBoundary compact>
+          <InstallTab
+            chatbotId={chatbotId}
+            embedCopyStatus={embedCopyStatus}
+            setEmbedCopyStatus={setEmbedCopyStatus}
+          />
+          </ErrorBoundary>
         </TabsContent>
 
+        {/* ── Settings Tab ── */}
         <TabsContent value="settings" className="space-y-6">
-          <Tabs
-            value={settingsSubTab}
-            onValueChange={setSettingsSubTab}
-            className="w-full"
-          >
-            <TabsList className="w-full justify-start border-b rounded-none h-auto p-0 bg-transparent mb-6">
-              <TabsTrigger
-                value="general"
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-2"
-              >
-                General
-              </TabsTrigger>
-              <TabsTrigger
-                value="team"
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-2"
-              >
-                Team
-              </TabsTrigger>
-            </TabsList>
-            <TabsContent value="general" className="space-y-6">
-              {/* Chatbot Information */}
-              <Card>
-                <CardHeader className="pb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center flex-shrink-0">
-                      <Settings className="h-5 w-5 text-white" />
-                    </div>
-                    <div>
-                      <CardTitle>General Information</CardTitle>
-                      <CardDescription>
-                        Manage your chatbot&apos;s identity and operational
-                        status
-                      </CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handleSettingsSubmit} className="space-y-6">
-                    {settingsError && (
-                      <div className="p-3 bg-red-50 border border-red-200 text-red-600 rounded-md text-sm flex items-center gap-2">
-                        <AlertCircle className="h-4 w-4 flex-shrink-0" />
-                        {settingsError}
-                      </div>
-                    )}
-                    {settingsSuccess && (
-                      <div className="p-3 bg-green-50 border border-green-200 text-green-600 rounded-md text-sm flex items-center gap-2">
-                        <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
-                        {settingsSuccess}
-                      </div>
-                    )}
-
-                    {/* Chatbot Name */}
-                    <div className="space-y-2">
-                      <Label
-                        htmlFor="chatbot-name"
-                        className="text-sm font-medium"
-                      >
-                        Chatbot Name
-                      </Label>
-                      <Input
-                        id="chatbot-name"
-                        name="name"
-                        defaultValue={chatbot.name}
-                        placeholder="My Awesome Chatbot"
-                        required
-                        disabled={!canEdit}
-                        className="max-w-md"
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Internal name used to identify this chatbot across your
-                        dashboard.
-                      </p>
-                    </div>
-
-                    {/* Chatbot Details (Read-only) */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 bg-muted/30 rounded-lg border">
-                      <div>
-                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                          Chatbot ID
-                        </p>
-                        <p
-                          className="text-sm font-mono mt-1 truncate"
-                          title={chatbot.id}
-                        >
-                          {chatbot.id}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                          Created
-                        </p>
-                        <p className="text-sm mt-1">
-                          {new Date(chatbot.created_at).toLocaleDateString(
-                            "en-US",
-                            { year: "numeric", month: "short", day: "numeric" },
-                          )}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                          Your Role
-                        </p>
-                        <Badge variant="outline" className="mt-1 capitalize">
-                          {chatbot.permission_level}
-                        </Badge>
-                      </div>
-                    </div>
-
-                    {/* Status */}
-                    <div className="space-y-3 pt-2 border-t">
-                      <Label className="text-sm font-medium">
-                        Chatbot Status
-                      </Label>
-                      <p className="text-xs text-muted-foreground -mt-2">
-                        Control whether your chatbot is live and responding to
-                        users.
-                      </p>
-                      <RadioGroup
-                        name="status"
-                        defaultValue={
-                          chatbot.status === "draft" ? "paused" : chatbot.status
-                        }
-                        className="grid gap-4 sm:grid-cols-2 max-w-lg"
-                        disabled={!canEdit}
-                      >
-                        <div>
-                          <RadioGroupItem
-                            value="active"
-                            id="status-active"
-                            className="peer sr-only"
-                          />
-                          <Label
-                            htmlFor="status-active"
-                            className="flex items-center gap-3 rounded-lg border-2 border-muted bg-popover p-4 hover:bg-accent/50 hover:text-accent-foreground peer-data-[state=checked]:border-emerald-500 peer-data-[state=checked]:bg-emerald-50 [&:has([data-state=checked])]:border-emerald-500 [&:has([data-state=checked])]:bg-emerald-50 cursor-pointer transition-all"
-                          >
-                            <div className="h-3 w-3 rounded-full bg-emerald-500 ring-4 ring-emerald-500/20" />
-                            <div>
-                              <span className="text-sm font-semibold block">
-                                Active
-                              </span>
-                              <span className="text-xs text-muted-foreground">
-                                Live and responding to users
-                              </span>
-                            </div>
-                          </Label>
-                        </div>
-                        <div>
-                          <RadioGroupItem
-                            value="paused"
-                            id="status-paused"
-                            className="peer sr-only"
-                          />
-                          <Label
-                            htmlFor="status-paused"
-                            className="flex items-center gap-3 rounded-lg border-2 border-muted bg-popover p-4 hover:bg-accent/50 hover:text-accent-foreground peer-data-[state=checked]:border-amber-500 peer-data-[state=checked]:bg-amber-50 [&:has([data-state=checked])]:border-amber-500 [&:has([data-state=checked])]:bg-amber-50 cursor-pointer transition-all"
-                          >
-                            <div className="h-3 w-3 rounded-full bg-amber-500 ring-4 ring-amber-500/20" />
-                            <div>
-                              <span className="text-sm font-semibold block">
-                                Paused
-                              </span>
-                              <span className="text-xs text-muted-foreground">
-                                Temporarily offline
-                              </span>
-                            </div>
-                          </Label>
-                        </div>
-                      </RadioGroup>
-                      {chatbot.status === "draft" && (
-                        <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-md">
-                          <AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0" />
-                          <p className="text-sm text-amber-700">
-                            This chatbot is in Draft mode. Set it to Active to
-                            make it live.
-                          </p>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex justify-end pt-4 border-t">
-                      <Button
-                        type="submit"
-                        disabled={isSavingSettings || !canEdit}
-                        className="min-w-[140px]"
-                      >
-                        {isSavingSettings ? (
-                          <>
-                            <ButtonSpinner />
-                            Saving...
-                          </>
-                        ) : (
-                          <>
-                            <Save className="h-4 w-4 mr-2" />
-                            Save Settings
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  </form>
-                </CardContent>
-              </Card>
-
-              {["owner", "admin"].includes(chatbot.permission_level) && (
-                <Card className="border-red-200/50">
-                  <CardHeader className="pb-4">
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-lg bg-red-50 border border-red-200 flex items-center justify-center flex-shrink-0">
-                        <Trash2 className="h-5 w-5 text-red-600" />
-                      </div>
-                      <div>
-                        <CardTitle className="text-red-700">
-                          Danger Zone
-                        </CardTitle>
-                        <CardDescription>
-                          This action is irreversible. All data including
-                          knowledge base, conversations, and analytics will be
-                          permanently deleted.
-                        </CardDescription>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <Button
-                      variant="destructive"
-                      className="bg-red-600 hover:bg-red-700"
-                      onClick={handleDeleteChatbot}
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Delete Chatbot
-                    </Button>
-                  </CardContent>
-                </Card>
-              )}
-            </TabsContent>
-            <TabsContent
-              value="team"
-              className="space-y-6"
-              forceMount
-              style={{
-                display: settingsSubTab === "team" ? undefined : "none",
-              }}
-            >
-              <ChatbotTeamSettings chatbotId={chatbotId} />
-            </TabsContent>
-          </Tabs>
+          <ErrorBoundary compact>
+          <SettingsTab
+            chatbot={chatbot}
+            chatbotId={chatbotId}
+            canEdit={canEdit}
+            settingsSubTab={settingsSubTab}
+            setSettingsSubTab={setSettingsSubTab}
+            isSavingSettings={isSavingSettings}
+            settingsSuccess={settingsSuccess}
+            settingsError={settingsError}
+            handleSettingsSubmit={handleSettingsSubmit}
+            handleDeleteChatbot={handleDeleteChatbot}
+          />
+          </ErrorBoundary>
         </TabsContent>
       </Tabs>
 
-      {/* Widget Preview - Visible in all tabs */}
-      {chatbot && appearance && (
-        <ChatbotWidgetPreview
-          key={`widget-${chatbotId}`}
-          primaryColor={watchedAppearanceValues.primary_color}
-          headerText={watchedAppearanceValues.header_text}
-          avatarUrl={watchedAppearanceValues.avatar_url}
-          position={watchedAppearanceValues.position}
-          offsetX={watchedAppearanceValues.offset_x}
-          offsetY={watchedAppearanceValues.offset_y}
-          welcomeMessage={watchedAppearanceValues.welcome_message}
-          initialSuggestions={watchedAppearanceValues.initial_suggestions}
-          showBranding={watchedAppearanceValues.show_branding}
-          language={watchedAppearanceValues.language as "en" | "hi" | "gu"}
-          languages={(watchedLanguages || ["en"]) as ("en" | "hi" | "gu")[]}
-          welcomeMessageTranslations={appearance?.welcome_message_translations || null}
-          contained={false}
-          initialOpen={false}
-          readOnly={false}
-          chatbotId={chatbotId}
-        />
-      )}
-
-      {/* File Preview Modal */}
-      {previewFile && (
-        <div
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-          onClick={() => setPreviewFile(null)}
-        >
-          <div
-            className="bg-card rounded-lg shadow-xl max-w-4xl w-full max-h-[80vh] flex flex-col border"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b">
-              <div className="flex items-center gap-2">
-                <FileText className="h-5 w-5 text-emerald-600" />
-                <h3 className="font-semibold text-lg">
+      {/* File Preview Dialog */}
+      <Dialog open={!!previewFile} onOpenChange={() => setPreviewFile(null)}>
+        <DialogContent className="sm:max-w-4xl max-h-[80vh] flex flex-col">
+          {previewFile && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-primary" />
                   {previewFile.filename}
-                </h3>
-                <Badge variant="secondary" className="text-xs">
-                  {previewFile.type.toUpperCase()}
-                </Badge>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setPreviewFile(null)}
-                className="h-8 w-8"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
+                  <Badge variant="secondary" className="text-xs">
+                    {previewFile.type.toUpperCase()}
+                  </Badge>
+                </DialogTitle>
+              </DialogHeader>
 
-            {/* Content */}
-            <div className="flex-1 overflow-auto p-6">
-              {previewFile.mode === "text" && (
-                <pre className="text-sm whitespace-pre-wrap font-mono bg-muted p-4 rounded-lg border">
-                  {previewFile.content}
-                </pre>
-              )}
-              {previewFile.mode === "iframe" &&
-                previewFile.url &&
-                (["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp"].includes(
-                  previewFile.type,
-                ) ? (
-                  <div className="flex items-center justify-center">
-                    <img
-                      src={previewFile.url}
-                      alt={previewFile.filename}
-                      className="max-w-full max-h-[60vh] object-contain rounded"
-                    />
-                  </div>
-                ) : (
-                  <iframe
-                    src={previewFile.url}
-                    className="w-full h-[60vh] rounded border"
-                    title={previewFile.filename}
-                  />
-                ))}
-              {previewFile.mode === "download" && (
-                <div className="flex flex-col items-center justify-center gap-4 py-12">
-                  <FileText className="h-16 w-16 text-muted-foreground" />
-                  <p className="text-muted-foreground text-center">
+              <div className="flex-1 overflow-auto">
+                {previewFile.mode === "text" && (
+                  <pre className="text-sm whitespace-pre-wrap font-mono bg-muted p-4 rounded-lg border">
                     {previewFile.content}
-                  </p>
-                  {previewFile.url && (
-                    <a
-                      href={previewFile.url}
-                      download={previewFile.filename}
-                      className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 transition-colors"
-                    >
-                      <Download className="h-4 w-4" />
-                      Download File
-                    </a>
-                  )}
-                </div>
-              )}
-            </div>
+                  </pre>
+                )}
+                {previewFile.mode === "iframe" &&
+                  previewFile.url &&
+                  (["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp"].includes(
+                    previewFile.type,
+                  ) ? (
+                    <div className="flex items-center justify-center">
+                      <img
+                        src={previewFile.url}
+                        alt={previewFile.filename}
+                        className="max-w-full max-h-[60vh] object-contain rounded"
+                      />
+                    </div>
+                  ) : (
+                    <iframe
+                      src={previewFile.url}
+                      className="w-full h-[60vh] rounded border"
+                      title={previewFile.filename}
+                    />
+                  ))}
+                {previewFile.mode === "download" && (
+                  <div className="flex flex-col items-center justify-center gap-4 py-12">
+                    <FileText className="h-16 w-16 text-muted-foreground" />
+                    <p className="text-muted-foreground text-center">
+                      {previewFile.content}
+                    </p>
+                    {previewFile.url && (
+                      <a
+                        href={previewFile.url}
+                        download={previewFile.filename}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+                      >
+                        <Download className="h-4 w-4" />
+                        Download File
+                      </a>
+                    )}
+                  </div>
+                )}
+              </div>
 
-            {/* Footer */}
-            <div className="p-4 border-t bg-muted/50 flex justify-end gap-2">
-              {previewFile.mode === "text" && (
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    navigator.clipboard.writeText(previewFile.content);
-                    alert("Content copied to clipboard!");
-                  }}
-                >
-                  Copy to Clipboard
-                </Button>
-              )}
-              <Button onClick={() => setPreviewFile(null)}>Close</Button>
-            </div>
+              <div className="pt-4 border-t bg-muted/50 flex justify-end gap-2 -mx-6 -mb-6 px-6 py-4 rounded-b-lg">
+                {previewFile.mode === "text" && (
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      navigator.clipboard.writeText(previewFile.content);
+                      toast.success("Content copied to clipboard!");
+                    }}
+                  >
+                    Copy to Clipboard
+                  </Button>
+                )}
+                <Button onClick={() => setPreviewFile(null)}>Close</Button>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Unsaved Changes Confirmation Dialog */}
+      <Dialog open={showUnsavedDialog} onOpenChange={setShowUnsavedDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Unsaved Changes</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            You have unsaved changes in the Appearance tab. Are you sure you want to leave? Your changes will be lost.
+          </p>
+          <div className="flex justify-end gap-2 pt-4">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowUnsavedDialog(false);
+                setPendingTab(null);
+              }}
+            >
+              Stay
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                setShowUnsavedDialog(false);
+                form.reset();
+                if (pendingTab) {
+                  setActiveTab(pendingTab);
+                  if (pendingTab === "knowledge" && !hasLoadedKnowledge) fetchKnowledgeSources();
+                  if (pendingTab === "overview") {
+                    fetchChatbotStats();
+                    fetchRecentActivity(recentActivityPage);
+                  }
+                  setPendingTab(null);
+                }
+              }}
+            >
+              Discard Changes
+            </Button>
           </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
     </div>
+
+    {/* Widget Preview — rendered outside transition container so position:fixed works */}
+    {chatbot && appearance && (
+      <ChatbotWidgetPreview
+        key={`widget-${chatbotId}`}
+        primaryColor={watchedAppearanceValues.primary_color}
+        headerText={watchedAppearanceValues.header_text}
+        avatarUrl={watchedAppearanceValues.avatar_url}
+        position={watchedAppearanceValues.position}
+        offsetX={watchedAppearanceValues.offset_x}
+        offsetY={watchedAppearanceValues.offset_y}
+        welcomeMessage={watchedAppearanceValues.welcome_message}
+        initialSuggestions={watchedAppearanceValues.initial_suggestions}
+        showBranding={watchedAppearanceValues.show_branding}
+        language={watchedAppearanceValues.language as "en" | "hi" | "gu"}
+        languages={(watchedLanguages || ["en"]) as ("en" | "hi" | "gu")[]}
+        welcomeMessageTranslations={
+          appearance?.welcome_message_translations || null
+        }
+        contained={false}
+        initialOpen={false}
+        readOnly={false}
+        chatbotId={chatbotId}
+      />
+    )}
+    </>
   );
 }

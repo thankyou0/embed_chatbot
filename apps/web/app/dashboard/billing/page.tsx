@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { toast } from "@/lib/notify-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { useHeaderContent } from "@/contexts/HeaderContext";
 import {
   Check,
   TrendingUp,
@@ -43,6 +45,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { apiRequestWithAuth } from "@/lib/api";
 import { getAccessToken } from "@/lib/auth";
 import { cn } from "@/lib/utils";
+import { UsagePredictions } from "@/components/dashboard/UsagePredictions";
 
 interface PlanLimits {
   chatbots: number;
@@ -133,6 +136,12 @@ export default function BillingPage() {
   );
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
   const [isUpgrading, setIsUpgrading] = useState(false);
+  const { setContent } = useHeaderContent();
+
+  useEffect(() => {
+    setContent({ title: "Subscription", description: "Manage your subscription and plan information" });
+    return () => setContent(null);
+  }, [setContent]);
 
   useEffect(() => {
     fetchBillingData();
@@ -179,7 +188,7 @@ export default function BillingPage() {
       setSelectedPlan(null);
     } catch (err: any) {
       console.error("Failed to upgrade plan:", err);
-      alert(err.message || "Failed to upgrade plan");
+      toast.error(err.message || "Failed to upgrade plan");
     } finally {
       setIsUpgrading(false);
     }
@@ -228,15 +237,9 @@ export default function BillingPage() {
   if (!billingData) {
     return (
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Billing</h1>
-          <p className="text-muted-foreground">
-            Manage your subscription and billing information
-          </p>
-        </div>
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
-            Failed to load billing information
+            Failed to load subscription information
           </CardContent>
         </Card>
       </div>
@@ -253,13 +256,6 @@ export default function BillingPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold">Billing</h1>
-        <p className="text-muted-foreground">
-          Manage your subscription and billing information
-        </p>
-      </div>
 
       {/* Current Plan Overview */}
       <div className="grid gap-6 md:grid-cols-3">
@@ -293,7 +289,7 @@ export default function BillingPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">
-              Billing Period
+              Subscription Period
             </CardTitle>
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
@@ -476,6 +472,88 @@ export default function BillingPage() {
         </CardContent>
       </Card>
 
+      {/* Usage Predictions */}
+      <UsagePredictions
+        currentUsage={usage.current_usage}
+        planLimits={usage.plan_limits}
+        usagePercentages={usage.usage_percentages}
+      />
+
+      {/* Payment History (Enhanced) */}
+      {billing_history.length > 0 && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Payment History</CardTitle>
+                <CardDescription>
+                  Your past invoices and payments
+                </CardDescription>
+              </div>
+              <Badge variant="secondary" className="text-xs">
+                {billing_history.length} transaction{billing_history.length !== 1 ? "s" : ""}
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {/* Table-style header */}
+            <div className="hidden sm:grid grid-cols-[1fr_120px_100px_40px] gap-4 px-4 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wider border-b mb-2">
+              <span>Description</span>
+              <span className="text-right">Amount</span>
+              <span className="text-center">Status</span>
+              <span></span>
+            </div>
+            <div className="space-y-1">
+              {billing_history.map((item) => (
+                <div
+                  key={item.id}
+                  className="grid sm:grid-cols-[1fr_120px_100px_40px] gap-2 sm:gap-4 items-center py-3 px-4 rounded-lg hover:bg-muted/50 transition-colors"
+                >
+                  <div className="space-y-0.5">
+                    <p className="font-medium text-sm">{item.description}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatDate(item.created_at)}
+                      {item.invoice_number && (
+                        <span className="ml-2 font-mono text-[10px] text-muted-foreground/70">
+                          {item.invoice_number}
+                        </span>
+                      )}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground/60">
+                      {formatDate(item.billing_period_start)} — {formatDate(item.billing_period_end)}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-semibold text-sm">
+                      {formatCurrency(item.amount)}
+                    </p>
+                  </div>
+                  <div className="flex justify-center">
+                    <Badge
+                      variant={
+                        item.payment_status === "paid"
+                          ? "default"
+                          : item.payment_status === "pending"
+                            ? "secondary"
+                            : "destructive"
+                      }
+                      className="text-[10px]"
+                    >
+                      {item.payment_status}
+                    </Badge>
+                  </div>
+                  <div className="flex justify-end">
+                    <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Download invoice">
+                      <Download className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Pricing Plans */}
       <div>
         <div className="mb-6">
@@ -656,56 +734,6 @@ export default function BillingPage() {
         </Tabs>
       </div>
 
-      {/* Billing History */}
-      {billing_history.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Billing History</CardTitle>
-            <CardDescription>Your past invoices and payments</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {billing_history.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-center justify-between py-3 border-b last:border-0"
-                >
-                  <div className="space-y-1">
-                    <p className="font-medium">{item.description}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {formatDate(item.created_at)}
-                      {item.invoice_number && ` • ${item.invoice_number}`}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="text-right">
-                      <p className="font-medium">
-                        {formatCurrency(item.amount)}
-                      </p>
-                      <Badge
-                        variant={
-                          item.payment_status === "paid"
-                            ? "default"
-                            : item.payment_status === "pending"
-                              ? "secondary"
-                              : "destructive"
-                        }
-                        className="text-xs"
-                      >
-                        {item.payment_status}
-                      </Badge>
-                    </div>
-                    <Button variant="ghost" size="icon">
-                      <Download className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Admin Warning */}
       {!isAdmin && (
         <Card className="border-amber-500/50 bg-amber-500/10">
@@ -753,7 +781,7 @@ export default function BillingPage() {
 
               {selectedPlan !== "free" && (
                 <div className="space-y-2">
-                  <Label>Billing Cycle</Label>
+                  <Label>Payment Cycle</Label>
                   <RadioGroup
                     value={billingCycle}
                     onValueChange={(value) =>

@@ -1158,6 +1158,7 @@ class CrawlerService:
                 crawled_urls = set()
                 pages_added = 0
                 pages_updated = 0
+                pages_visited = 0  # Track ALL URLs visited (including unchanged) for accurate progress
                 pages_skipped = (
                     0  # Track URLs skipped due to existing in other knowledge sources
                 )
@@ -1275,8 +1276,10 @@ class CrawlerService:
                         pages_added += 1
                         logger.info(f"Added new page: {url} (is_product: {is_product})")
 
+                    pages_visited += 1
+
                     # Update stats periodically
-                    if (pages_added + pages_updated) % 5 == 0:
+                    if pages_visited % 5 == 0:
                         # Also update pages_found on KnowledgeSource so the
                         # SSE status-stream and crawl-status API return a
                         # real count instead of 0 while crawling is in progress.
@@ -1288,7 +1291,7 @@ class CrawlerService:
                         # Compute crawl_progress metrics
                         elapsed = (datetime.now(timezone.utc) - crawl_start_time).total_seconds() or 1
                         total_processed = pages_added + pages_updated
-                        speed = total_processed / elapsed  # pages/sec
+                        speed = pages_visited / elapsed  # pages/sec (use visited for accurate speed)
                         queue_size = len(crawler.queue) if hasattr(crawler, 'queue') else 0
                         est_remaining = int(queue_size / speed) if speed > 0 else None
                         await db.execute(
@@ -1298,10 +1301,12 @@ class CrawlerService:
                                 pages_found=running_total,
                                 crawl_progress={
                                     "pages_crawled": total_processed,
+                                    "pages_visited": pages_visited,
                                     "urls_in_queue": queue_size,
                                     "crawl_speed": round(speed, 2),
                                     "started_at": crawl_start_time.isoformat(),
                                     "estimated_remaining_seconds": est_remaining,
+                                    "is_recrawl": is_recrawl,
                                 },
                             )
                         )

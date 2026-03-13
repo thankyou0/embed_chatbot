@@ -52,7 +52,7 @@ const navigation = [
     requiresKnowledgePermission: false,
   }, // Members see filtered view
   {
-    name: "Usage & Billing",
+    name: "Usage",
     href: "/dashboard/usage",
     icon: TrendingUp,
     requiresAdmin: false,
@@ -172,6 +172,8 @@ export function Sidebar({ isCollapsed = false, setIsCollapsed }: SidebarProps) {
 
       {/* Sidebar */}
       <div
+        role="navigation"
+        aria-label="Main navigation"
         className={cn(
           "fixed inset-y-0 left-0 z-40 bg-gradient-to-b from-card to-card/95 border-r border-border transform transition-all duration-300 ease-in-out lg:translate-x-0 flex flex-col",
           mobileMenuOpen ? "translate-x-0" : "-translate-x-full",
@@ -210,6 +212,7 @@ export function Sidebar({ isCollapsed = false, setIsCollapsed }: SidebarProps) {
             </Button>
           </div>
           <nav
+            aria-label="Dashboard pages"
             className={cn(
               "flex-1 py-6 space-y-1 transition-all",
               isCollapsed
@@ -219,16 +222,16 @@ export function Sidebar({ isCollapsed = false, setIsCollapsed }: SidebarProps) {
           >
             {navigation
               // Filter out admin-only items for non-admin users
-              // Show Analytics and Usage & Billing to users with analytics permission
+              // Show Analytics and Usage to users with analytics permission
               .filter((item) => {
                 if (item.requiresAdmin && !isAdmin) return false;
                 if (
                   (item.name === "Analytics" ||
-                    item.name === "Usage & Billing") &&
+                    item.name === "Usage") &&
                   !isAdmin &&
                   !hasAnalyticsPermission
                 ) {
-                  return false; // Hide analytics/billing if user lacks permission
+                  return false; // Hide analytics/usage if user lacks permission
                 }
                 if (
                   item.requiresKnowledgePermission &&
@@ -249,7 +252,7 @@ export function Sidebar({ isCollapsed = false, setIsCollapsed }: SidebarProps) {
                 let href = item.href;
                 if (
                   (item.name === "Analytics" ||
-                    item.name === "Usage & Billing") &&
+                    item.name === "Usage") &&
                   currentChatbotId &&
                   currentChatbotId !== "new"
                 ) {
@@ -273,8 +276,8 @@ export function Sidebar({ isCollapsed = false, setIsCollapsed }: SidebarProps) {
                       "flex items-center text-sm font-medium rounded-lg transition-all group relative",
                       isCollapsed ? "justify-center p-3" : "px-4 py-3",
                       isActive
-                        ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-500/25"
-                        : "text-muted-foreground hover:bg-emerald-50 hover:text-emerald-700",
+                        ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-primary/25"
+                        : "text-muted-foreground hover:bg-primary/10 hover:text-primary",
                       pendingHref === href &&
                         !isActive &&
                         "bg-accent/60 text-foreground ring-1 ring-primary/30",
@@ -324,8 +327,8 @@ export function Sidebar({ isCollapsed = false, setIsCollapsed }: SidebarProps) {
                         "flex items-center text-sm font-medium rounded-lg transition-all group relative",
                         isCollapsed ? "justify-center p-3" : "px-4 py-3",
                         isActive
-                          ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-500/25"
-                          : "text-muted-foreground hover:bg-emerald-50 hover:text-emerald-700",
+                          ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-primary/25"
+                          : "text-muted-foreground hover:bg-primary/10 hover:text-primary",
                       )}
                     >
                       <item.icon
@@ -402,7 +405,7 @@ export function Sidebar({ isCollapsed = false, setIsCollapsed }: SidebarProps) {
                         isCollapsed ? "flex-col" : "space-x-2 flex-1",
                       )}
                     >
-                      <div className="h-10 w-10 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 flex items-center justify-center shrink-0 shadow-sm ring-2 ring-emerald-500/20">
+                      <div className="h-10 w-10 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 flex items-center justify-center shrink-0 shadow-sm ring-2 ring-primary/20">
                         <span className="text-white font-bold text-xs">
                           {(user.name ||
                             user.username ||
@@ -437,7 +440,7 @@ export function Sidebar({ isCollapsed = false, setIsCollapsed }: SidebarProps) {
                               logout();
                               setMobileMenuOpen(false);
                             }}
-                            className="text-red-600 focus:text-red-600 focus:bg-red-50 rounded-none cursor-pointer"
+                            className="text-destructive focus:text-destructive focus:bg-destructive/10 rounded-none cursor-pointer"
                           >
                             <ArrowRight className="mr-2 h-4 w-4" />
                             Logout
@@ -460,7 +463,7 @@ export function Sidebar({ isCollapsed = false, setIsCollapsed }: SidebarProps) {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                      className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
                       onClick={() => logout()}
                     >
                       <ArrowRight className="h-4 w-4" />

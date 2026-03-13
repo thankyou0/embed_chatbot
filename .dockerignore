@@ -50,6 +50,30 @@
 **/Dockerfile
 **/docker-compose*.yml
 
+# Local test/analysis scripts at workspace root (not part of the app)
+_*.*
+*.ps1
+*.sql
+analyze_data.py
+check_*.py
+crawl_*.py
+debug_*.py
+extract_*.py
+generate_*.py
+lang_test*.py
+list_*.py
+missing_info*.py
+post_fix_test*.py
+quick_*.py
+*.txt
+!requirements.txt
+
+# JSON test data at root
+*.json
+!package.json
+!pnpm-lock.yaml
+!pnpm-workspace.yaml
+
 # Documentation
 **/README.md
 **/*.md

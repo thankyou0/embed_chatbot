@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { toast } from "@/lib/notify-toast";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import { useHeaderContent } from "@/contexts/HeaderContext";
 import {
   BarChart3,
   MessageSquare,
@@ -17,7 +19,8 @@ import {
   CheckSquare,
   Square,
 } from "lucide-react";
-import { SectionLoader, ButtonSpinner } from "@/components/ui/loading";
+import { ButtonSpinner } from "@/components/ui/loading";
+import { SkeletonDashboardPage } from "@/components/ui/skeleton";
 import {
   Card,
   CardContent,
@@ -33,6 +36,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { apiRequestWithAuth } from "@/lib/api";
 import { getAccessToken } from "@/lib/auth";
 import { cn } from "@/lib/utils";
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
+import { AnalyticsCharts } from "@/components/dashboard/AnalyticsCharts";
 
 interface AnalyticsOverview {
   total_sessions: number;
@@ -93,6 +98,7 @@ export default function AnalyticsPage() {
   const [queryTab, setQueryTab] = useState<string>("missing_info");
   const [selectedQueries, setSelectedQueries] = useState<string[]>([]);
   const [isResolving, setIsResolving] = useState(false);
+  const { setContent } = useHeaderContent();
 
   // Cache for analytics data to avoid redundant API calls
   const [analyticsCache, setAnalyticsCache] = useState<
@@ -138,9 +144,6 @@ export default function AnalyticsPage() {
             bot.permission_level === "admin",
         );
         setFilteredChatbots(filtered);
-        console.log(
-          `[Analytics] Member user - filtered to ${filtered.length} chatbots with analytics permission`,
-        );
 
         // If user only has access to one chatbot, auto-select it
         if (filtered.length === 1 && selectedChatbot === "all") {
@@ -319,43 +322,38 @@ export default function AnalyticsPage() {
       // Force refresh analytics to update stats immediately
       await fetchAnalytics(true);
     } catch (err: any) {
-      alert(err.message || "Failed to resolve queries");
+      toast.error(err.message || "Failed to resolve queries");
     } finally {
       setIsResolving(false);
     }
   };
 
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 to-teal-600">Analytics</h1>
-          <p className="text-muted-foreground">
-            Monitor your chatbot performance and user engagement
-          </p>
-        </div>
-
+  useEffect(() => {
+    setContent({
+      title: "Analytics",
+      description: "Monitor your chatbot performance and user engagement",
+      actions: (
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-2 bg-card border rounded-md px-3 py-1">
             <Filter className="h-4 w-4 text-muted-foreground" />
-            <select
-              value={selectedChatbot}
-              onChange={(e) => handleChatbotChange(e.target.value)}
-              className="bg-transparent border-0 focus:ring-0 text-sm h-8 outline-none cursor-pointer min-w-[150px] text-foreground"
-            >
-              {/* Admins and members with all chatbots' analytics permission can see "All Chatbots" option */}
-              {(isAdmin ||
-                (!isAdmin &&
-                  filteredChatbots.length > 0 &&
-                  filteredChatbots.length === chatbots.length)) && (
-                <option value="all" className="bg-background text-foreground">All Chatbots</option>
-              )}
-              {filteredChatbots.map((bot) => (
-                <option key={bot.id} value={bot.id} className="bg-background text-foreground">
-                  {bot.name}
-                </option>
-              ))}
-            </select>
+            <Select value={selectedChatbot} onValueChange={handleChatbotChange}>
+              <SelectTrigger className="bg-transparent border-0 focus:ring-0 text-sm h-8 cursor-pointer min-w-[150px]">
+                <SelectValue placeholder="All Chatbots" />
+              </SelectTrigger>
+              <SelectContent>
+                {(isAdmin ||
+                  (!isAdmin &&
+                    filteredChatbots.length > 0 &&
+                    filteredChatbots.length === chatbots.length)) && (
+                  <SelectItem value="all">All Chatbots</SelectItem>
+                )}
+                {filteredChatbots.map((bot) => (
+                  <SelectItem key={bot.id} value={bot.id}>
+                    {bot.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <Button
             variant="outline"
@@ -372,7 +370,14 @@ export default function AnalyticsPage() {
             />
           </Button>
         </div>
-      </div>
+      ),
+    });
+    return () => setContent(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [setContent, selectedChatbot, isLoading, isRefreshing, filteredChatbots, chatbots, isAdmin]);
+
+  return (
+    <div className="space-y-6">
 
       {/* Date Range Picker */}
       <Tabs value={period} onValueChange={handlePeriodChange}>
@@ -384,9 +389,7 @@ export default function AnalyticsPage() {
       </Tabs>
 
       {isLoading && !analytics ? (
-        <div className="flex items-center justify-center py-24">
-          <SectionLoader minHeight="min-h-0" />
-        </div>
+        <SkeletonDashboardPage />
       ) : (
         <>
           {/* Metrics Cards */}
@@ -486,6 +489,18 @@ export default function AnalyticsPage() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Trend Charts */}
+          {analytics && (
+            <AnalyticsCharts
+              totalSessions={analytics.total_sessions}
+              totalMessages={analytics.total_messages}
+              deflectionRate={analytics.deflection_rate}
+              unansweredRate={analytics.unanswered_rate}
+              avgDepth={analytics.avg_messages_per_session}
+              period={period}
+            />
+          )}
 
           {/* Deflection Rate Visualization */}
           {analytics && (

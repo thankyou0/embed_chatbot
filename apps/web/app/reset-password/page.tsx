@@ -9,16 +9,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Card,
   CardContent,
-  CardDescription,
   CardFooter,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import Link from "next/link";
 import { SectionLoader, ButtonSpinner } from "@/components/ui/loading";
+import { AuthLayout, AuthLayoutSkeleton } from "@/components/auth/AuthLayout";
+import { KeyRound } from "lucide-react";
 import { apiRequest } from "@/lib/api";
 
 const resetPasswordSchema = z
@@ -105,24 +103,15 @@ function ResetPasswordForm() {
   };
 
   if (!token && !error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 via-white to-teal-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
-        <Card className="w-full max-w-md shadow-xl border-0 ring-1 ring-black/5">
-          <CardContent className="pt-6">
-            <SectionLoader minHeight="min-h-[100px]" />
-          </CardContent>
-        </Card>
-      </div>
-    );
+    return <AuthLayoutSkeleton />;
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 via-white to-teal-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 px-4">
-      <Card className="w-full max-w-md shadow-xl border-0 ring-1 ring-black/5">
-        <CardHeader className="space-y-1 text-center">
-          <CardTitle className="text-2xl font-bold">Reset Password</CardTitle>
-          <CardDescription>Enter your new password below.</CardDescription>
-        </CardHeader>
+    <AuthLayout
+      icon={<KeyRound className="h-7 w-7 text-white" />}
+      title="Reset Password"
+      description="Enter your new password below."
+    >
         <form onSubmit={handleSubmit(onSubmit)}>
           <CardContent className="space-y-4">
             {error && (
@@ -203,23 +192,14 @@ function ResetPasswordForm() {
             </div>
           </CardFooter>
         </form>
-      </Card>
-    </div>
+    </AuthLayout>
   );
 }
 
 export default function ResetPasswordPage() {
   return (
     <Suspense
-      fallback={
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 via-white to-teal-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
-          <Card className="w-full max-w-md shadow-xl border-0 ring-1 ring-black/5">
-            <CardContent className="pt-6">
-              <SectionLoader minHeight="min-h-[100px]" />
-            </CardContent>
-          </Card>
-        </div>
-      }
+      fallback={<AuthLayoutSkeleton />}
     >
       <ResetPasswordForm />
     </Suspense>

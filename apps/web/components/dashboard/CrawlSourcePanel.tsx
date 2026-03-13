@@ -36,10 +36,12 @@ interface KnowledgeSource {
   updated_at?: string;
   crawl_progress?: {
     pages_crawled: number;
+    pages_visited?: number;
     urls_in_queue: number;
     crawl_speed: number;
     started_at: string;
     estimated_remaining_seconds: number | null;
+    is_recrawl?: boolean;
   } | null;
 }
 
@@ -250,17 +252,32 @@ export function CrawlSourcePanel({
         <div className="px-4 py-2.5 bg-indigo-50/60 border-t border-indigo-100">
           <div className="flex items-center justify-between text-xs text-indigo-700 mb-1.5">
             <span className="font-medium">
-              {source.crawl_progress.pages_crawled} page{source.crawl_progress.pages_crawled !== 1 ? "s" : ""} processed
-              {source.crawl_progress.urls_in_queue > 0 && (
-                <span className="text-indigo-500 ml-1">
-                  · {source.crawl_progress.urls_in_queue} in queue
-                </span>
+              {source.crawl_progress.is_recrawl ? (
+                <>
+                  {source.crawl_progress.pages_visited ?? source.crawl_progress.pages_crawled} page{(source.crawl_progress.pages_visited ?? source.crawl_progress.pages_crawled) !== 1 ? "s" : ""} synced
+                  {source.crawl_progress.pages_crawled > 0 && (
+                    <span className="text-indigo-500 ml-1">
+                      · {source.crawl_progress.pages_crawled} updated
+                    </span>
+                  )}
+                  {source.crawl_progress.urls_in_queue > 0 && (
+                    <span className="text-indigo-500 ml-1">
+                      · {source.crawl_progress.urls_in_queue} in queue
+                    </span>
+                  )}
+                </>
+              ) : (
+                <>
+                  {source.crawl_progress.pages_crawled} page{source.crawl_progress.pages_crawled !== 1 ? "s" : ""} discovered
+                  {source.crawl_progress.urls_in_queue > 0 && (
+                    <span className="text-indigo-500 ml-1">
+                      · {source.crawl_progress.urls_in_queue} in queue
+                    </span>
+                  )}
+                </>
               )}
             </span>
             <span className="text-indigo-500">
-              {source.crawl_progress.crawl_speed > 0 && (
-                <span>{source.crawl_progress.crawl_speed} pages/s</span>
-              )}
               {source.crawl_progress.estimated_remaining_seconds != null &&
                 source.crawl_progress.estimated_remaining_seconds > 0 && (
                   <span className="ml-2">
@@ -272,21 +289,18 @@ export function CrawlSourcePanel({
             </span>
           </div>
           <div className="w-full h-1.5 bg-indigo-100 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-indigo-500 rounded-full transition-all duration-500 animate-pulse"
-              style={{
-                width: source.crawl_progress.urls_in_queue > 0
-                  ? `${Math.min(
-                      95,
-                      Math.round(
-                        (source.crawl_progress.pages_crawled /
-                          (source.crawl_progress.pages_crawled + source.crawl_progress.urls_in_queue)) *
-                          100,
-                      ),
-                    )}%`
-                  : "100%",
-              }}
-            />
+            {(() => {
+              const visited = source.crawl_progress!.pages_visited ?? source.crawl_progress!.pages_crawled;
+              const queue = source.crawl_progress!.urls_in_queue;
+              const total = visited + queue;
+              const pct = total > 0 ? Math.min(95, Math.round((visited / total) * 100)) : 0;
+              return (
+                <div
+                  className="h-full bg-indigo-500 rounded-full transition-all duration-500 animate-pulse"
+                  style={{ width: queue > 0 ? `${pct}%` : "100%" }}
+                />
+              );
+            })()}
           </div>
         </div>
       )}

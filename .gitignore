@@ -56,3 +56,5 @@ coverage/
 *.zip
 *.tar.gz
 recovered_workspace_*.zip
+
+.github

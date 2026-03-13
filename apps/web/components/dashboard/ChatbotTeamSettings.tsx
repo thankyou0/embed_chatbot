@@ -1,8 +1,10 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { toast } from "@/lib/notify-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { getAccessToken } from "@/lib/auth";
+import { ErrorMessage } from "@/components/ui/error-message";
 import { apiRequestWithAuth } from "@/lib/api";
 import { Plus, Trash2, X, AlertCircle } from "lucide-react";
 import { SectionLoader, ButtonSpinner } from "@/components/ui/loading";
@@ -11,6 +13,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 // Types
 interface Permission {
@@ -198,7 +208,7 @@ export function ChatbotTeamSettings({ chatbotId }: ChatbotTeamSettingsProps) {
 
       fetchData();
     } catch (err: any) {
-      alert(err.message || "Failed to remove member");
+      toast.error(err.message || "Failed to remove member");
     }
   };
 
@@ -273,12 +283,7 @@ export function ChatbotTeamSettings({ chatbotId }: ChatbotTeamSettingsProps) {
         </Button>
       </div>
 
-      {error && (
-        <div className="bg-red-50 text-red-600 p-4 rounded-lg flex items-center gap-2">
-          <AlertCircle className="h-5 w-5" />
-          {error}
-        </div>
-      )}
+      <ErrorMessage message={error} />
 
       <div className="grid gap-4">
         {permissions.map((perm) => (
@@ -309,17 +314,15 @@ export function ChatbotTeamSettings({ chatbotId }: ChatbotTeamSettingsProps) {
                     variant="outline"
                     className={
                       perm.permission_level === "owner"
-                        ? "bg-teal-50 text-teal-700 border-teal-200"
+                        ? "bg-success/10 text-success border-success/30"
                         : perm.permission_level === "admin"
-                          ? "bg-blue-50 text-blue-700 border-blue-200"
-                          : "bg-gray-50 text-gray-700 border-gray-200"
+                          ? "bg-info/10 text-info border-info/30"
+                          : perm.permission_level === "editor"
+                            ? "bg-amber-500/10 text-amber-600 border-amber-500/30"
+                            : "bg-muted text-muted-foreground border-border"
                     }
                   >
-                    {perm.permission_level === "owner"
-                      ? "Owner"
-                      : perm.permission_level === "admin"
-                        ? "Admin"
-                        : "Member"}
+                    {perm.permission_level.charAt(0).toUpperCase() + perm.permission_level.slice(1)}
                   </Badge>
                 </div>
 
@@ -349,43 +352,33 @@ export function ChatbotTeamSettings({ chatbotId }: ChatbotTeamSettingsProps) {
       </div>
 
       {/* Custom Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-lg w-full shadow-xl">
-            <div className="p-6 border-b flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-semibold">
-                  {editingPermission ? "Edit Member Access" : "Add Team Member"}
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                  Control what members can do with this chatbot.
-                </p>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setShowAddModal(false)}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
+      <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {editingPermission ? "Edit Member Access" : "Add Team Member"}
+            </DialogTitle>
+            <DialogDescription>
+              Control what members can do with this chatbot.
+            </DialogDescription>
+          </DialogHeader>
 
-            <div className="p-6 space-y-6">
+            <div className="space-y-6">
               {!editingPermission && (
                 <div className="space-y-2">
                   <Label>Select Member</Label>
-                  <select
-                    className="w-full h-10 px-3 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
-                    value={selectedMemberId}
-                    onChange={(e) => setSelectedMemberId(e.target.value)}
-                  >
-                    <option value="">Select a team member...</option>
-                    {availableMembers.map((member) => (
-                      <option key={member.id} value={member.id.toString()}>
-                        {member.name || member.email} ({member.email})
-                      </option>
-                    ))}
-                  </select>
+                  <Select value={selectedMemberId} onValueChange={setSelectedMemberId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a team member..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableMembers.map((member) => (
+                        <SelectItem key={member.id} value={member.id.toString()}>
+                          {member.name || member.email} ({member.email})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               )}
 
@@ -450,11 +443,11 @@ export function ChatbotTeamSettings({ chatbotId }: ChatbotTeamSettingsProps) {
                     checked={customFlags.can_resolve_queries}
                     onCheckedChange={(checked) => {
                       const isChecked = !!checked;
-                      // If enabling resolve queries, also auto-enable analytics & billing
+                      // If enabling resolve queries, also auto-enable analytics & usage
                       setCustomFlags((prev) => ({
                         ...prev,
                         can_resolve_queries: isChecked,
-                        // Auto-enable analytics & billing when resolve queries is enabled
+                        // Auto-enable analytics & usage when resolve queries is enabled
                         can_view_analytics_billing: isChecked
                           ? true
                           : prev.can_view_analytics_billing,
@@ -471,7 +464,7 @@ export function ChatbotTeamSettings({ chatbotId }: ChatbotTeamSettingsProps) {
                     </Label>
                     <p className="text-xs text-muted-foreground">
                       Manually answer user queries and view conversations. This
-                      automatically includes Analytics & Billing access.
+                      automatically includes Analytics & Usage access.
                     </p>
                   </div>
                 </div>
@@ -497,10 +490,10 @@ export function ChatbotTeamSettings({ chatbotId }: ChatbotTeamSettingsProps) {
                       htmlFor="p_analytics"
                       className={`cursor-pointer font-medium ${customFlags.can_resolve_queries ? "text-muted-foreground" : ""}`}
                     >
-                      View Analytics & Billing
+                      View Analytics & Usage
                     </Label>
                     <p className="text-xs text-muted-foreground">
-                      See conversation stats, usage metrics, and billing
+                      See conversation stats, usage metrics, and subscription
                       information.
                       {customFlags.can_resolve_queries &&
                         " (Required when Resolve Queries is enabled)"}
@@ -534,9 +527,8 @@ export function ChatbotTeamSettings({ chatbotId }: ChatbotTeamSettingsProps) {
                 </Button>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

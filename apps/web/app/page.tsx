@@ -1,16 +1,11 @@
-"use client";
-
 import { LandingNavbar } from "@/components/landing/navbar";
 import { HeroSection } from "@/components/landing/hero-3d";
 import { LogoCloud } from "@/components/landing/logo-cloud-3d";
 import { FeaturesSection } from "@/components/landing/features-3d";
-import HowItWorks3D from "@/components/landing/how-it-works-3d";
-import Demo3D from "@/components/landing/demo-3d";
-import Pricing3D from "@/components/landing/pricing-3d";
 import { FAQSection } from "@/components/landing/faq";
-import CTA3D from "@/components/landing/cta-3d";
 import { Footer } from "@/components/landing/footer";
 import { PageLoader } from "@/components/landing/page-loader";
+import { LazyBelowFold } from "@/components/landing/lazy-below-fold";
 
 export default function LandingPage() {
   return (
@@ -20,11 +15,9 @@ export default function LandingPage() {
       <HeroSection />
       <LogoCloud />
       <FeaturesSection />
-      <HowItWorks3D />
-      <Demo3D />
-      <Pricing3D />
+      {/* Below-the-fold 3D sections lazy-loaded for faster initial paint */}
+      <LazyBelowFold />
       <FAQSection />
-      <CTA3D />
       <Footer />
     </div>
   );

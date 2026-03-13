@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { toast } from "@/lib/notify-toast";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { getAccessToken } from "@/lib/auth";
@@ -27,6 +28,14 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 // Types
 interface Permission {
@@ -207,7 +216,7 @@ export default function ChatbotMembersPage() {
 
       fetchData();
     } catch (err: any) {
-      alert(err.message || "Failed to remove member");
+      toast.error(err.message || "Failed to remove member");
     }
   };
 
@@ -341,7 +350,7 @@ export default function ChatbotMembersPage() {
                       variant="outline"
                       className="bg-gray-50 text-gray-700 border-gray-200"
                     >
-                      Analytics & Billing
+                      Analytics & Usage
                     </Badge>
                   )}
                 </div>
@@ -371,60 +380,51 @@ export default function ChatbotMembersPage() {
         ))}
       </div>
 
-      {/* Custom Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-lg w-full shadow-xl">
-            <div className="p-6 border-b flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-semibold">
-                  {editingPermission ? "Edit Member Access" : "Add Team Member"}
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                  Control what members can do with this chatbot.
-                </p>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setShowAddModal(false)}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
+      {/* Add/Edit Member Dialog */}
+      <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {editingPermission ? "Edit Member Access" : "Add Team Member"}
+            </DialogTitle>
+            <DialogDescription>
+              Control what members can do with this chatbot.
+            </DialogDescription>
+          </DialogHeader>
 
-            <div className="p-6 space-y-6">
+            <div className="space-y-6">
               {!editingPermission && (
                 <div className="space-y-2">
                   <Label>Select Member</Label>
-                  <select
-                    className="w-full h-10 px-3 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
-                    value={selectedMemberId}
-                    onChange={(e) => setSelectedMemberId(e.target.value)}
-                  >
-                    <option value="">Select a team member...</option>
-                    {availableMembers.map((member) => (
-                      <option key={member.id} value={member.id.toString()}>
-                        {member.name || member.email} ({member.email})
-                      </option>
-                    ))}
-                  </select>
+                  <Select value={selectedMemberId} onValueChange={setSelectedMemberId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a team member..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableMembers.map((member) => (
+                        <SelectItem key={member.id} value={member.id.toString()}>
+                          {member.name || member.email} ({member.email})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               )}
 
               <div className="space-y-2">
                 <Label>Access Level</Label>
-                <select
-                  className="w-full h-10 px-3 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
-                  value={selectedPreset}
-                  onChange={(e) => setSelectedPreset(e.target.value)}
-                >
-                  {Object.entries(PRESETS).map(([key, preset]) => (
-                    <option key={key} value={key}>
-                      {preset.label} - {preset.description}
-                    </option>
-                  ))}
-                </select>
+                <Select value={selectedPreset} onValueChange={setSelectedPreset}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select access level" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(PRESETS).map(([key, preset]) => (
+                      <SelectItem key={key} value={key}>
+                        {preset.label} - {preset.description}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-3 border rounded-lg p-4 bg-muted/20">
@@ -487,7 +487,7 @@ export default function ChatbotMembersPage() {
                     id="p_resolve"
                     checked={customFlags.can_resolve_queries}
                     onCheckedChange={(checked) => {
-                      // When enabling resolve queries, also enable analytics/billing
+                      // When enabling resolve queries, also enable analytics/usage
                       if (checked) {
                         setCustomFlags((prev) => ({
                           ...prev,
@@ -534,10 +534,10 @@ export default function ChatbotMembersPage() {
                       htmlFor="p_analytics"
                       className={`cursor-pointer font-medium ${customFlags.can_resolve_queries ? "text-muted-foreground" : ""}`}
                     >
-                      View Analytics & Billing
+                      View Analytics & Usage
                     </Label>
                     <p className="text-xs text-muted-foreground">
-                      See conversation stats, usage metrics, and billing
+                      See conversation stats, usage metrics, and subscription
                       information.
                       {customFlags.can_resolve_queries && (
                         <span className="text-blue-600">
@@ -575,9 +575,8 @@ export default function ChatbotMembersPage() {
                 </Button>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

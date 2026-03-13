@@ -5,6 +5,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { getAccessToken } from "@/lib/auth";
 import { apiRequestWithAuth } from "@/lib/api";
+import { useHeaderContent } from "@/contexts/HeaderContext";
+import { ErrorMessage, SuccessMessage } from "@/components/ui/error-message";
 import {
   Shield,
   User,
@@ -30,6 +32,14 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -63,10 +73,26 @@ export default function TeamPage() {
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const { setContent } = useHeaderContent();
   const [successMessage, setSuccessMessage] = useState("");
 
   // Add Member State
   const [showAddModal, setShowAddModal] = useState(false);
+
+  useEffect(() => {
+    setContent({
+      title: "Organization Team",
+      description: "Manage your organization members and their roles.",
+      actions: (
+        <Button onClick={() => setShowAddModal(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Add Member
+        </Button>
+      ),
+    });
+    return () => setContent(null);
+  }, [setContent]);
+
   const [newMember, setNewMember] = useState({
     email: "",
     name: "",
@@ -140,7 +166,6 @@ export default function TeamPage() {
       });
 
       setSuccessMessage(`Member ${newMember.email} added successfully`);
-      console.log(`[Team] Successfully added member: ${newMember.email} with role: ${newMember.role}`);
       setShowAddModal(false);
       setNewMember({
         email: "",
@@ -184,7 +209,6 @@ export default function TeamPage() {
       });
 
       setSuccessMessage(`Member ${memberEmail} removed successfully`);
-      console.log(`[Team] Successfully removed member: ${memberEmail}`);
       fetchData();
     } catch (err: any) {
       console.error(`[Team] Failed to remove member ${memberEmail}:`, err);
@@ -200,32 +224,10 @@ export default function TeamPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 to-teal-600">Organization Team</h1>
-          <p className="text-muted-foreground">
-            Manage your organization members and their roles.
-          </p>
-        </div>
-        <Button onClick={() => setShowAddModal(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Member
-        </Button>
-      </div>
 
-      {error && (
-        <div className="bg-red-50 text-red-600 p-4 rounded-lg flex items-center gap-2">
-          <AlertCircle className="h-5 w-5" />
-          {error}
-        </div>
-      )}
+      <ErrorMessage message={error} />
 
-      {successMessage && (
-        <div className="bg-green-50 text-green-600 p-4 rounded-lg flex items-center gap-2">
-          <Check className="h-5 w-5" />
-          {successMessage}
-        </div>
-      )}
+      <SuccessMessage message={successMessage} />
 
       <div className="grid gap-4">
         {members.map((member) => (
@@ -239,12 +241,12 @@ export default function TeamPage() {
                   <div className="font-medium flex items-center gap-2">
                     {member.name || member.email.split("@")[0] || "No Name"}
                     {member.is_org_owner && (
-                      <Badge variant="secondary" className="text-xs bg-emerald-50 text-emerald-700 border-emerald-200">
+                      <Badge variant="active" className="text-xs">
                         Org Owner
                       </Badge>
                     )}
                     {!member.is_org_owner && member.role === "admin" && (
-                      <Badge variant="secondary" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                      <Badge variant="outline" className="text-xs bg-info/10 text-info border-info/30">
                         Admin
                       </Badge>
                     )}
@@ -312,29 +314,17 @@ export default function TeamPage() {
         ))}
       </div>
 
-      {/* Custom Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-card rounded-lg max-w-md w-full shadow-2xl">
-            <div className="p-6 border-b flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-semibold">
-                  Add Organization Member
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                  Create a new account for a team member.
-                </p>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setShowAddModal(false)}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
+      {/* Add Member Dialog */}
+      <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add Organization Member</DialogTitle>
+            <DialogDescription>
+              Create a new account for a team member.
+            </DialogDescription>
+          </DialogHeader>
 
-            <form onSubmit={handleAddMember} className="p-6 space-y-4">
+          <form onSubmit={handleAddMember} className="space-y-4">
               <div className="space-y-2">
                 <Label>Email Address</Label>
                 <Input
@@ -361,21 +351,25 @@ export default function TeamPage() {
 
               <div className="space-y-2">
                 <Label>Role</Label>
-                <select
-                  className="w-full h-10 px-3 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                <Select
                   value={newMember.role}
-                  onChange={(e) =>
+                  onValueChange={(val) =>
                     setNewMember({
                       ...newMember,
-                      role: e.target.value as "admin" | "user",
+                      role: val as "admin" | "user",
                     })
                   }
                 >
-                  <option value="user">Member (Chatbot-specific access only)</option>
-                  <option value="admin">
-                    Admin (Full organization access)
-                  </option>
-                </select>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="user">Member (Chatbot-specific access only)</SelectItem>
+                    <SelectItem value="admin">
+                      Admin (Full organization access)
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
                 <p className="text-xs text-muted-foreground mt-1">
                   {newMember.role === "admin" 
                     ? "Admins have full access to all chatbots, can create new chatbots, manage team members, and access all features. They cannot remove the organization owner."
@@ -427,9 +421,8 @@ export default function TeamPage() {
                 </Button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

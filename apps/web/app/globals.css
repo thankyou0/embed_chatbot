@@ -195,49 +195,45 @@
 }
 
 /* ==================== Dark Mode Overrides ==================== */
-/* Auto-soften common Tailwind color-50 backgrounds in dark mode */
-/* These target the most common banner/alert patterns across the dashboard */
-@layer utilities {
-  .dark .bg-red-50 { background-color: rgb(127 29 29 / 0.15) !important; }
-  .dark .bg-green-50 { background-color: rgb(20 83 45 / 0.15) !important; }
-  .dark .bg-emerald-50 { background-color: rgb(6 78 59 / 0.15) !important; }
-  .dark .bg-teal-50 { background-color: rgb(19 78 74 / 0.15) !important; }
-  .dark .bg-blue-50 { background-color: rgb(30 58 138 / 0.15) !important; }
-  .dark .bg-amber-50 { background-color: rgb(120 53 15 / 0.15) !important; }
-  .dark .bg-yellow-50 { background-color: rgb(113 63 18 / 0.15) !important; }
-  .dark .bg-slate-50 { background-color: rgb(30 41 59 / 0.3) !important; }
-  .dark .bg-slate-100 { background-color: rgb(30 41 59 / 0.4) !important; }
-  .dark .bg-gray-50 { background-color: rgb(31 41 55 / 0.3) !important; }
-  .dark .bg-gray-100 { background-color: rgb(31 41 55 / 0.4) !important; }
+/* Auto-soften hardcoded Tailwind colors for dark mode.                      */
+/* Placed OUTSIDE @layer so they naturally override Tailwind utility classes */
+/* without needing !important. Specificity: .dark .bg-* (0-2-0) wins over   */
+/* Tailwind's .bg-* (0-1-0) since unlayered CSS beats @layer utilities.     */
+/*                                                                           */
+/* Used by: chatbot tabs, CrawlSourcePanel, QABundlePanel, analytics,       */
+/*          settings, members, developer pages.                              */
+/* TODO: Migrate to semantic tokens per-component, then remove this block.   */
 
-  /* Border overrides for dark — soften light borders */
-  .dark .border-red-200 { border-color: rgb(127 29 29 / 0.4) !important; }
-  .dark .border-green-200 { border-color: rgb(20 83 45 / 0.4) !important; }
-  .dark .border-emerald-200 { border-color: rgb(6 78 59 / 0.4) !important; }
-  .dark .border-teal-200 { border-color: rgb(19 78 74 / 0.4) !important; }
-  .dark .border-blue-200 { border-color: rgb(30 58 138 / 0.4) !important; }
-  .dark .border-amber-200 { border-color: rgb(120 53 15 / 0.4) !important; }
-  .dark .border-gray-200 { border-color: rgb(55 65 81 / 0.5) !important; }
+/* Background overrides */
+.dark .bg-red-50 { background-color: rgb(127 29 29 / 0.15); }
+.dark .bg-green-50 { background-color: rgb(20 83 45 / 0.15); }
+.dark .bg-emerald-50 { background-color: rgb(6 78 59 / 0.15); }
+.dark .bg-teal-50 { background-color: rgb(19 78 74 / 0.15); }
+.dark .bg-blue-50 { background-color: rgb(30 58 138 / 0.15); }
+.dark .bg-amber-50 { background-color: rgb(120 53 15 / 0.15); }
+.dark .bg-slate-100 { background-color: rgb(30 41 59 / 0.4); }
+.dark .bg-gray-50 { background-color: rgb(31 41 55 / 0.3); }
 
-  /* Text overrides for dark — lighten dark text on colored banners */
-  .dark .text-red-900 { color: rgb(252 165 165) !important; }
-  .dark .text-red-800 { color: rgb(252 165 165) !important; }
-  .dark .text-red-700 { color: rgb(252 165 165) !important; }
-  .dark .text-green-800 { color: rgb(134 239 172) !important; }
-  .dark .text-green-700 { color: rgb(134 239 172) !important; }
-  .dark .text-emerald-800 { color: rgb(110 231 183) !important; }
-  .dark .text-emerald-700 { color: rgb(110 231 183) !important; }
-  .dark .text-teal-800 { color: rgb(94 234 212) !important; }
-  .dark .text-teal-700 { color: rgb(94 234 212) !important; }
-  .dark .text-blue-800 { color: rgb(147 197 253) !important; }
-  .dark .text-blue-700 { color: rgb(147 197 253) !important; }
-  .dark .text-amber-800 { color: rgb(252 211 77) !important; }
-  .dark .text-amber-700 { color: rgb(252 211 77) !important; }
-  .dark .text-gray-800 { color: rgb(229 231 235) !important; }
-  .dark .text-gray-700 { color: rgb(209 213 219) !important; }
-  .dark .text-gray-600 { color: rgb(156 163 175) !important; }
-  .dark .text-gray-500 { color: rgb(156 163 175) !important; }
-  .dark .text-slate-800 { color: rgb(226 232 240) !important; }
-  .dark .text-slate-700 { color: rgb(203 213 225) !important; }
-  .dark .text-slate-600 { color: rgb(148 163 184) !important; }
-}
+/* Border overrides */
+.dark .border-red-200 { border-color: rgb(127 29 29 / 0.4); }
+.dark .border-green-200 { border-color: rgb(20 83 45 / 0.4); }
+.dark .border-emerald-200 { border-color: rgb(6 78 59 / 0.4); }
+.dark .border-teal-200 { border-color: rgb(19 78 74 / 0.4); }
+.dark .border-blue-200 { border-color: rgb(30 58 138 / 0.4); }
+.dark .border-amber-200 { border-color: rgb(120 53 15 / 0.4); }
+.dark .border-gray-200 { border-color: rgb(55 65 81 / 0.5); }
+
+/* Text overrides */
+.dark .text-red-800 { color: rgb(252 165 165); }
+.dark .text-red-700 { color: rgb(252 165 165); }
+.dark .text-green-800 { color: rgb(134 239 172); }
+.dark .text-green-700 { color: rgb(134 239 172); }
+.dark .text-emerald-700 { color: rgb(110 231 183); }
+.dark .text-teal-800 { color: rgb(94 234 212); }
+.dark .text-blue-800 { color: rgb(147 197 253); }
+.dark .text-blue-700 { color: rgb(147 197 253); }
+.dark .text-amber-800 { color: rgb(252 211 77); }
+.dark .text-amber-700 { color: rgb(252 211 77); }
+.dark .text-gray-700 { color: rgb(209 213 219); }
+.dark .text-gray-500 { color: rgb(156 163 175); }
+.dark .text-slate-600 { color: rgb(148 163 184); }

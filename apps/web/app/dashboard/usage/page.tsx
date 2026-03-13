@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import { useHeaderContent } from "@/contexts/HeaderContext";
+import { ErrorMessage } from "@/components/ui/error-message";
 import {
   TrendingUp,
   MessageSquare,
@@ -17,7 +19,7 @@ import {
   Calendar,
   CreditCard,
 } from "lucide-react";
-import { PageLoader } from "@/components/ui/loading";
+import { SkeletonDashboardPage } from "@/components/ui/skeleton";
 import {
   Card,
   CardContent,
@@ -31,6 +33,7 @@ import { Progress } from "@/components/ui/progress";
 import { apiRequestWithAuth } from "@/lib/api";
 import { getAccessToken } from "@/lib/auth";
 import { cn } from "@/lib/utils";
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -128,6 +131,54 @@ export default function UsagePage() {
     chatbotIdParam || "all",
   );
   const [error, setError] = useState<string | null>(null);
+  const { setContent } = useHeaderContent();
+
+  // Set header bar content (must be before any early returns to satisfy Rules of Hooks)
+  useEffect(() => {
+    setContent({
+      title: "Usage",
+      description: "Track your usage, limits, and subscription information",
+      actions: !isLoading && billingData ? (
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 bg-card border rounded-md px-3 py-1">
+            <Filter className="h-4 w-4 text-muted-foreground" />
+            <Select value={selectedChatbot} onValueChange={handleChatbotSelection}>
+              <SelectTrigger className="bg-transparent border-0 focus:ring-0 text-sm h-8 cursor-pointer min-w-[200px]">
+                <SelectValue placeholder="All Chatbots (Total Usage)" />
+              </SelectTrigger>
+              <SelectContent>
+                {(isAdmin ||
+                  (!isAdmin &&
+                    filteredChatbots.length > 0 &&
+                    filteredChatbots.length === chatbots.length)) && (
+                  <SelectItem value="all">All Chatbots (Total Usage)</SelectItem>
+                )}
+                {filteredChatbots.map((bot) => (
+                  <SelectItem key={bot.id} value={bot.id}>
+                    {bot.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <Button
+            onClick={() => fetchData(false)}
+            variant="outline"
+            size="icon"
+          >
+            <RefreshCcw
+              className={cn(
+                "h-4 w-4",
+                (isLoading || isRefreshing) && "animate-spin",
+              )}
+            />
+          </Button>
+        </div>
+      ) : undefined,
+    });
+    return () => setContent(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [setContent, selectedChatbot, isLoading, isRefreshing, filteredChatbots, chatbots, isAdmin, billingData]);
 
   const handleChatbotSelection = (value: string) => {
     // Store current bot stats before changing
@@ -143,7 +194,7 @@ export default function UsagePage() {
     router.replace(`/dashboard/usage${queryString}`);
   };
 
-  // Fetch billing and usage data
+  // Fetch usage and subscription data
   const fetchData = async (showLoader = false) => {
     try {
       if (showLoader) {
@@ -154,7 +205,7 @@ export default function UsagePage() {
       const token = getAccessToken();
       if (!token) return;
 
-      // Fetch billing overview (includes usage with limits)
+      // Fetch usage overview (includes usage with limits)
       const billing = await apiRequestWithAuth<BillingOverview>(
         "/api/v1/billing/overview",
         token,
@@ -203,7 +254,7 @@ export default function UsagePage() {
 
       setChatbots(response.chatbots);
 
-      // For non-admins, filter to only chatbots they have analytics/billing permission for
+      // For non-admins, filter to only chatbots they have analytics/usage permission for
       if (!isAdmin) {
         const filtered = response.chatbots.filter(
           (bot) =>
@@ -260,31 +311,13 @@ export default function UsagePage() {
   };
 
   if (isLoading) {
-    return <PageLoader message="Loading usage & billing data..." />;
+    return <SkeletonDashboardPage />;
   }
 
   if (!billingData) {
     return (
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 to-teal-600">Usage & Billing</h1>
-          <p className="text-muted-foreground mt-2">
-            Track your usage and billing information
-          </p>
-        </div>
-        <Card className="border-red-200 bg-red-50">
-          <CardContent className="pt-6">
-            <div className="flex items-start space-x-3">
-              <AlertCircle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
-              <div>
-                <p className="font-medium text-red-900 dark:text-red-300">Error</p>
-                <p className="text-sm text-red-800">
-                  {error || "Failed to load billing information"}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <ErrorMessage message={error || "Failed to load usage information"} />
       </div>
     );
   }
@@ -335,51 +368,8 @@ export default function UsagePage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 to-teal-600">Usage & Billing</h1>
-          <p className="text-muted-foreground mt-1">
-            Track your usage, limits, and billing information
-          </p>
-        </div>
 
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2 bg-card border rounded-md px-3 py-1">
-            <Filter className="h-4 w-4 text-muted-foreground" />
-            <select
-              value={selectedChatbot}
-              onChange={(e) => handleChatbotSelection(e.target.value)}
-              className="bg-transparent border-0 focus:ring-0 text-sm h-8 outline-none cursor-pointer min-w-[200px] text-foreground"
-            >
-              {(isAdmin ||
-                (!isAdmin &&
-                  filteredChatbots.length > 0 &&
-                  filteredChatbots.length === chatbots.length)) && (
-                <option value="all" className="bg-background text-foreground">All Chatbots (Total Usage)</option>
-              )}
-              {filteredChatbots.map((bot) => (
-                <option key={bot.id} value={bot.id} className="bg-background text-foreground">
-                  {bot.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <Button
-            onClick={() => fetchData(false)}
-            variant="outline"
-            size="icon"
-          >
-            <RefreshCcw
-              className={cn(
-                "h-4 w-4",
-                (isLoading || isRefreshing) && "animate-spin",
-              )}
-            />
-          </Button>
-        </div>
-      </div>
-
-      {/* Current Plan & Billing Period */}
+      {/* Current Plan & Subscription Period */}
       <div className="grid gap-4 md:grid-cols-3">
         <Card className="border-l-4 border-l-emerald-500">
           <CardHeader className="pb-3">
@@ -401,7 +391,7 @@ export default function UsagePage() {
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               <Calendar className="h-4 w-4 inline mr-1" />
-              Billing Period
+              Subscription Period
             </CardTitle>
           </CardHeader>
           <CardContent>

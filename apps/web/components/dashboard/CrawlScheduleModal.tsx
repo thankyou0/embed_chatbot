@@ -1,12 +1,22 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { toast } from "@/lib/notify-toast";
 import { X, Clock, Calendar, History } from "lucide-react";
 import { SectionLoader, ButtonSpinner } from "@/components/ui/loading";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
+import { ErrorMessage } from "@/components/ui/error-message";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { apiRequestWithAuth } from "@/lib/api";
 import { getAccessToken } from "@/lib/auth";
 
@@ -154,7 +164,7 @@ export function CrawlScheduleModal({
       );
 
       setSchedule(data);
-      alert("Schedule saved successfully!");
+      toast.success("Schedule saved successfully!");
       // Close modal after successful save
       onClose();
     } catch (err: any) {
@@ -216,32 +226,26 @@ export function CrawlScheduleModal({
 
   if (isLoading) {
     return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-        <div className="bg-white dark:bg-gray-900 rounded-lg p-6 max-w-2xl w-full mx-4">
+      <Dialog open onOpenChange={() => onClose()}>
+        <DialogContent className="sm:max-w-2xl">
           <SectionLoader minHeight="min-h-[200px]" />
-        </div>
-      </div>
+        </DialogContent>
+      </Dialog>
     );
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-900 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="sticky top-0 bg-white dark:bg-gray-900 border-b dark:border-gray-700 px-6 py-4 flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Sync Settings</h2>
-            <p className="text-sm text-muted-foreground truncate">
-              {sourceUrl}
-            </p>
-          </div>
-          <Button variant="ghost" size="sm" onClick={onClose}>
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
+    <Dialog open onOpenChange={() => onClose()}>
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Sync Settings</DialogTitle>
+          <DialogDescription className="truncate">
+            {sourceUrl}
+          </DialogDescription>
+        </DialogHeader>
 
         {/* Content */}
-        <div className="p-6 space-y-6">
+        <div className="space-y-6">
           {/* Status */}
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">{pagesCount} pages</span>
@@ -250,11 +254,7 @@ export function CrawlScheduleModal({
             </span>
           </div>
 
-          {error && (
-            <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-300 px-4 py-3 rounded-md text-sm">
-              {error}
-            </div>
-          )}
+          <ErrorMessage message={error} />
 
           {/* Schedule Settings */}
           <div className="space-y-4">
@@ -288,17 +288,18 @@ export function CrawlScheduleModal({
                 {scheduleType === "weekly" && (
                   <div className="ml-8 flex items-center gap-2 flex-wrap">
                     <span className="text-sm text-muted-foreground">Every</span>
-                    <select
-                      value={dayOfWeek}
-                      onChange={(e) => setDayOfWeek(Number(e.target.value))}
-                      className="border dark:border-gray-600 rounded px-2 py-1 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                    >
-                      {DAYS_OF_WEEK.map((day) => (
-                        <option key={day.value} value={day.value}>
-                          {day.label}
-                        </option>
-                      ))}
-                    </select>
+                    <Select value={String(dayOfWeek)} onValueChange={(val) => setDayOfWeek(Number(val))}>
+                      <SelectTrigger className="h-8 px-2 py-1 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {DAYS_OF_WEEK.map((day) => (
+                          <SelectItem key={day.value} value={String(day.value)}>
+                            {day.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 )}
               </div>
@@ -314,17 +315,18 @@ export function CrawlScheduleModal({
             {scheduleType !== "manual" && (
               <div className="ml-8 flex items-center gap-2">
                 <span className="text-sm text-muted-foreground">at</span>
-                <select
-                  value={preferredHour}
-                  onChange={(e) => setPreferredHour(Number(e.target.value))}
-                  className="border dark:border-gray-600 rounded px-2 py-1 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                >
-                  {HOURS.map((hour) => (
-                    <option key={hour.value} value={hour.value}>
-                      {hour.label}
-                    </option>
-                  ))}
-                </select>
+                <Select value={String(preferredHour)} onValueChange={(val) => setPreferredHour(Number(val))}>
+                  <SelectTrigger className="h-8 px-2 py-1 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {HOURS.map((hour) => (
+                      <SelectItem key={hour.value} value={String(hour.value)}>
+                        {hour.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             )}
           </div>
@@ -442,7 +444,7 @@ export function CrawlScheduleModal({
             </div>
           )}
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

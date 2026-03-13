@@ -161,7 +161,7 @@ function PricingCard({
             </div>
           )}
           {yearly && !isCustom && price !== "0" && (
-            <p className="text-xs text-emerald-400 mt-1">Save 17% with yearly billing</p>
+            <p className="text-xs text-emerald-400 mt-1">Save 17% with yearly plan</p>
           )}
         </div>
 

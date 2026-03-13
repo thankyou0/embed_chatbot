@@ -1,21 +1,21 @@
 "use client";
 
+import { useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useHeaderContent } from "@/contexts/HeaderContext";
 import Link from "next/link";
 
 export default function SettingsPage() {
   const { user, tenant, isAdmin } = useAuth();
+  const { setContent } = useHeaderContent();
+
+  useEffect(() => {
+    setContent({ title: "Settings", description: "Manage your account and tenant settings" });
+    return () => setContent(null);
+  }, [setContent]);
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 to-teal-600">
-          Settings
-        </h1>
-        <p className="text-muted-foreground">
-          Manage your account and tenant settings
-        </p>
-      </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {/* Profile Card */}

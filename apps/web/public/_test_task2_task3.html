@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Task 2 & 3 — Visual Test Guide</title>
+  <style>
+    :root {
+      --bg: #f9fafb;
+      --fg: #111827;
+      --card: #fff;
+      --border: #e5e7eb;
+      --muted: #6b7280;
+      --success: hsl(142, 76%, 36%);
+      --warning: hsl(38, 92%, 50%);
+      --info: hsl(217, 91%, 60%);
+      --destructive: hsl(0, 84%, 60%);
+      --primary: hsl(160, 84%, 39%);
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      padding: 32px;
+      max-width: 960px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+    h1 { font-size: 28px; margin-bottom: 8px; }
+    h2 { font-size: 22px; margin: 32px 0 16px; padding-top: 24px; border-top: 2px solid var(--border); }
+    h3 { font-size: 16px; margin: 20px 0 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
+    p { margin: 8px 0; color: #374151; }
+    .subtitle { color: var(--muted); font-size: 15px; margin-bottom: 24px; }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      margin: 16px 0;
+    }
+    .test-step {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin: 8px 0;
+      counter-increment: step;
+    }
+    .test-step::before {
+      content: "Step " counter(step) ": ";
+      font-weight: 700;
+      color: var(--success);
+    }
+    .check-item {
+      padding: 8px 0 8px 28px;
+      position: relative;
+    }
+    .check-item::before {
+      content: "☐";
+      position: absolute;
+      left: 4px;
+      font-size: 16px;
+    }
+    .badge-demo {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 9999px;
+      padding: 2px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      border: 1px solid transparent;
+      margin: 2px 4px;
+    }
+    .badge-active { background: rgba(22,163,74,0.1); color: var(--success); border-color: rgba(22,163,74,0.3); }
+    .badge-draft { background: #f3f4f6; color: var(--muted); border-color: var(--border); }
+    .badge-paused { background: rgba(234,179,8,0.1); color: var(--warning); border-color: rgba(234,179,8,0.3); }
+    .badge-success { background: var(--success); color: #fff; }
+    .badge-warning { background: var(--warning); color: #fff; }
+    .badge-info { background: var(--info); color: #fff; }
+
+    table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 14px; }
+    th, td { text-align: left; padding: 10px 14px; border: 1px solid var(--border); }
+    th { background: #f9fafb; font-weight: 600; }
+    td code { background: #f3f4f6; padding: 2px 6px; border-radius: 4px; font-size: 13px; font-family: 'SF Mono', Consolas, monospace; }
+    .old { color: #dc2626; text-decoration: line-through; opacity: 0.7; }
+    .new { color: var(--success); font-weight: 600; }
+    .url-box {
+      background: #1e293b;
+      color: #e2e8f0;
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-family: 'SF Mono', Consolas, monospace;
+      font-size: 14px;
+      margin: 12px 0;
+      user-select: all;
+    }
+    .warn-box {
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      border-radius: 8px;
+      padding: 14px 18px;
+      margin: 12px 0;
+      font-size: 14px;
+    }
+    .warn-box::before { content: "⚠️ "; }
+    .info-box {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 8px;
+      padding: 14px 18px;
+      margin: 12px 0;
+      font-size: 14px;
+    }
+    .info-box::before { content: "ℹ️ "; }
+    .file-ref {
+      font-family: 'SF Mono', Consolas, monospace;
+      font-size: 13px;
+      color: var(--info);
+    }
+  </style>
+</head>
+<body>
+
+<h1>🧪 Task 2 & Task 3 — Visual Test Guide</h1>
+<p class="subtitle">Use this guide to verify changes to the Badge component and Sidebar dark mode colors.</p>
+
+<div class="url-box">http://localhost:3000/dashboard/chatbots</div>
+<p>Login: <strong>max@gmail.com</strong> / <strong>12345678</strong></p>
+
+<!-- ============================================ -->
+<h2>Task 2: Badge Component — Semantic Tokens</h2>
+<p><span class="file-ref">apps/web/components/ui/badge.tsx</span></p>
+
+<h3>What Changed</h3>
+<table>
+  <tr>
+    <th>Variant</th>
+    <th>Before (hardcoded)</th>
+    <th>After (semantic)</th>
+  </tr>
+  <tr>
+    <td><code>success</code></td>
+    <td class="old"><code>bg-emerald-500 text-white</code></td>
+    <td class="new"><code>bg-success text-success-foreground</code></td>
+  </tr>
+  <tr>
+    <td><code>warning</code></td>
+    <td class="old"><code>bg-amber-500 text-white</code></td>
+    <td class="new"><code>bg-warning text-warning-foreground</code></td>
+  </tr>
+  <tr>
+    <td><code>info</code></td>
+    <td class="old"><code>bg-blue-500 text-white</code></td>
+    <td class="new"><code>bg-info text-info-foreground</code></td>
+  </tr>
+  <tr>
+    <td><code>active</code></td>
+    <td class="old"><code>bg-emerald-50 text-emerald-700 border-emerald-200</code></td>
+    <td class="new"><code>bg-success/10 text-success border-success/30</code></td>
+  </tr>
+  <tr>
+    <td><code>draft</code></td>
+    <td class="old"><code>bg-slate-100 text-slate-600 border-slate-200</code></td>
+    <td class="new"><code>bg-muted text-muted-foreground border-border</code></td>
+  </tr>
+  <tr>
+    <td><code>paused</code></td>
+    <td class="old"><code>bg-amber-50 text-amber-700 border-amber-200</code></td>
+    <td class="new"><code>bg-warning/10 text-warning border-warning/30</code></td>
+  </tr>
+</table>
+
+<div class="info-box">
+  The tokens <code>success</code>, <code>warning</code>, <code>info</code> are CSS variables defined in <code>globals.css</code> (both <code>:root</code> and <code>.dark</code>) and mapped in <code>tailwind.config.ts</code>. They automatically adapt to the active theme — no <code>!important</code> hacks needed.
+</div>
+
+<h3>How to Test Badge Changes</h3>
+<div style="counter-reset: step;">
+  <div class="test-step">
+    Go to <strong>Chatbots</strong> page. Each chatbot card shows a status badge (Active / Draft / Paused). Check all three look correct.
+  </div>
+  <div class="test-step">
+    Click into a chatbot. The header shows the chatbot name + status badge. Verify it matches.
+  </div>
+  <div class="test-step">
+    Toggle to <strong>Dark Mode</strong> (bottom of sidebar). Repeat steps 1-2. Badges should look natural — <em>no</em> washed-out light backgrounds on dark cards.
+  </div>
+  <div class="test-step">
+    Go to <strong>Settings → Team</strong>. The role badges (Org Owner = green tint, Admin = blue tint, Member = outline) should look correct in both themes.
+  </div>
+</div>
+
+<h3>Expected Appearance</h3>
+<div class="card">
+  <p><strong>Light Mode:</strong></p>
+  <p>
+    <span class="badge-demo badge-active">Active</span>
+    <span class="badge-demo badge-draft">Draft</span>
+    <span class="badge-demo badge-paused">Paused</span>
+    <span class="badge-demo badge-success">Success</span>
+    <span class="badge-demo badge-warning">Warning</span>
+    <span class="badge-demo badge-info">Info</span>
+  </p>
+  <p style="margin-top: 12px; color: var(--muted); font-size: 13px;">
+    Dark Mode: Same colors but with opacity-based backgrounds that adapt naturally to the dark background. No white/light patches.
+  </p>
+</div>
+
+<div class="check-item">Active badge: subtle green tint bg, green text, thin green border</div>
+<div class="check-item">Draft badge: muted gray bg, gray text, standard border (adapts automatically)</div>
+<div class="check-item">Paused badge: subtle amber tint bg, amber text, thin amber border</div>
+<div class="check-item">Success/Warning/Info: solid filled badges with white text</div>
+<div class="check-item">All badges readable in both light and dark mode</div>
+
+<!-- ============================================ -->
+<h2>Task 3: Sidebar Dark Mode Hover Colors</h2>
+<p><span class="file-ref">apps/web/components/dashboard/Sidebar.tsx</span></p>
+
+<h3>What Changed</h3>
+<table>
+  <tr>
+    <th>Element</th>
+    <th>Before (hardcoded)</th>
+    <th>After (semantic)</th>
+  </tr>
+  <tr>
+    <td>Nav link hover</td>
+    <td class="old"><code>hover:bg-emerald-50 hover:text-emerald-700</code></td>
+    <td class="new"><code>hover:bg-primary/10 hover:text-primary</code></td>
+  </tr>
+  <tr>
+    <td>Active link shadow</td>
+    <td class="old"><code>shadow-emerald-500/25</code></td>
+    <td class="new"><code>shadow-primary/25</code></td>
+  </tr>
+  <tr>
+    <td>Logout text</td>
+    <td class="old"><code>text-red-600 focus:bg-red-50</code></td>
+    <td class="new"><code>text-destructive focus:bg-destructive/10</code></td>
+  </tr>
+  <tr>
+    <td>Collapsed logout hover</td>
+    <td class="old"><code>hover:text-red-700 hover:bg-red-50</code></td>
+    <td class="new"><code>hover:text-destructive hover:bg-destructive/10</code></td>
+  </tr>
+  <tr>
+    <td>Avatar ring</td>
+    <td class="old"><code>ring-emerald-500/20</code></td>
+    <td class="new"><code>ring-primary/20</code></td>
+  </tr>
+</table>
+
+<div class="warn-box">
+  The brand gradient on the active nav link (<code>from-emerald-600 to-teal-600</code>) and the logo/brand text are intentionally kept as hardcoded brand colors — they work well in both themes since they're medium-saturation colors on both light and dark backgrounds.
+</div>
+
+<h3>How to Test Sidebar Changes</h3>
+<div style="counter-reset: step;">
+  <div class="test-step">
+    Open the dashboard. The sidebar should show navigation links. <strong>Hover over each nav link</strong> — you should see a subtle green-tinted background appear with green text.
+  </div>
+  <div class="test-step">
+    Switch to <strong>Dark Mode</strong> (toggle at bottom of sidebar). Hover over nav links again. The hover should show a subtle green tint on the dark background — NOT a washed-out light green patch.
+  </div>
+  <div class="test-step">
+    Check the <strong>active link</strong> (the one matching your current page). It should have a green-to-teal gradient with white text and a subtle colored shadow.
+  </div>
+  <div class="test-step">
+    Click your <strong>avatar/name area</strong> at the bottom → the <strong>Logout</strong> button in the dropdown should be red-tinted. In dark mode, the red should be the semantic destructive color, not hardcoded red-600.
+  </div>
+  <div class="test-step">
+    <strong>Collapse the sidebar</strong> (click the chevron button at the top). In collapsed mode, the logout icon button at the bottom should also be red/destructive and have a proper hover background in both themes.
+  </div>
+  <div class="test-step">
+    <strong>Test mobile</strong>: Resize browser to &lt;1024px width. The sidebar becomes a slide-out panel. Verify hover colors work in both themes in the mobile overlay as well.
+  </div>
+</div>
+
+<h3>Verification Checklist</h3>
+<div class="check-item">Nav link hover: subtle branded green tint (not washed-out) in both themes</div>
+<div class="check-item">Active nav link: gradient looks identical in both themes</div>
+<div class="check-item">Logout dropdown: red text with red-tinted hover in both themes</div>
+<div class="check-item">Collapsed sidebar: logout icon has proper hover in both themes</div>
+<div class="check-item">Avatar ring: subtle ring visible in both themes</div>
+<div class="check-item">Mobile sidebar: all hover colors work correctly</div>
+
+<!-- ============================================ -->
+<h2>Additional Consumer Fixes</h2>
+<p>These files were also updated to use semantic tokens instead of hardcoded colors on Badge consumers:</p>
+
+<div class="card">
+  <p><span class="file-ref">apps/web/app/dashboard/settings/team/page.tsx</span></p>
+  <ul style="margin: 8px 0 0 20px; font-size: 14px;">
+    <li>"Org Owner" badge: <code>bg-emerald-50 text-emerald-700</code> → <code>variant="active"</code></li>
+    <li>"Admin" badge: <code>bg-blue-50 text-blue-700</code> → <code>bg-info/10 text-info border-info/30</code></li>
+  </ul>
+</div>
+
+<div class="card">
+  <p><span class="file-ref">apps/web/components/dashboard/ChatbotTeamSettings.tsx</span></p>
+  <ul style="margin: 8px 0 0 20px; font-size: 14px;">
+    <li>Owner: <code>bg-teal-50 text-teal-700</code> → <code>bg-success/10 text-success border-success/30</code></li>
+    <li>Admin: <code>bg-blue-50 text-blue-700</code> → <code>bg-info/10 text-info border-info/30</code></li>
+    <li>Member: <code>bg-gray-50 text-gray-700</code> → <code>bg-muted text-muted-foreground border-border</code></li>
+  </ul>
+</div>
+
+<!-- ============================================ -->
+<h2>Quick Smoke Test (30 seconds)</h2>
+<div style="counter-reset: step;">
+  <div class="test-step">Open <code>http://localhost:3000/dashboard/chatbots</code> in <strong>Light Mode</strong>. Hover sidebar links — see green tint. Check badge on chatbot cards.</div>
+  <div class="test-step">Toggle to <strong>Dark Mode</strong>. Hover sidebar links — green tint on dark bg, no white patches. Badges still readable.</div>
+  <div class="test-step">Navigate to <strong>Settings → Team</strong>. Check role badges (Org Owner green, Admin blue) in both themes.</div>
+</div>
+
+<div class="info-box">
+  This file is accessible at <code>http://localhost:3000/_test_task2_task3.html</code> while the dev server is running.
+</div>
+
+</body>
+</html>

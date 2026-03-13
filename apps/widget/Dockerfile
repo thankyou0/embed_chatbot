@@ -3,15 +3,17 @@ FROM node:18-alpine AS development
 WORKDIR /app
 
 RUN apk add --no-cache libc6-compat
-RUN corepack enable && corepack prepare pnpm@latest --activate
+# Use npm to install pnpm globally — much faster than corepack in Docker.
+RUN npm install -g pnpm@10.28.0 --no-fund --no-audit
 
 # Copy workspace config
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages ./packages
 COPY apps/widget ./apps/widget
 
-# Install deps ONCE
-RUN pnpm install --no-frozen-lockfile
+# Reuse pnpm store cache across builds (same cache id as web — shared store).
+RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile
 
 WORKDIR /app/apps/widget
 

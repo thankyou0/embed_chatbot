@@ -7,6 +7,9 @@ wsl --shutdown
 Stop-Service com.docker.service
 
 
+About local pnpm install: You only need it to update pnpm-lock.yaml when changing package.json. No node_modules needed locally — Docker has its own.
+
+
 anyone can copy widget script and run it 
 
 should avoid mentioning "context" --> The price of the Moissanite Oval Diamond Solitaire Silver Ring is not mentioned in the provided context.
@@ -173,3 +176,16 @@ Discovery-based estimation: Track two numbers — pages_crawled and urls_discove
 Historical estimation: For re-crawls, use the previous crawl's page count as the expected total
 
 Time estimation: Track crawl speed (pages/min) and show "~X minutes remaining" based on queue size. Formula: estimated_time = urls_in_queue / crawl_speed_per_minute
+
+
+I can set up automatic Postgres backups so this never happens again. Should I do that now?
+
+
+What could be added:
+Search chatbots by name — query the chatbot list API
+Search knowledge base items — find specific uploaded documents/URLs
+Search team members — by name/email
+Search conversation history — find past chat sessions
+Recent items — show recently visited pages when search is empty
+
+

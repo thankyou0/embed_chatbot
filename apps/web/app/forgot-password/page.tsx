@@ -8,18 +8,15 @@ import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { AuthLayout } from "@/components/auth/AuthLayout";
 import {
-  Card,
   CardContent,
-  CardDescription,
   CardFooter,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ButtonSpinner } from "@/components/ui/loading";
 import Link from "next/link";
+import { KeyRound } from "lucide-react";
 import { apiRequest } from "@/lib/api";
 
 const forgotPasswordSchema = z.object({
@@ -71,22 +68,11 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 via-white to-teal-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 px-4">
-      <ThemeToggle />
-      <div className="w-full max-w-md">
-        <div className="flex justify-center mb-8">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/25">
-            <svg className="h-7 w-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg>
-          </div>
-        </div>
-      <Card className="w-full max-w-md shadow-xl border-0 ring-1 ring-black/5 dark:ring-white/10 dark:shadow-2xl">
-        <CardHeader className="space-y-1 text-center">
-          <CardTitle className="text-2xl font-bold">Forgot Password</CardTitle>
-          <CardDescription>
-            Enter your email address and we'll send you a link to reset your
-            password.
-          </CardDescription>
-        </CardHeader>
+    <AuthLayout
+      icon={<KeyRound className="h-7 w-7 text-white" />}
+      title="Forgot Password"
+      description="Enter your email address and we'll send you a link to reset your password."
+    >
         <form onSubmit={handleSubmit(onSubmit)}>
           <CardContent className="space-y-4">
             {error && (
@@ -141,8 +127,6 @@ export default function ForgotPasswordPage() {
             </div>
           </CardFooter>
         </form>
-      </Card>
-      </div>
-    </div>
+    </AuthLayout>
   );
 }

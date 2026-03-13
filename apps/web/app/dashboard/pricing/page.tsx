@@ -8,7 +8,10 @@ import {
   AlertCircle,
   ArrowRight,
 } from "lucide-react";
-import { PageLoader, ButtonSpinner } from "@/components/ui/loading";
+import { ButtonSpinner } from "@/components/ui/loading";
+import { SkeletonDashboardPage } from "@/components/ui/skeleton";
+import { useHeaderContent } from "@/contexts/HeaderContext";
+import { ErrorMessage, SuccessMessage } from "@/components/ui/error-message";
 import {
   Card,
   CardContent,
@@ -63,6 +66,12 @@ export default function PricingPage() {
   const [error, setError] = useState<string | null>(null);
   const [upgradingPlan, setUpgradingPlan] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const { setContent } = useHeaderContent();
+
+  useEffect(() => {
+    setContent({ title: "Pricing & Plans", description: "Choose the perfect plan for your chatbot needs" });
+    return () => setContent(null);
+  }, [setContent]);
 
   useEffect(() => {
     const fetchPlans = async () => {
@@ -127,45 +136,15 @@ export default function PricingPage() {
   };
 
   if (isLoading) {
-    return <PageLoader message="Loading pricing plans..." />;
+    return <SkeletonDashboardPage />;
   }
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 to-teal-600">Pricing & Plans</h1>
-        <p className="text-muted-foreground mt-2">
-          Choose the perfect plan for your chatbot needs
-        </p>
-      </div>
 
-      {error && (
-        <Card className="border-red-200 bg-red-50">
-          <CardContent className="pt-6">
-            <div className="flex items-start space-x-3">
-              <AlertCircle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
-              <div>
-                <p className="font-medium text-red-900">Error</p>
-                <p className="text-sm text-red-800">{error}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      <ErrorMessage message={error} />
 
-      {successMessage && (
-        <Card className="border-green-200 bg-green-50">
-          <CardContent className="pt-6">
-            <div className="flex items-start space-x-3">
-              <Check className="h-5 w-5 text-green-600 shrink-0 mt-0.5" />
-              <div>
-                <p className="font-medium text-green-900">Success</p>
-                <p className="text-sm text-green-800">{successMessage}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      <SuccessMessage message={successMessage} />
 
       {/* Billing Cycle Toggle */}
       <Card>

@@ -51,7 +51,9 @@ export function middleware(request: NextRequest) {
   }
 
   // If accessing login/signup with token, redirect directly to chatbots page
-  if (isPublicRoute && hasAuth) {
+  // Allow forgot-password and reset-password even when logged in
+  const authRedirectRoutes = ["/login", "/signup"];
+  if (authRedirectRoutes.includes(pathname) && hasAuth) {
     return NextResponse.redirect(new URL("/dashboard/chatbots", request.url));
   }
 
