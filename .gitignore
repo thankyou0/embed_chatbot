@@ -58,3 +58,7 @@ coverage/
 recovered_workspace_*.zip
 
 .github
+
+cs.py
+distri.txt
+off_campus.tex
